@@ -1,3 +1,6 @@
+/* 导入主题样式 */
+@import './theme/theme.scss';
+
 /* 全局主题变量 */
 :root {
   --ant-primary-color: #db0011;
@@ -174,9 +177,6 @@ a:hover {
 .rounded-full {
   border-radius: 9999px;
 }
-
-/* 导入主题样式 */
-@import './theme/theme.scss';
 
 /* 强制覆盖Ant Design输入框样式 */
 :where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:hover {
