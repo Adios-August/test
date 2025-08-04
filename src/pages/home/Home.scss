@@ -219,6 +219,16 @@
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+
+      // 覆盖 Ant Design Card 的默认样式
+      .ant-card-body {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 16px;
+      }
 
       &:hover {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -248,6 +258,9 @@
       }
 
       .panel-list {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
         .panel-item {
           padding: 8px 0;
           border: none;
@@ -300,7 +313,8 @@
         text-align: center;
         padding-top: 12px;
         border-top: 1px solid #f0f0f0;
-        margin-top: 8px;
+        margin-top: auto;
+        flex-shrink: 0;
 
         .ant-btn-link {
           color: var(--ant-primary-color);

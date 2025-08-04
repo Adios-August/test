@@ -128,7 +128,7 @@ const Home = () => {
               <Card className="panel-card">
                 <div className="panel-header">
                   <div className="panel-title">
-                    <HeartOutlined className="panel-icon" style={{ color: "#ff4d4f" }} />
+                    <HeartOutlined className="panel-icon" />
                     <span>知识推荐</span>
                   </div>
                 </div>
@@ -163,7 +163,7 @@ const Home = () => {
               <Card className="panel-card">
                 <div className="panel-header">
                   <div className="panel-title">
-                    <ClockCircleOutlined className="panel-icon" style={{ color: "#52c41a" }} />
+                    <ClockCircleOutlined className="panel-icon"  />
                     <span>最新知识</span>
                   </div>
                 </div>
@@ -198,7 +198,7 @@ const Home = () => {
               <Card className="panel-card">
                 <div className="panel-header">
                   <div className="panel-title">
-                    <DownloadOutlined className="panel-icon" style={{ color: "#db0011" }} />
+                    <DownloadOutlined className="panel-icon"  />
                     <span>最热资料</span>
                   </div>
                 </div>
