@@ -1,0 +1,273 @@
+// 导入主题配置
+@import './index.js';
+
+// 主题变量已在 index.css 中定义
+
+// Ant Design 组件主题覆盖
+.ant-btn {
+  &.ant-btn-primary {
+    background-color: var(--ant-primary-color) !important;
+    border-color: var(--ant-primary-color) !important;
+    
+    &:hover {
+      background-color: var(--ant-primary-color-hover) !important;
+      border-color: var(--ant-primary-color-hover) !important;
+    }
+    
+    &:focus {
+      background-color: var(--ant-primary-color) !important;
+      border-color: var(--ant-primary-color) !important;
+      box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+    }
+    
+    &:active {
+      background-color: var(--ant-primary-color-active) !important;
+      border-color: var(--ant-primary-color-active) !important;
+    }
+  }
+  
+  &.ant-btn-text {
+    color: var(--ant-primary-color) !important;
+    
+    &:hover {
+      color: var(--ant-primary-color-hover) !important;
+      background-color: transparent !important;
+    }
+    
+    &:focus {
+      color: var(--ant-primary-color) !important;
+      background-color: transparent !important;
+    }
+  }
+  
+  &.ant-btn-link {
+    color: var(--ant-primary-color) !important;
+    
+    &:hover {
+      color: var(--ant-primary-color-hover) !important;
+    }
+    
+    &:focus {
+      color: var(--ant-primary-color) !important;
+    }
+  }
+}
+
+// 输入框样式 - 全局覆盖
+.ant-input,
+.ant-input-outlined,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined {
+  &:focus,
+  &:focus-within {
+    border-color: var(--ant-primary-color) !important;
+    box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+  }
+  
+  &:hover {
+    border-color: var(--ant-primary-color) !important;
+  }
+}
+
+// 更高优先级的输入框样式覆盖
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:hover {
+  border-color: var(--ant-primary-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:focus,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:focus-within {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+}
+
+// 输入框包装器样式 - 全局覆盖
+.ant-input-affix-wrapper,
+.ant-input-affix-wrapper-outlined,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined {
+  &:focus,
+  &:focus-within {
+    border-color: var(--ant-primary-color) !important;
+    box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+  }
+  
+  &.ant-input-affix-wrapper-focused {
+    border-color: var(--ant-primary-color) !important;
+    box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+  }
+}
+
+// 更高优先级的输入框包装器样式覆盖
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:hover {
+  border-color: var(--ant-primary-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:focus,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:focus-within {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined.ant-input-affix-wrapper-focused {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+}
+
+.ant-input-prefix {
+  color: var(--ant-primary-color) !important;
+}
+
+.ant-select {
+  &:focus {
+    .ant-select-selector {
+      border-color: var(--ant-primary-color) !important;
+      box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+    }
+  }
+}
+
+.ant-select-focused {
+  .ant-select-selector {
+    border-color: var(--ant-primary-color) !important;
+    box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+  }
+}
+
+.ant-checkbox-checked {
+  .ant-checkbox-inner {
+    background-color: var(--ant-primary-color) !important;
+    border-color: var(--ant-primary-color) !important;
+  }
+}
+
+.ant-radio-checked {
+  .ant-radio-inner {
+    border-color: var(--ant-primary-color) !important;
+    
+    &::after {
+      background-color: var(--ant-primary-color) !important;
+    }
+  }
+}
+
+.ant-switch-checked {
+  background-color: var(--ant-primary-color) !important;
+}
+
+.ant-slider {
+  .ant-slider-track {
+    background-color: var(--ant-primary-color) !important;
+  }
+  
+  .ant-slider-handle {
+    border-color: var(--ant-primary-color) !important;
+  }
+}
+
+.ant-pagination {
+  .ant-pagination-item-active {
+    border-color: var(--ant-primary-color) !important;
+    
+    a {
+      color: var(--ant-primary-color) !important;
+    }
+  }
+  
+  .ant-pagination-item:hover {
+    border-color: var(--ant-primary-color) !important;
+    
+    a {
+      color: var(--ant-primary-color) !important;
+    }
+  }
+  
+  .ant-pagination-prev:hover,
+  .ant-pagination-next:hover {
+    .ant-pagination-item-link {
+      border-color: var(--ant-primary-color) !important;
+      color: var(--ant-primary-color) !important;
+    }
+  }
+}
+
+.ant-menu {
+  .ant-menu-item-selected {
+    background-color: var(--ant-primary-color) !important;
+    color: white !important;
+  }
+  
+  .ant-menu-item:hover {
+    color: var(--ant-primary-color) !important;
+  }
+}
+
+.ant-tabs {
+  .ant-tabs-tab-active {
+    .ant-tabs-tab-btn {
+      color: var(--ant-primary-color) !important;
+    }
+  }
+  
+  .ant-tabs-ink-bar {
+    background-color: var(--ant-primary-color) !important;
+  }
+}
+
+.ant-steps {
+  .ant-steps-item-process {
+    .ant-steps-item-icon {
+      background-color: var(--ant-primary-color) !important;
+      border-color: var(--ant-primary-color) !important;
+    }
+  }
+  
+  .ant-steps-item-finish {
+    .ant-steps-item-icon {
+      border-color: var(--ant-primary-color) !important;
+      
+      .ant-steps-icon {
+        color: var(--ant-primary-color) !important;
+      }
+    }
+  }
+}
+
+.ant-tree {
+  .ant-tree-node-selected {
+    background-color: var(--ant-primary-color-outline) !important;
+  }
+  
+  .ant-tree-node-content-wrapper:hover {
+    background-color: rgba(219, 0, 17, 0.1) !important;
+  }
+}
+
+.ant-dropdown-menu-item:hover {
+  background-color: rgba(219, 0, 17, 0.1) !important;
+}
+
+.ant-message {
+  .ant-message-notice-content {
+    .ant-message-success {
+      .anticon {
+        color: var(--ant-success-color) !important;
+      }
+    }
+    
+    .ant-message-error {
+      .anticon {
+        color: var(--ant-error-color) !important;
+      }
+    }
+    
+    .ant-message-warning {
+      .anticon {
+        color: var(--ant-warning-color) !important;
+      }
+    }
+    
+    .ant-message-info {
+      .anticon {
+        color: var(--ant-info-color) !important;
+      }
+    }
+  }
+} 

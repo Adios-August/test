@@ -1,0 +1,205 @@
+/* 全局主题变量 */
+:root {
+  --ant-primary-color: #db0011;
+  --ant-primary-color-hover: #ff1a1a;
+  --ant-primary-color-active: #b30000;
+  --ant-primary-color-outline: rgba(219, 0, 17, 0.2);
+  --ant-success-color: #52c41a;
+  --ant-warning-color: #faad14;
+  --ant-error-color: #ff4d4f;
+  --ant-info-color: #db0011;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 500;
+  background-color: #e9f0fb;
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  background-color: #e9f0fb;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+a {
+  color: #1890ff;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #40a9ff;
+}
+
+::selection {
+  background: #1890ff;
+  color: white;
+}
+
+
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+
+.ml-0 { margin-left: 0; }
+.ml-1 { margin-left: 8px; }
+.ml-2 { margin-left: 16px; }
+.ml-3 { margin-left: 24px; }
+
+.mr-0 { margin-right: 0; }
+.mr-1 { margin-right: 8px; }
+.mr-2 { margin-right: 16px; }
+.mr-3 { margin-right: 24px; }
+
+.p-0 { padding: 0; }
+.p-1 { padding: 8px; }
+.p-2 { padding: 16px; }
+.p-3 { padding: 24px; }
+
+@media (max-width: 768px) {
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .hidden-desktop {
+    display: none !important;
+}
+}
+
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1890ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.shadow {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+.rounded {
+  border-radius: 6px;
+}
+
+.rounded-lg {
+  border-radius: 8px;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+/* 导入主题样式 */
+@import './theme/theme.scss';
+
+/* 强制覆盖Ant Design输入框样式 */
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:hover {
+  border-color: var(--ant-primary-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:focus,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:focus-within {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:hover {
+  border-color: var(--ant-primary-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:focus,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:focus-within {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined.ant-input-affix-wrapper-focused {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
+}

@@ -1,0 +1,169 @@
+.layout-container {
+  min-height: 100vh;
+}
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: #101010;
+  padding: 0;
+  height: 64px;
+  line-height: 64px;
+  width: 100vw;
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 24px;
+
+    .header-title {
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+
+      .logo {
+        color: #ffffff;
+        font-size: 20px;
+        font-weight: 600;
+      }
+    }
+
+    .header-menu {
+      flex: 1;
+      display: flex;
+      justify-content: flex-start;
+
+      .ant-menu {
+        border-bottom: none;
+        font-size: 16px;
+        background: transparent;
+        color: #ffffff;
+        
+      
+
+        .ant-menu-item {
+          color: #ffffff;
+          transition: color 0.3s ease;
+          border: none;
+          outline: none;
+
+          &:hover {
+            color: var(--ant-primary-color) !important;
+            background: transparent !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            
+            // 备用颜色，以防CSS变量未加载
+            color: #db0011 !important;
+          }
+
+          &.ant-menu-item-selected {
+            color: var(--ant-primary-color) !important;
+            background: transparent !important;
+            border: none !important;
+            border-bottom: 2px solid var(--ant-primary-color) !important;
+            outline: none !important;
+            box-shadow: none !important;
+            
+            // 备用颜色，以防CSS变量未加载
+            color: #db0011 !important;
+            border-bottom-color: #db0011 !important;
+          }
+
+          &:focus {
+            border: none;
+            outline: none;
+            box-shadow: none;
+          }
+        }
+
+        .ant-menu-submenu-title {
+          color: #ffffff;
+          transition: color 0.3s ease;
+          border: none;
+          outline: none;
+
+          &:hover {
+            color: var(--ant-primary-color) !important;
+            background: transparent !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            
+            // 备用颜色，以防CSS变量未加载
+            color: #db0011 !important;
+          }
+
+          &:focus {
+            border: none;
+            outline: none;
+            box-shadow: none;
+          }
+        }
+      }
+    }
+
+    .header-user {
+      min-width: 200px;
+      display: flex;
+      justify-content: flex-end;
+
+      .user-info {
+        color: #ffffff;
+        cursor: pointer;
+        transition: color 0.3s ease;
+
+        &:hover {
+          color: var(--ant-primary-color) !important;
+          
+          // 备用颜色，以防CSS变量未加载
+          color: #db0011 !important;
+        }
+      }
+    }
+  }
+}
+
+.main-layout {
+  margin-top: 64px;
+  min-height: calc(100vh - 64px);
+  background-color: #e9f0fb;
+}
+
+.content-layout {
+  flex: 1;
+  margin-left: 0;
+  transition: margin-left 0.2s ease;
+  background: #e9f0fb;
+
+  &.collapsed {
+    margin-left: 0;
+  }
+
+  &.no-sidebar {
+    margin-left: 0;
+  }
+
+  .content {
+    padding: 24px;
+    min-height: calc(100vh - 64px);
+  }
+}
+
+@media (max-width: 768px) {
+  .main-layout {
+    .content-layout {
+      margin-left: 0;
+      margin: 64px 8px 8px 8px;
+
+      .content {
+        padding: 16px;
+      }
+    }
+  }
+}
