@@ -8,7 +8,7 @@
   left: 0;
   right: 0;
   z-index: 1000;
-  background: #101010;
+  background: #000000;
   padding: 0;
   height: 64px;
   line-height: 64px;
@@ -24,18 +24,32 @@
       min-width: 200px;
       display: flex;
       align-items: center;
+      gap: 8px;
+
+      .header-logo {
+        height: 20px;
+        width: auto;
+        object-fit: contain;
+        margin-right: 8px;
+       
+      }
 
       .logo {
         color: #ffffff;
         font-size: 20px;
         font-weight: 600;
+        padding-right: 20px;
+         border-right: 1px solid #fff;
       }
     }
 
     .header-menu {
+      margin-left: 40px;
       flex: 1;
       display: flex;
       justify-content: flex-start;
+
+     
 
       .ant-menu {
         border-bottom: none;
@@ -43,13 +57,14 @@
         background: transparent;
         color: #ffffff;
         
-      
+        gap: 20px;
 
         .ant-menu-item {
           color: #ffffff;
           transition: color 0.3s ease;
           border: none;
           outline: none;
+         
 
           &:hover {
             color: var(--ant-primary-color) !important;

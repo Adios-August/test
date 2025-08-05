@@ -15,6 +15,7 @@ import {
   Avatar,
   Space,
 } from "antd";
+import { useNavigate } from "react-router-dom";
 import {
   SearchOutlined,
   FileTextOutlined,
@@ -39,6 +40,7 @@ const { Sider, Content } = Layout;
 const { Search } = Input;
 
 const Knowledge = () => {
+  const navigate = useNavigate();
   const [searchCurrentPage, setSearchCurrentPage] = useState(1); // 搜索结果分页
   const [currentPdf, setCurrentPdf] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -176,6 +178,10 @@ const Knowledge = () => {
     setPdfLoading(false);
   };
 
+  const handleResultClick = (item) => {
+    navigate(`/knowledge/${item.id}`);
+  };
+
   return (
     <Layout className="knowledge-layout">
       {/* 顶部搜索栏 */}
@@ -287,6 +293,8 @@ const Knowledge = () => {
               dataSource={searchResults.slice((searchCurrentPage - 1) * 3, searchCurrentPage * 3)}
               renderItem={(item) => (
                 <List.Item
+                  onClick={() => handleResultClick(item)}
+                  style={{ cursor: 'pointer' }}
                   actions={[
                     <Button type="text" icon={<EyeOutlined />} size="small" />,
                     <Button type="text" icon={<DownloadOutlined />} size="small" />,
@@ -314,7 +322,10 @@ const Knowledge = () => {
                 onChange={setSearchCurrentPage}
                 showSizeChanger={false}
                 showQuickJumper={false}
-                showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
+                showPrevNextJumpers={true}
+                showLessItems={true}
+                prevIcon="上一页"
+                nextIcon="下一页"
               />
             </div>
           </div>
@@ -329,20 +340,15 @@ const Knowledge = () => {
           <div className="sources-content">
             {displayedFiles.map((file) => (
               <div key={file.id}>
-                <Card className="source-card" size="small">
+                <Card 
+                  className="source-card" 
+                  size="small"
+                  onClick={() => handlePdfPreview(file.path, file.id)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="source-file">
                     <FilePdfOutlined className="file-icon" />
                     <span className="file-name">{file.title}</span>
-                    <div className="file-actions">
-                      <Button
-                        type="text"
-                        icon={<EyeOutlined />}
-                        size="small"
-                        onClick={() => handlePdfPreview(file.path, file.id)}
-                        title="预览"
-                      />
-                      <Button type="text" icon={<DownloadOutlined />} size="small" title="下载" />
-                    </div>
                   </div>
                 </Card>
 

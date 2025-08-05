@@ -9,6 +9,7 @@ import {
 import "./Layout.scss";
 
 const { Header, Content } = Layout;
+import Logo from "../assets/image/logo.png";
 
 const headerMenuItems = [
   { key: "/", label: "首页" },
@@ -37,6 +38,7 @@ const LayoutComponent = () => {
       <Header className="header">
         <div className="header-content">
           <div className="header-title">
+            <img src={Logo} alt="Logo" className="header-logo" />
             <div className="logo">SMART SEARCH</div>
           </div>
           <div className="header-menu">

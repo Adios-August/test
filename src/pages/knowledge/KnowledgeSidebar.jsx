@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
-import { Layout, Tree, Button } from 'antd';
+import { Layout, Menu, Button } from 'antd';
 import {
-  StarOutlined,
-  ShopOutlined,
-  FileOutlined,
   LeftOutlined,
   RightOutlined,
 } from '@ant-design/icons';
 import './KnowledgeSidebar.scss';
 
 const { Sider } = Layout;
+const { SubMenu } = Menu;
 
 const KnowledgeSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const [expandedKeys, setExpandedKeys] = useState([
+  const [selectedKeys, setSelectedKeys] = useState([]);
+  const [openKeys, setOpenKeys] = useState([
     "product-info", 
     "deposit", 
     "loan-services", 
@@ -21,105 +20,127 @@ const KnowledgeSidebar = () => {
     "digital-banking"
   ]);
 
-  const treeData = [
+  const menuItems = [
     {
-      title: "IWS",
       key: "iws",
-      icon: <StarOutlined style={{ color: "#faad14" }} />,
+      label: "IWS",
     },
     {
-      title: "Product Information",
       key: "product-info",
+      label: "Product Information",
       children: [
-        { title: "Fund", key: "fund", icon: <FileOutlined /> },
-        { title: "Investment", key: "investment", icon: <FileOutlined /> },
-        { title: "Insurance", key: "insurance", icon: <FileOutlined /> },
-        { title: "Credit", key: "credit", icon: <FileOutlined /> },
+        { key: "fund", label: "Fund" },
+        { key: "investment", label: "Investment" },
+        { key: "insurance", label: "Insurance" },
+        { key: "credit", label: "Credit" },
       ],
     },
     {
-      title: "Retail Banking",
       key: "retail-banking",
-      icon: <ShopOutlined style={{ color: "#1890ff" }} />,
+      label: "Retail Banking",
     },
     {
-      title: "Deposit",
       key: "deposit",
+      label: "Deposit",
       children: [
-        { title: "7月存款礼包", key: "deposit-july", icon: <FileOutlined /> },
-        { title: "定期存款", key: "fixed-deposit", icon: <FileOutlined /> },
-        { title: "活期存款", key: "current-deposit", icon: <FileOutlined /> },
-        { title: "通知存款", key: "notice-deposit", icon: <FileOutlined /> },
+        { key: "deposit-july", label: "7月存款礼包" },
+        { key: "fixed-deposit", label: "定期存款" },
+        { key: "current-deposit", label: "活期存款" },
+        { key: "notice-deposit", label: "通知存款" },
       ],
     },
     {
-      title: "Loan Services",
       key: "loan-services",
+      label: "Loan Services",
       children: [
-        { title: "个人贷款", key: "personal-loan", icon: <FileOutlined /> },
-        { title: "房贷", key: "mortgage", icon: <FileOutlined /> },
-        { title: "车贷", key: "car-loan", icon: <FileOutlined /> },
-        { title: "企业贷款", key: "business-loan", icon: <FileOutlined /> },
+        { key: "personal-loan", label: "个人贷款" },
+        { key: "mortgage", label: "房贷" },
+        { key: "car-loan", label: "车贷" },
+        { key: "business-loan", label: "企业贷款" },
       ],
     },
     {
-      title: "Investment Products",
       key: "investment-products",
+      label: "Investment Products",
       children: [
-        { title: "基金产品", key: "funds", icon: <FileOutlined /> },
-        { title: "理财产品", key: "wealth-management", icon: <FileOutlined /> },
-        { title: "股票投资", key: "stock-investment", icon: <FileOutlined /> },
-        { title: "债券投资", key: "bond-investment", icon: <FileOutlined /> },
+        { key: "funds", label: "基金产品" },
+        { key: "wealth-management", label: "理财产品" },
+        { key: "stock-investment", label: "股票投资" },
+        { key: "bond-investment", label: "债券投资" },
       ],
     },
     {
-      title: "Digital Banking",
       key: "digital-banking",
+      label: "Digital Banking",
       children: [
-        { title: "移动银行", key: "mobile-banking", icon: <FileOutlined /> },
-        { title: "网上银行", key: "online-banking", icon: <FileOutlined /> },
-        { title: "电子支付", key: "e-payment", icon: <FileOutlined /> },
+        { key: "mobile-banking", label: "移动银行" },
+        { key: "online-banking", label: "网上银行" },
+        { key: "e-payment", label: "电子支付" },
       ],
     },
   ];
 
-  const handleTreeSelect = (selectedKeys, info) => {
-    console.log("选择分类:", selectedKeys, info);
+  const handleMenuSelect = ({ key, keyPath }) => {
+    console.log("选择菜单项:", key, keyPath);
+    setSelectedKeys([key]);
   };
 
-  const handleTreeExpand = (expandedKeys) => {
-    console.log('展开/折叠状态变化:', expandedKeys);
-    setExpandedKeys(expandedKeys);
+  const handleMenuOpenChange = (keys) => {
+    console.log('展开/折叠状态变化:', keys);
+    setOpenKeys(keys);
   };
 
   return (
-    <Sider
+   <div className="knowledge-sidebar-container">
+     <Sider
       className="knowledge-sidebar"
       width={300}
       collapsed={collapsed}
       collapsible
       trigger={null}
     >
-      <div className="sidebar-toggle">
+   
+
+      <div className="sidebar-content">
+        <Menu
+          className="category-tree"
+          mode="inline"
+          openKeys={openKeys}
+          selectedKeys={selectedKeys}
+          onOpenChange={handleMenuOpenChange}
+          onSelect={handleMenuSelect}
+          style={{ borderRight: 'none' }}
+        >
+          {menuItems.map((item) => {
+            if (item.children) {
+              return (
+                <SubMenu key={item.key} title={item.label}>
+                  {item.children.map((subItem) => (
+                    <Menu.Item key={subItem.key}>
+                      {subItem.label}
+                    </Menu.Item>
+                  ))}
+                </SubMenu>
+              );
+            } else {
+              return (
+                <Menu.Item key={item.key}>
+                  {item.label}
+                </Menu.Item>
+              );
+            }
+          })}
+        </Menu>
+      </div>
+    </Sider>
+    <div className="sidebar-toggle">
         <Button
           type="text"
           icon={collapsed ? <RightOutlined /> : <LeftOutlined />}
           onClick={() => setCollapsed(!collapsed)}
         />
-      </div>
-
-      <div className="sidebar-content">
-        <Tree
-          className="category-tree"
-          treeData={treeData}
-          expandedKeys={expandedKeys}
-          onExpand={handleTreeExpand}
-          onSelect={handleTreeSelect}
-          showIcon
-          blockNode
-        />
-      </div>
-    </Sider>
+      </div>   
+   </div>
   );
 };
 

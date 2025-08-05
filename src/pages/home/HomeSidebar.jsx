@@ -1,54 +1,49 @@
 import React, { useState } from 'react';
-import { Layout, Tree } from 'antd';
-import {
-  StarOutlined,
-  ShopOutlined,
-  FileOutlined,
-  DollarOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { Layout, Menu } from 'antd';
+
 import './HomeSidebar.scss';
 
 const { Sider } = Layout;
+const { SubMenu } = Menu;
 
 const HomeSidebar = () => {
-  const [expandedKeys, setExpandedKeys] = useState(["iws", "product-solution"]);
+  const [selectedKeys, setSelectedKeys] = useState([]);
+  const [openKeys, setOpenKeys] = useState(["iws", "product-solution"]);
 
-  const treeData = [
+  const menuItems = [
     {
-      title: "IWS",
       key: "iws",
-      icon: <StarOutlined style={{ color: "#faad14" }} />,
+      label: "IWS",
       children: [
         {
-          title: "Product Solution",
           key: "product-solution",
-          icon: <ShopOutlined style={{ color: "#52c41a" }} />,
+          label: "Product Solution",
           children: [
-            { title: "Fund", key: "fund", icon: <FileOutlined /> },
-            { title: "WMP", key: "wmp", icon: <FileOutlined /> },
-            { title: "ALTs", key: "alts", icon: <FileOutlined /> },
-            { title: "FX/DCI/EYI", key: "fx-dci-eyi", icon: <FileOutlined /> },
-            { title: "Family Trust", key: "family-trust", icon: <FileOutlined /> },
-            { title: "Product Information", key: "product-info", icon: <FileOutlined /> },
-            { title: "Sales Process and Platforms", key: "sales-process", icon: <FileOutlined /> },
-            { title: "Insurance", key: "insurance", icon: <FileOutlined /> },
+            { key: "fund", label: "Fund" },
+            { key: "wmp", label: "WMP" },
+            { key: "alts", label: "ALTs" },
+            { key: "fx-dci-eyi", label: "FX/DCI/EYI" },
+            { key: "family-trust", label: "Family Trust" },
+            { key: "product-info", label: "Product Information" },
+            { key: "sales-process", label: "Sales Process and Platforms" },
+            { key: "insurance", label: "Insurance" },
           ],
         },
-        { title: "Wealth Insight", key: "wealth-insight", icon: <DollarOutlined style={{ color: "#1890ff" }} /> },
-        { title: "Distribution", key: "distribution", icon: <ShopOutlined style={{ color: "#1890ff" }} /> },
-        { title: "Proposition", key: "proposition", icon: <UserOutlined style={{ color: "#52c41a" }} /> },
+        { key: "wealth-insight", label: "Wealth Insight" },
+        { key: "distribution", label: "Distribution" },
+        { key: "proposition", label: "Proposition" },
       ],
     },
   ];
 
-  const handleTreeSelect = (selectedKeys, info) => {
-    console.log("选择分类:", selectedKeys, info);
+  const handleMenuSelect = ({ key, keyPath }) => {
+    console.log("选择菜单项:", key, keyPath);
+    setSelectedKeys([key]);
   };
 
-  const handleTreeExpand = (expandedKeys) => {
-    console.log('展开/折叠状态变化:', expandedKeys);
-    setExpandedKeys(expandedKeys);
+  const handleMenuOpenChange = (keys) => {
+    console.log('展开/折叠状态变化:', keys);
+    setOpenKeys(keys);
   };
 
   return (
@@ -59,15 +54,49 @@ const HomeSidebar = () => {
       <div className="sidebar-content">
         <div className="sidebar-title">全部分类</div>
 
-        <Tree
+        <Menu
           className="category-tree"
-          treeData={treeData}
-          expandedKeys={expandedKeys}
-          onExpand={handleTreeExpand}
-          onSelect={handleTreeSelect}
-          showIcon
-          blockNode
-        />
+          mode="inline"
+          openKeys={openKeys}
+          selectedKeys={selectedKeys}
+          onOpenChange={handleMenuOpenChange}
+          onSelect={handleMenuSelect}
+          style={{ borderRight: 'none' }}
+        >
+          {menuItems.map((item) => {
+            if (item.children) {
+              return (
+                <SubMenu key={item.key} title={item.label}>
+                  {item.children.map((subItem) => {
+                    if (subItem.children) {
+                      return (
+                        <SubMenu key={subItem.key} title={subItem.label}>
+                          {subItem.children.map((subSubItem) => (
+                            <Menu.Item key={subSubItem.key}>
+                              {subSubItem.label}
+                            </Menu.Item>
+                          ))}
+                        </SubMenu>
+                      );
+                    } else {
+                      return (
+                        <Menu.Item key={subItem.key}>
+                          {subItem.label}
+                        </Menu.Item>
+                      );
+                    }
+                  })}
+                </SubMenu>
+              );
+            } else {
+              return (
+                <Menu.Item key={item.key}>
+                  {item.label}
+                </Menu.Item>
+              );
+            }
+          })}
+        </Menu>
       </div>
     </Sider>
   );

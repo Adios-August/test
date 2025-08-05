@@ -1,5 +1,22 @@
 // 主题变量已在 index.css 中定义
 
+// 侧边栏折叠开关按钮样式覆盖
+.sidebar-toggle {
+  .ant-btn {
+    &:hover {
+      color: var(--ant-primary-color) !important;
+      border-color: var(--ant-primary-color) !important;
+      background: #ffffff !important;
+    }
+    
+    &:focus {
+      color: var(--ant-primary-color) !important;
+      border-color: var(--ant-primary-color) !important;
+      background: #ffffff !important;
+    }
+  }
+}
+
 // Ant Design 组件主题覆盖
 .ant-btn {
   &.ant-btn-primary {
@@ -185,6 +202,7 @@
   }
 }
 
+// Menu 组件主题覆盖
 .ant-menu {
   .ant-menu-item-selected {
     background-color: var(--ant-primary-color) !important;
@@ -194,6 +212,35 @@
   .ant-menu-item:hover {
     color: var(--ant-primary-color) !important;
   }
+
+  .ant-menu-submenu-selected > .ant-menu-submenu-title {
+    color: var(--ant-primary-color) !important;
+  }
+
+  .ant-menu-submenu-title:hover {
+    color: var(--ant-primary-color) !important;
+  }
+}
+
+// 更高优先级的 Menu 样式覆盖
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: var(--ant-primary-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-menu-light > .ant-menu .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: var(--ant-primary-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-menu-light .ant-menu-item-selected {
+  color:white !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-menu-light .ant-menu-item:hover {
+  color: var(--ant-primary-color) !important;
+}
+
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-menu-light .ant-menu-submenu-title:hover {
+  color: var(--ant-primary-color) !important;
 }
 
 .ant-tabs {

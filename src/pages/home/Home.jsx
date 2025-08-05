@@ -15,7 +15,7 @@ import {
   ArrowUpOutlined,
 } from "@ant-design/icons";
 import HomeSidebar from "./HomeSidebar";
-import homeBanner from "../../assets/home_banner.png";
+import homeBanner from "../../assets/image/home_banner.png";
 import "./Home.scss";
 
 const { Content } = Layout;

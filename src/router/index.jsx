@@ -4,6 +4,7 @@ import Home from '../pages/home/Home';
 import NotFound from '../pages/common/NotFound';
 import Developing from '../components/Developing';
 import Knowledge from '../pages/knowledge/Knowledge';
+import KnowledgeDetail from '../pages/knowledge/KnowledgeDetail';
 
 const router = createBrowserRouter([
   {
@@ -18,6 +19,10 @@ const router = createBrowserRouter([
       {
         path: '/knowledge',
         element: <Knowledge />,
+      },
+      {
+        path: '/knowledge/:id',
+        element: <KnowledgeDetail />,
       },
       {
         path: '/knowledge-admin',

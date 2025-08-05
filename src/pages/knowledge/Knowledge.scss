@@ -13,6 +13,7 @@
 }
 
 .knowledge-main-layout {
+ 
   display: flex;
   flex: 1;
   overflow: hidden;
@@ -300,9 +301,17 @@
       .ant-list-item {
         padding: 12px 0;
         border-bottom: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
 
         &:last-child {
           border-bottom: none;
+        }
+
+        &:hover {
+          background-color: #f9f9f9;
+          padding-left: 8px;
+          padding-right: 8px;
+          border-radius: 6px;
         }
 
         .file-icon {
@@ -379,11 +388,16 @@
       margin-bottom: 12px;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+
+      &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+      }
 
       .source-file {
         display: flex;
         align-items: center;
-        justify-content: space-between;
 
         .file-icon {
           color: var(--ant-primary-color);
@@ -393,11 +407,6 @@
         .file-name {
           flex: 1;
           font-size: 14px;
-        }
-
-        .file-actions {
-          display: flex;
-          gap: 4px;
         }
       }
     }
