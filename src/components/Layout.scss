@@ -128,6 +128,18 @@
       display: flex;
       justify-content: flex-end;
 
+      .ant-btn-text{
+        color: #fff !important;
+        :hover{
+          color: var(--ant-primary-color) !important;
+      
+        }
+      }
+
+      .wpd-button{
+        padding: 0;
+      }
+
       .user-info {
         color: #ffffff;
         cursor: pointer;
@@ -136,7 +148,7 @@
         &:hover {
           color: var(--ant-primary-color) !important;
           
-          // 备用颜色，以防CSS变量未加载
+         
           color: #db0011 !important;
         }
       }

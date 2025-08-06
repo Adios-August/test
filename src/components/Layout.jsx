@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Layout, Menu, Button, Avatar, Space } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import {
-  UserOutlined,
-  BellOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { UserOutlined, MessageOutlined, StarOutlined } from "@ant-design/icons";
 import "./Layout.scss";
 
 const { Header, Content } = Layout;
@@ -52,12 +48,10 @@ const LayoutComponent = () => {
           </div>
           <div className="header-user">
             <Space>
-              <Button type="text" icon={<SearchOutlined />} />
-              <Button type="text" icon={<BellOutlined />} />
+              <Button type="text" icon={<MessageOutlined />} />
+              <Button type="text" icon={<StarOutlined />} />
+              <Button type="text" className="wpd-button">WPB</Button>
               <Space className="user-info">
-                <span>站内信</span>
-                <span>收藏夹</span>
-                <span>WPB</span>
                 <Avatar icon={<UserOutlined />} />
               </Space>
             </Space>
