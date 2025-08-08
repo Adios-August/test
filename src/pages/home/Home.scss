@@ -20,7 +20,7 @@
     .search-container {
       margin-bottom: 16px;
       background: #02a0bd;
-      padding: 90px 6vw 90px 35vw;
+      padding: 90px 6vw 90px 26vw;
       border-radius: 12px;
       text-align: center;
       position: relative;
@@ -30,7 +30,7 @@
       overflow: hidden;
 
       .search-content {
-        flex: 1;
+     
         z-index: 2;
         position: relative;
       }
@@ -214,8 +214,22 @@
   }
 
   .content-panels {
+    min-height: calc(100vh - 252px - 180px - 24px );
+    
+    .ant-row {
+      height: 100%;
+      min-height: calc(100vh - 252px - 180px - 24px );
+    }
+    
+    .ant-col {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
     .panel-card {
       height: 100%;
+      min-height: calc(100vh - 100px - 180px - 24px - 150px);
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       transition: all 0.3s ease;
@@ -254,6 +268,20 @@
             margin-right: 8px;
             font-size: 18px;
           }
+        }
+      }
+
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+        color: #666;
+
+        p {
+          margin-top: 12px;
+          font-size: 14px;
         }
       }
 
@@ -306,6 +334,27 @@
               }
             }
           }
+
+          .item-tags {
+            margin-top: 4px;
+            padding-left: 32px;
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+          }
+
+          .item-attachments {
+            margin-top: 4px;
+            padding-left: 32px;
+            
+            .attachment-count {
+              font-size: 12px;
+              color: #666;
+              background: #f5f5f5;
+              padding: 2px 6px;
+              border-radius: 4px;
+            }
+          }
         }
       }
 
@@ -315,6 +364,7 @@
         border-top: 1px solid #f0f0f0;
         margin-top: auto;
         flex-shrink: 0;
+        margin-bottom: 0;
 
         .ant-btn-link {
           color: var(--ant-primary-color);
@@ -353,8 +403,19 @@
     }
 
     .content-panels {
+      min-height: auto;
+      
+      .ant-row {
+        min-height: auto;
+      }
+      
+      .ant-col {
+        min-height: auto;
+      }
+      
       .panel-card {
         margin-bottom: 16px;
+        min-height: auto;
       }
     }
   }

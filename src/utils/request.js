@@ -1,10 +1,9 @@
 import axios from "axios";
 import { message } from "antd";
-import { envConfig } from "../../env.config.js";
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: envConfig.API_BASE_URL, // 使用环境配置中的API基础URL
+  baseURL: import.meta.env.VITE_API_BASE_URL, // 使用环境变量中的API基础URL
   timeout: 10000, // 请求超时时间
   headers: {
     "Content-Type": "application/json",
@@ -22,16 +21,8 @@ request.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // 添加时间戳防止缓存
-    if (config.method === "get") {
-      config.params = {
-        ...config.params,
-        _t: Date.now(),
-      };
-    }
-
     // 开发环境下打印请求信息
-    if (envConfig.DEV_MODE) {
+    if (import.meta.env.VITE_DEV_MODE === "true") {
       console.log("Request:", config.method?.toUpperCase(), config.url, config);
     }
 
@@ -50,7 +41,7 @@ request.interceptors.response.use(
     // 对响应数据做点什么
 
     // 开发环境下打印响应信息
-    if (envConfig.DEV_MODE) {
+    if (import.meta.env.VITE_DEV_MODE === "true") {
       console.log("Response:", response.config.url, response.data);
     }
 

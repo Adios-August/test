@@ -99,12 +99,7 @@ const KnowledgeDetail = () => {
 
   // 初始化标签页
   const [tabs, setTabs] = useState([
-    {
-      key: '1',
-      label: 'IWS产品方案',
-      closable: true,
-      content: documentData
-    }
+     
   ]);
 
   // 搜索列表数据
@@ -171,19 +166,30 @@ const KnowledgeDetail = () => {
     setActiveTabKey(activeKey);
   };
 
+  // 判断搜索结果项是否应该高亮
+  const isSearchResultActive = (searchItem) => {
+    // 检查当前激活的tab是否对应这个搜索结果
+    const activeTab = tabs.find(tab => tab.key === activeTabKey);
+    if (activeTab && activeTab.key === `search-${searchItem.id}`) {
+      return true;
+    }
+    return false;
+  };
+
   const handleTabEdit = (targetKey, action) => {
     if (action === 'remove') {
-      // 确保至少保留一个标签页
-      if (tabs.length <= 1) {
-        return;
-      }
-      
       const newTabs = tabs.filter(tab => tab.key !== targetKey);
       setTabs(newTabs);
       
-      // 如果关闭的是当前激活的标签页，切换到第一个标签页
-      if (targetKey === activeTabKey && newTabs.length > 0) {
-        setActiveTabKey(newTabs[0].key);
+      // 如果关闭的是当前激活的标签页
+      if (targetKey === activeTabKey) {
+        if (newTabs.length > 0) {
+          // 如果还有其他标签页，切换到第一个
+          setActiveTabKey(newTabs[0].key);
+        } else {
+          // 如果没有标签页了，清空activeTabKey
+          setActiveTabKey('');
+        }
       }
     }
   };
@@ -293,6 +299,7 @@ const KnowledgeDetail = () => {
               icon={collapsed ? <RightOutlined /> : <LeftOutlined />}
               onClick={() => setCollapsed(!collapsed)}
             />
+            {collapsed && <div className="filter-text">Filter</div>}
           </div>
         </div>
 
@@ -344,7 +351,11 @@ const KnowledgeDetail = () => {
           {/* 搜索结果列表 */}
           <div className="search-results">
             {searchResults.map((item) => (
-              <div key={item.id} className="result-item" onClick={() => addTabFromSearch(item)}>
+              <div 
+                key={item.id} 
+                className={`result-item ${isSearchResultActive(item) ? 'active' : ''}`} 
+                onClick={() => addTabFromSearch(item)}
+              >
                 <div className="result-header">
                   <span className="result-title">{item.title}</span>
                   <span className="result-date">{item.date}</span>
@@ -374,100 +385,110 @@ const KnowledgeDetail = () => {
               icon={searchCollapsed ? <RightOutlined /> : <LeftOutlined />}
               onClick={() => setSearchCollapsed(!searchCollapsed)}
             />
+            {searchCollapsed && <div className="search-text">Search</div>}
           </div>
         </div>
        
 
         <Content className="detail-content">
-          {/* 文档详情内容 */}
-          <Tabs
-            type="editable-card"
-            activeKey={activeTabKey}
-            onChange={handleTabChange}
-            onEdit={handleTabEdit}
-            className="detail-tabs"
-            hideAdd={true}
-          >
-            {tabs.map(tab => (
-              <Tabs.TabPane
-                key={tab.key}
-                tab={tab.label}
-                closable={tab.closable}
-              >
-                <div className="document-detail">
-                  {/* 文档头部信息 */}
-                  <div className="document-header">
-                    <div className="header-left">
-                      <div className="author-info">
-                        <Avatar size={32} src="https://via.placeholder.com/32" />
-                        <span className="author-name">Created by {tab.content.author}</span>
-                        <span className="date">{tab.content.date}</span>
+          {tabs.length > 0 ? (
+            /* 文档详情内容 */
+            <Tabs
+              type="editable-card"
+              activeKey={activeTabKey}
+              onChange={handleTabChange}
+              onEdit={handleTabEdit}
+              className="detail-tabs"
+              hideAdd={true}
+            >
+              {tabs.map(tab => (
+                <Tabs.TabPane
+                  key={tab.key}
+                  tab={tab.label}
+                  closable={tab.closable}
+                >
+                  <div className="document-detail">
+                    {/* 文档头部信息 */}
+                    <div className="document-header">
+                      <div className="header-left">
+                        <div className="author-info">
+                          <Avatar size={32} src="https://via.placeholder.com/32" />
+                          <span className="author-name">Created by {tab.content.author}</span>
+                          <span className="date">{tab.content.date}</span>
+                        </div>
+                        <div className="tags">
+                          {tab.content.tags.map((tag, index) => (
+                            <Tag key={index} color="red">{tag}</Tag>
+                          ))}
+                        </div>
                       </div>
-                      <div className="tags">
-                        {tab.content.tags.map((tag, index) => (
-                          <Tag key={index} color="red">{tag}</Tag>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="header-right">
-                      <Button type="text" icon={<HeartOutlined />} />
-                      <Button type="primary" icon={<HistoryOutlined />}>
-                        History
-                      </Button>
-                      <Button type="primary" icon={<TranslationOutlined />}>
-                        Translation
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* 文档内容 */}
-                  <div className="document-content">
-                    <div className="content-section">
-                      <h3>摘要</h3>
-                      <p>{tab.content.summary}</p>
-                    </div>
-
-                    <div className="content-section">
-                      <h3>基本资料</h3>
-                      <p>这里是基本资料的详细内容...</p>
-                    </div>
-
-                    <div className="content-section">
-                      <h3>流程</h3>
-                      <p>这里是流程的详细说明...</p>
-                    </div>
-
-                    <div className="content-section">
-                      <h3>常见问题与答案</h3>
-                      <p>这里是常见问题与答案的详细内容...</p>
-                    </div>
-
-                    <div className="content-section">
-                      <h3>附件</h3>
-                      <div className="attachment-list">
-                        {tab.content.attachments.map((attachment, index) => (
-                          <div key={index} className="attachment-item">
-                            <span className="attachment-icon">{attachment.icon}</span>
-                            <span className="attachment-name">{attachment.name}</span>
-                          </div>
-                        ))}
+                      <div className="header-right">
+                        <Button type="text" icon={<HeartOutlined />} />
+                        <Button type="primary" icon={<HistoryOutlined />}>
+                          History
+                        </Button>
+                        <Button type="primary" icon={<TranslationOutlined />}>
+                          Translation
+                        </Button>
                       </div>
                     </div>
 
-                    <div className="content-section">
-                      <h3>生效时间</h3>
-                      <p>{tab.content.effectiveDate}</p>
+                    {/* 文档内容 */}
+                    <div className="document-content">
+                      <div className="content-section">
+                        <h3>摘要</h3>
+                        <p>{tab.content.summary}</p>
+                      </div>
+
+                      <div className="content-section">
+                        <h3>基本资料</h3>
+                        <p>这里是基本资料的详细内容...</p>
+                      </div>
+
+                      <div className="content-section">
+                        <h3>流程</h3>
+                        <p>这里是流程的详细说明...</p>
+                      </div>
+
+                      <div className="content-section">
+                        <h3>常见问题与答案</h3>
+                        <p>这里是常见问题与答案的详细内容...</p>
+                      </div>
+
+                      <div className="content-section">
+                        <h3>附件</h3>
+                        <div className="attachment-list">
+                          {tab.content.attachments.map((attachment, index) => (
+                            <div key={index} className="attachment-item">
+                              <span className="attachment-icon">{attachment.icon}</span>
+                              <span className="attachment-name">{attachment.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="content-section">
+                        <h3>生效时间</h3>
+                        <p>{tab.content.effectiveDate}</p>
+                      </div>
+                    </div>
+
+                    {/* 文档底部 */}
+                    <div className="document-footer">
+                      <span>2/M</span>
                     </div>
                   </div>
-
-                  {/* 文档底部 */}
-                  <div className="document-footer">
-                    <span>2/M</span>
-                  </div>
-                </div>
-              </Tabs.TabPane>
-            ))}
-          </Tabs>
+                </Tabs.TabPane>
+              ))}
+            </Tabs>
+          ) : (
+            /* 空状态 */
+            <div className="empty-state">
+              <div className="empty-icon">📄</div>
+              <h3>暂无文档</h3>
+              <p>请从搜索结果中选择一个文档进行查看</p>
+            </div>
+          )}
         </Content>
       </Layout>
     </Layout>

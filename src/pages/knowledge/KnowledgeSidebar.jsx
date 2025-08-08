@@ -139,6 +139,7 @@ const KnowledgeSidebar = () => {
           icon={collapsed ? <RightOutlined /> : <LeftOutlined />}
           onClick={() => setCollapsed(!collapsed)}
         />
+        {collapsed && <div className="filter-text">Filter</div>}
       </div>   
    </div>
   );

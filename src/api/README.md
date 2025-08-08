@@ -18,13 +18,33 @@ src/api/
 
 ## 环境配置
 
-项目根目录下的 `env.config.js` 文件包含了所有环境变量配置：
+项目使用环境变量进行配置，在根目录下创建以下文件：
+
+### 开发环境 (.env.development)
+
+```bash
+VITE_API_BASE_URL=/api
+VITE_APP_TITLE=Smart Search
+VITE_APP_VERSION=1.0.0
+VITE_DEV_MODE=true
+VITE_DEBUG_MODE=true
+```
+
+### 生产环境 (.env.production)
+
+```bash
+VITE_API_BASE_URL=http://172.16.143.17:8080/api
+VITE_APP_TITLE=Smart Search
+VITE_APP_VERSION=1.0.0
+VITE_DEV_MODE=false
+VITE_DEBUG_MODE=false
+```
+
+### 使用环境变量
 
 ```javascript
-import { envConfig } from "@/env.config.js";
-
-// 使用环境配置
-console.log(envConfig.API_BASE_URL);
+// 直接使用环境变量
+console.log(import.meta.env.VITE_API_BASE_URL);
 ```
 
 ## 使用方法

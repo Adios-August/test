@@ -1,29 +1,28 @@
-import React, { useState } from "react";
-import { Layout, Card, Row, Col, Input, Button, Tag, List, Badge, Space } from "antd";
+import React, { useState, useEffect } from "react";
+import { Layout, Card, Row, Col, Input, Button, Tag, List, Spin, message } from "antd";
 import {
-  SearchOutlined,
   EyeOutlined,
-  CalendarOutlined,
+  TagOutlined,
   DownloadOutlined,
-  FireOutlined,
   ClockCircleOutlined,
   FileTextOutlined,
-  HeartOutlined,
   FileExcelOutlined,
   FilePdfOutlined,
+  HeartOutlined,
   MoreOutlined,
-  ArrowUpOutlined,
 } from "@ant-design/icons";
 import HomeSidebar from "./HomeSidebar";
 import homeBanner from "../../assets/image/home_banner.png";
+import { homeAPI } from "../../api";
 import "./Home.scss";
 
 const { Content } = Layout;
 
-const { Search } = Input;
-
 const Home = () => {
-  const [searchValue, setSearchValue] = useState("");
+  const [popularKnowledge, setPopularKnowledge] = useState([]);
+  const [latestKnowledgeData, setLatestKnowledgeData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [latestLoading, setLatestLoading] = useState(false);
 
   const hotTags = [
     { name: "热门标签" },
@@ -33,43 +32,61 @@ const Home = () => {
     { name: "信用卡问题" },
   ];
 
-  const knowledgeRecommendations = [
-    { title: "QDUT Tools for RM(20250702)", views: 156, icon: <EyeOutlined /> },
-    { title: "QDUT每日价格-20250703", views: 150, icon: <EyeOutlined /> },
-    { title: "MRF产品资质培训", icon: <FileTextOutlined /> },
-    { title: "LUT产品资质培训", icon: <FileTextOutlined /> },
-    { title: "Market Tracker", icon: <FileTextOutlined /> },
-    { title: "QDII top AUM fund", icon: <FileTextOutlined /> },
-    { title: "每周投资晨会", icon: <FileTextOutlined /> },
-  ];
-
-  const latestKnowledge = [
-    { title: "Wealth Sales 7月视频精讲", date: "2025/7/23", icon: <ArrowUpOutlined style={{ color: "#52c41a" }} /> },
-    { title: "产品图谱", date: "2025/3/20", icon: <ArrowUpOutlined style={{ color: "#52c41a" }} /> },
-    { title: "QDUT每日价格", icon: <FileTextOutlined /> },
-    { title: "MRF产品资质培训", icon: <FileTextOutlined /> },
-    { title: "Alts 另类策略产品台账", icon: <FileTextOutlined /> },
-    { title: "汇丰晋信基金材料", icon: <FileTextOutlined /> },
-    { title: "外贸信托私享", icon: <FileTextOutlined /> },
-  ];
-
   const hottestResources = [
-    { title: "每日基金价格.xlsx", downloads: 205, icon: <FileExcelOutlined style={{ color: "#52c41a" }} /> },
-    { title: "产品推介.PDF", downloads: 200, icon: <FilePdfOutlined style={{ color: "#ff4d4f" }} /> },
-    { title: "", downloads: null, icon: null },
-    { title: "", downloads: null, icon: null },
-    { title: "", downloads: null, icon: null },
-    { title: "", downloads: null, icon: null },
-    { title: "", downloads: null, icon: null },
+    { title: "每日基金价格.xlsx", downloads: 205, icon: <DownloadOutlined  /> },
+    { title: "产品推介.PDF", downloads: 200, icon: <DownloadOutlined /> },
+    { title: "投资策略报告.docx", downloads: 180, icon: <DownloadOutlined /> },
+    { title: "市场分析数据.xlsx", downloads: 165, icon: <DownloadOutlined /> },
+    { title: "产品手册.PDF", downloads: 150, icon: <DownloadOutlined  /> },
   ];
 
-  const handleSearch = (value) => {
-    console.log("搜索:", value);
+
+
+
+
+  // 获取热门知识列表
+  const fetchPopularKnowledge = async () => {
+    setLoading(true);
+    try {
+      const response = await homeAPI.getPopularKnowledge(10);
+      if (response.code === 200) {
+        setPopularKnowledge(response.data || []);
+      } else {
+        message.error(response.message || '获取热门知识失败');
+      }
+    } catch (error) {
+      console.error('获取热门知识失败:', error);
+      message.error('获取热门知识失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleTagClick = (tag) => {
-    console.log("点击标签:", tag);
+  // 获取最新知识列表
+  const fetchLatestKnowledge = async () => {
+    setLatestLoading(true);
+    try {
+      const response = await homeAPI.getLatestKnowledge(10);
+      if (response.code === 200) {
+        setLatestKnowledgeData(response.data || []);
+      } else {
+        message.error(response.message || '获取最新知识失败');
+      }
+    } catch (error) {
+      console.error('获取最新知识失败:', error);
+      message.error('获取最新知识失败，请稍后重试');
+    } finally {
+      setLatestLoading(false);
+    }
   };
+
+  // 组件挂载时获取数据
+  useEffect(() => {
+    fetchPopularKnowledge();
+    fetchLatestKnowledge();
+  }, []);
+
+
 
   return (
     <Layout className="home-layout">
@@ -106,7 +123,9 @@ const Home = () => {
 
                 <div className="hot-tags-section">
                   <div className="hot-tags-header">
-                    <span className="hot-tags-title">热门标签</span>
+                    <span className="hot-tags-title">
+                    <TagOutlined />
+                      热门标签</span>
                     {hotTags.map((tag, index) => (
                       <Tag key={index} className="hot-tag" onClick={() => handleTagClick(tag)}>
                         {tag.name}
@@ -133,23 +152,37 @@ const Home = () => {
                   </div>
                 </div>
 
-                <List
-                  className="panel-list"
-                  dataSource={knowledgeRecommendations}
-                  renderItem={(item, index) => (
-                    <List.Item className="panel-item">
-                      <div className="item-content">
-                        <span className="item-number">{index + 1}</span>
-                        <span className="item-title">{item.title}</span>
-                        {item.views && (
+                {loading ? (
+                  <div className="loading-container">
+                    <Spin size="large" />
+                    <p>加载中...</p>
+                  </div>
+                ) : (
+                  <List
+                    className="panel-list"
+                    dataSource={popularKnowledge}
+                    renderItem={(item, index) => (
+                      <List.Item className="panel-item">
+                        <div className="item-content">
+                          <span className="item-number">{index + 1}</span>
+                          <span className="item-title">{item.name}</span>
                           <span className="item-meta">
-                            {item.icon} {item.views}
+                            <EyeOutlined /> {item.searchCount || 0}
                           </span>
+                        </div>
+                        {item.tags && item.tags.length > 0 && (
+                          <div className="item-tags">
+                            {item.tags.slice(0, 2).map((tag, tagIndex) => (
+                              <Tag key={tagIndex} size="small" color="blue">
+                                {tag}
+                              </Tag>
+                            ))}
+                          </div>
                         )}
-                      </div>
-                    </List.Item>
-                  )}
-                />
+                      </List.Item>
+                    )}
+                  />
+                )}
 
                 <div className="panel-footer">
                   <Button type="link" icon={<MoreOutlined />}>
@@ -168,23 +201,37 @@ const Home = () => {
                   </div>
                 </div>
 
-                <List
-                  className="panel-list"
-                  dataSource={latestKnowledge}
-                  renderItem={(item, index) => (
-                    <List.Item className="panel-item">
-                      <div className="item-content">
-                        <span className="item-number">{index + 1}</span>
-                        <span className="item-title">{item.title}</span>
-                        {item.date && (
+                {latestLoading ? (
+                  <div className="loading-container">
+                    <Spin size="large" />
+                    <p>加载中...</p>
+                  </div>
+                ) : (
+                  <List
+                    className="panel-list"
+                    dataSource={latestKnowledgeData}
+                    renderItem={(item, index) => (
+                      <List.Item className="panel-item">
+                        <div className="item-content">
+                          <span className="item-number">{index + 1}</span>
+                          <span className="item-title">{item.name}</span>
                           <span className="item-meta">
-                            {item.icon} {item.date}
+                            <ClockCircleOutlined /> {new Date(item.createdTime).toLocaleDateString()}
                           </span>
+                        </div>
+                        {item.tags && item.tags.length > 0 && (
+                          <div className="item-tags">
+                            {item.tags.slice(0, 2).map((tag, tagIndex) => (
+                              <Tag key={tagIndex} size="small" color="green">
+                                {tag}
+                              </Tag>
+                            ))}
+                          </div>
                         )}
-                      </div>
-                    </List.Item>
-                  )}
-                />
+                      </List.Item>
+                    )}
+                  />
+                )}
 
                 <div className="panel-footer">
                   <Button type="link" icon={<MoreOutlined />}>
@@ -205,7 +252,7 @@ const Home = () => {
 
                 <List
                   className="panel-list"
-                  dataSource={hottestResources.filter((item) => item.title)}
+                  dataSource={hottestResources}
                   renderItem={(item, index) => (
                     <List.Item className="panel-item">
                       <div className="item-content">
@@ -228,6 +275,7 @@ const Home = () => {
                 </div>
               </Card>
             </Col>
+
           </Row>
         </div>
       </Content>

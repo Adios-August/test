@@ -15,6 +15,42 @@ export const homeExample = {
       throw error;
     }
   },
+
+  // 获取热门知识列表
+  async getPopularKnowledge(limit = 10) {
+    try {
+      const result = await homeAPI.getPopularKnowledge(limit);
+      console.log("热门知识列表:", result);
+      return result;
+    } catch (error) {
+      console.error("获取热门知识失败:", error);
+      throw error;
+    }
+  },
+
+  // 获取最新知识列表
+  async getLatestKnowledge(limit = 10) {
+    try {
+      const result = await homeAPI.getLatestKnowledge(limit);
+      console.log("最新知识列表:", result);
+      return result;
+    } catch (error) {
+      console.error("获取最新知识失败:", error);
+      throw error;
+    }
+  },
+
+  // 获取分类树
+  async getCategoryTree() {
+    try {
+      const result = await homeAPI.getCategoryTree();
+      console.log("分类树:", result);
+      return result;
+    } catch (error) {
+      console.error("获取分类树失败:", error);
+      throw error;
+    }
+  },
 };
 
 // 知识库API使用示例

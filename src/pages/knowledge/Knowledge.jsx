@@ -332,7 +332,7 @@ const Knowledge = () => {
         </Content>
 
         {/* 右侧Sources侧边栏 */}
-        <Sider className="sources-sider" width={320}>
+        <Sider className="sources-sider" width={420}>
           <div className="sources-header">
             <h3>Sources</h3>
           </div>

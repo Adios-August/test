@@ -20,7 +20,7 @@
   height: calc(100vh - 64px);
   box-sizing: border-box;
   align-items: flex-start;
-  gap: 16px;
+ 
 }
 
 .knowledge-header {
@@ -356,11 +356,11 @@
   background: white;
   border-left: 1px solid #f0f0f0;
   padding: 16px;
-  margin: 16px 16px 16px 16px;
+  margin: 16px 0px 16px 0px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  width: 320px;
+  width: 420px;
   flex-shrink: 0;
   border-radius: 12px !important;
   height: calc(100vh - 198px);
@@ -564,7 +564,7 @@
 // 响应式设计
 @media (max-width: 1200px) {
   .sources-sider {
-    width: 280px !important;
+    width: 380px !important;
   }
 }
 
