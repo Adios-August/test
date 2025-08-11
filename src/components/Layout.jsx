@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, Button, Avatar, Space } from "antd";
+import { Layout, Menu, Button, Avatar, Space, Dropdown, message } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { UserOutlined, MessageOutlined, StarOutlined } from "@ant-design/icons";
+import { UserOutlined, MessageOutlined, StarOutlined, LogoutOutlined, SettingOutlined } from "@ant-design/icons";
+import { observer } from "mobx-react-lite";
+import { useAuthStore } from "../stores";
 import "./Layout.scss";
 
 const { Header, Content } = Layout;
@@ -14,10 +16,11 @@ const headerMenuItems = [
   { key: "/stats", label: "数据统计" },
 ];
 
-const LayoutComponent = () => {
+const LayoutComponent = observer(() => {
   const [headerSelectedKey, setHeaderSelectedKey] = useState("/");
   const navigate = useNavigate();
   const location = useLocation();
+  const authStore = useAuthStore();
 
   // 根据当前路径同步header选中状态
   useEffect(() => {
@@ -28,6 +31,24 @@ const LayoutComponent = () => {
     setHeaderSelectedKey(key);
     navigate(key);
   };
+
+  // 处理用户退出
+  const handleLogout = () => {
+    authStore.logout();
+    message.success('已成功退出登录');
+    navigate('/login');
+  };
+
+  // 用户菜单项
+  const userMenuItems = [
+  
+    {
+      key: 'logout',
+      label: '退出登录',
+      icon: <LogoutOutlined />,
+      onClick: handleLogout,
+    },
+  ];
 
   return (
     <Layout className="layout-container">
@@ -51,9 +72,16 @@ const LayoutComponent = () => {
               <Button type="text" icon={<MessageOutlined />} />
               <Button type="text" icon={<StarOutlined />} />
               <Button type="text" className="wpd-button">WPB</Button>
-              <Space className="user-info">
-                <Avatar icon={<UserOutlined />} />
-              </Space>
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                placement="bottomRight"
+                trigger={['click']}
+              >
+                <Space className="user-info" style={{ cursor: 'pointer' }}>
+                  <Avatar icon={<UserOutlined />} />
+                 
+                </Space>
+              </Dropdown>
             </Space>
           </div>
         </div>
@@ -68,6 +96,6 @@ const LayoutComponent = () => {
       </Layout>
     </Layout>
   );
-};
+});
 
 export default LayoutComponent;

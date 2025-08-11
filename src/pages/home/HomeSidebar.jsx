@@ -259,38 +259,9 @@ const HomeSidebar = () => {
     setOpenKeys(keys);
   };
 
-  // 递归渲染菜单项，支持多层嵌套
-  const renderMenuItems = (items) => {
-    return items.map((item) => {
-      if (item.children && item.children.length > 0) {
-        return (
-          <SubMenu 
-            key={item.key} 
-            title={
-              <span title={item.label}>
-                {item.label}
-              </span>
-            }
-          >
-            {renderMenuItems(item.children)}
-          </SubMenu>
-        );
-      } else {
-        return (
-          <Menu.Item key={item.key}>
-            <span title={item.label}>
-              {item.label}
-            </span>
-          </Menu.Item>
-        );
-      }
-    });
-  };
-
   return (
     <Sider
       className="home-sidebar"
-      width={300}
     >
       <div className="sidebar-content">
         <div className="sidebar-title">全部分类</div>
@@ -309,9 +280,8 @@ const HomeSidebar = () => {
             onOpenChange={handleMenuOpenChange}
             onSelect={handleMenuSelect}
             style={{ borderRight: 'none' }}
-          >
-          {renderMenuItems(menuItems)}
-        </Menu>
+            items={menuItems}
+          />
         )}
       </div>
     </Sider>

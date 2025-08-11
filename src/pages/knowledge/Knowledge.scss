@@ -1,4 +1,4 @@
-@use '../../components/SimplePDFViewer.scss';
+
 
 .ant-layout {
   max-height: calc(100vh - 118px);
@@ -13,14 +13,12 @@
 }
 
 .knowledge-main-layout {
- 
   display: flex;
   flex: 1;
   overflow: hidden;
   height: calc(100vh - 64px);
   box-sizing: border-box;
   align-items: flex-start;
- 
 }
 
 .knowledge-header {
@@ -80,9 +78,12 @@
   background: #e9f0fb;
   height: calc(100vh - 198px);
   border-radius: 12px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
   .chat-section {
+    flex: 1;
     background: white;
     border-radius: 12px;
     padding: 16px;
@@ -92,11 +93,11 @@
     flex-direction: column;
     min-height: 400px;
 
-          .chat-message {
-        display: flex;
-        gap: 16px;
-        margin-bottom: 16px;
-        flex: 1;
+    .chat-message {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex: 1;
 
       .message-header {
         display: flex;
@@ -125,14 +126,14 @@
         }
       }
 
-                            .message-content {
-          flex: 1;
-          background: #f0f8ff;
-          border-radius: 12px;
-          padding: 16px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-          display: flex;
-          flex-direction: column;
+      .message-content {
+        flex: 1;
+        background: #f0f8ff;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
 
         p {
           margin: 0 0 16px 0;
@@ -233,7 +234,7 @@
       .input-section {
         .textarea-container {
           position: relative;
-          
+
           .ant-input {
             border-radius: 8px;
             margin-bottom: 0;
@@ -463,16 +464,16 @@
     .load-more-section {
       margin-top: 16px;
       text-align: center;
-      
+
       .ant-btn {
         color: var(--ant-primary-color);
         border-color: var(--ant-primary-color);
-        
+
         &:hover {
           color: var(--ant-primary-color-hover);
           border-color: var(--ant-primary-color-hover);
         }
-        
+
         &:focus {
           color: var(--ant-primary-color);
           border-color: var(--ant-primary-color);

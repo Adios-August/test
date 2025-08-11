@@ -5,32 +5,43 @@ import NotFound from '../pages/common/NotFound';
 import Developing from '../components/Developing';
 import Knowledge from '../pages/knowledge/Knowledge';
 import KnowledgeDetail from '../pages/knowledge/KnowledgeDetail';
+import Login from '../pages/login/Login';
+import RouteGuard from './RouteGuard';
 
 const router = createBrowserRouter([
   {
+    path: '/login',
+    element: <Login />,
+  },
+  {
     path: '/',
-    element: <Layout />,
+    element: <RouteGuard />,
     children: [
       {
         path: '/',
-        element: <Home />,
-      },
-
-      {
-        path: '/knowledge',
-        element: <Knowledge />,
-      },
-      {
-        path: '/knowledge/:id',
-        element: <KnowledgeDetail />,
-      },
-      {
-        path: '/knowledge-admin',
-        element: <Developing title="知识库管理功能开发中" />,
-      },
-      {
-        path: '/stats',
-        element: <Developing title="数据统计功能开发中" />,
+        element: <Layout />,
+        children: [
+          {
+            path: '/',
+            element: <Home />,
+          },
+          {
+            path: '/knowledge',
+            element: <Knowledge />,
+          },
+          {
+            path: '/knowledge/:id',
+            element: <KnowledgeDetail />,
+          },
+          {
+            path: '/knowledge-admin',
+            element: <Developing title="知识库管理功能开发中" />,
+          },
+          {
+            path: '/stats',
+            element: <Developing title="数据统计功能开发中" />,
+          },
+        ],
       },
     ],
   },

@@ -31,7 +31,7 @@ import {
   CalendarOutlined,
 } from "@ant-design/icons";
 import KnowledgeSidebar from "./KnowledgeSidebar";
-import SimplePDFViewer from "../../components/SimplePDFViewer";
+ 
 import pdfFile1 from "../../assets/单士伟的简历.pdf";
 import pdfFile2 from "../../assets/财务自由之路.pdf";
 import "./Knowledge.scss";
@@ -360,14 +360,12 @@ const Knowledge = () => {
                       <Button type="text" size="small" icon={<CloseOutlined />} onClick={handlePdfClose} />
                     </div>
                     <div className="pdf-preview-container">
-                      {pdfLoading ? (
+                      { (
                         <div className="pdf-loading">
                           <Spin size="large" />
                           <p>PDF 加载中...</p>
                         </div>
-                      ) : (
-                        <SimplePDFViewer pdfUrl={currentPdf} />
-                      )}
+                      )  }
                     </div>
                   </div>
                 )}
