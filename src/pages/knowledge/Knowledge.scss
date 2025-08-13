@@ -80,7 +80,7 @@
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
 
   .chat-section {
     flex: 1;
@@ -271,6 +271,7 @@
     background: white;
     border-radius: 12px;
     padding: 16px;
+    padding-bottom: 24px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
     .results-header {
@@ -349,6 +350,8 @@
       display: flex;
       justify-content: center;
       margin-top: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
     }
   }
 }

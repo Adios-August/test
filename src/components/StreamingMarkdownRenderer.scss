@@ -1,0 +1,310 @@
+.markdown-renderer {
+  // 直接针对ReactMarkdown组件的样式
+  > div {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+
+    // 标题样式
+    h1, h2, h3, h4, h5, h6 {
+      margin: 16px 0 12px 0; // 减少标题间距
+      font-weight: 600;
+      line-height: 1.25;
+      color: #24292e;
+
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+
+    h1 {
+      font-size: 2em;
+      border-bottom: 1px solid #eaecef;
+      padding-bottom: 0.3em;
+    }
+
+    h2 {
+      font-size: 1.5em;
+      border-bottom: 1px solid #eaecef;
+      padding-bottom: 0.3em;
+    }
+
+    h3 {
+      font-size: 1.25em;
+    }
+
+    h4 {
+      font-size: 1em;
+    }
+
+    h5 {
+      font-size: 0.875em;
+    }
+
+    h6 {
+      font-size: 0.85em;
+      color: #6a737d;
+    }
+
+    // 段落样式
+    p {
+      margin: 0 0 12px 0; // 减少段落间距
+      line-height: 1.6;
+    }
+
+    // 列表样式
+    ul, ol {
+      margin: 0 0 12px 0; // 减少列表间距
+      padding-left: 2em;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+    }
+
+    li {
+      margin: 0.2em 0; // 减少列表项间距
+      line-height: 1.6;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+      padding-right: 8px;
+    }
+
+    // 强调样式
+    strong {
+      font-weight: 600;
+      color: #24292e;
+    }
+
+    em {
+      font-style: italic;
+      color: #24292e;
+    }
+
+    // 引用样式
+    blockquote {
+      margin: 0 0 12px 0; // 减少引用间距
+      padding: 0 1em;
+      color: #6a737d;
+      border-left: 0.25em solid #dfe2e5;
+      background-color: #f6f8fa;
+
+      p {
+        margin: 0;
+      }
+    }
+
+    // 分割线样式
+    hr {
+      height: 0.25em;
+      padding: 0;
+      margin: 16px 0; // 减少分割线间距
+      background-color: #e1e4e8;
+      border: 0;
+    }
+
+    // 任务列表样式
+    input[type="checkbox"] {
+      margin: 0 0.2em 0.25em -1.4em;
+      vertical-align: middle;
+    }
+
+    // 代码样式
+    code:not(pre code) {
+      padding: 0.2em 0.4em;
+      margin: 0;
+      font-size: 85%;
+      background-color: rgba(27, 31, 35, 0.05);
+      border-radius: 3px;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      color: #e36209;
+    }
+
+    // 代码块样式
+    pre {
+      margin: 12px 0; // 减少代码块间距
+      padding: 16px;
+      overflow-x: auto;
+      background-color: #f6f8fa;
+      border: 1px solid #e1e4e8;
+      border-radius: 6px;
+      font-size: 85%;
+      line-height: 1.45;
+      color: #24292e;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
+      code {
+        background: none;
+        padding: 0;
+        margin: 0;
+        color: inherit;
+      }
+    }
+
+    // 表格样式
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 8px 0; // 减少表格上下间距
+      border: 1px solid #e1e4e8;
+      border-radius: 8px;
+      overflow: hidden;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+      // 确保表格边框显示
+      border-spacing: 0;
+      table-layout: auto;
+
+      th {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: none;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        color: #495057;
+        text-align: left;
+        padding: 12px 16px; // 减少表格单元格内边距
+        position: relative;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+      }
+
+      td {
+        border: none;
+        border-bottom: 1px solid #f1f3f4;
+        padding: 12px 16px; // 减少表格单元格内边距
+        color: #212529;
+        vertical-align: middle;
+        background: white;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      tr {
+        transition: background-color 0.2s ease;
+
+        &:hover {
+          background-color: #f8f9fa;
+        }
+
+        &:last-child td {
+          border-bottom: none;
+        }
+
+        &:nth-child(even) td {
+          background-color: #fafbfc;
+        }
+      }
+    }
+
+    // 表格相关元素的额外样式
+    thead {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-bottom: 2px solid #dee2e6;
+    }
+
+    tbody {
+      tr:nth-child(even) {
+        background-color: transparent;
+      }
+    }
+
+    // 确保表格内容正确对齐
+    th, td {
+      text-align: left;
+      vertical-align: middle;
+      word-wrap: break-word;
+      max-width: none;
+      border-right: none;
+    }
+
+    // 表格容器的响应式处理
+    .table-container {
+      overflow-x: auto;
+      margin: 8px 0; // 减少表格容器间距
+      border-radius: 8px;
+      border: 1px solid #e1e4e8;
+    }
+
+    // 表格包装器样式
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 8px 0; // 减少表格包装器间距
+      border-radius: 8px;
+      border: 1px solid #e1e4e8;
+      background: white;
+      
+      table {
+        margin: 0;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        
+        th, td {
+          border: none !important;
+          white-space: normal;
+          min-width: auto;
+          border-bottom: 1px solid #f1f3f4;
+        }
+
+        th {
+          border-bottom: 2px solid #dee2e6;
+        }
+      }
+    }
+
+    // 强制显示表格边框
+    table, th, td {
+      border: none !important;
+    }
+
+    // 表格行样式
+    tr {
+      border-bottom: 1px solid #f1f3f4;
+    }
+
+    // 链接样式
+    a {
+      color: #0366d6;
+      text-decoration: none;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #0256cc;
+        text-decoration: underline;
+      }
+    }
+
+    // 图片样式
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      margin: 16px 0;
+    }
+  }
+
+  // 水平滚动条样式
+  .table-wrapper::-webkit-scrollbar,
+  .code-block::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .table-wrapper::-webkit-scrollbar-track,
+  .code-block::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  .table-wrapper::-webkit-scrollbar-thumb,
+  .code-block::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
+} 

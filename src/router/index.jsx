@@ -5,6 +5,7 @@ import NotFound from '../pages/common/NotFound';
 import Developing from '../components/Developing';
 import Knowledge from '../pages/knowledge/Knowledge';
 import KnowledgeDetail from '../pages/knowledge/KnowledgeDetail';
+import KnowledgeQA from '../pages/knowledge/KnowledgeQA';
 import Login from '../pages/login/Login';
 import RouteGuard from './RouteGuard';
 
@@ -33,6 +34,11 @@ const router = createBrowserRouter([
             path: '/knowledge/:id',
             element: <KnowledgeDetail />,
           },
+          {
+            path: '/knowledge-qa',
+            element: <KnowledgeQA />,
+          },
+           
           {
             path: '/knowledge-admin',
             element: <Developing title="知识库管理功能开发中" />,

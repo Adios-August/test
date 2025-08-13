@@ -1,0 +1,164 @@
+.markdown-renderer {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1 !important;
+  color: #333;
+
+  // 标题样式
+  h1, h2, h3, h4, h5, h6 {
+    margin: 16px 0 8px 0;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #24292e;
+  }
+
+  h1 { font-size: 2em; }
+  h2 { font-size: 1.5em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1em; }
+  h5 { font-size: 0.875em; }
+  h6 { font-size: 0.85em; }
+
+  // 段落样式
+  p {
+    margin: 8px 0;
+   
+  }
+
+  // 列表样式
+  ul, ol {
+    margin: 8px 0;
+    padding-left: 24px;
+  }
+
+  li {
+    margin: 4px 0;
+  }
+
+  // 强调样式
+  strong {
+    font-weight: 600;
+    color: #24292e;
+  }
+
+  em {
+    font-style: italic;
+  }
+
+  // 代码样式
+  .inline-code {
+    background-color: #f6f8fa;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 0.9em;
+    color: #e36209;
+  }
+
+  .code-block {
+    background-color: #f6f8fa;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 16px 0;
+    overflow-x: auto;
+    border: 1px solid #e1e4e8;
+
+    code {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 0.9em;
+      line-height: 1.45;
+      color: #24292e;
+    }
+  }
+
+  // 引用样式
+  blockquote {
+    margin: 16px 0;
+    padding: 0 16px;
+    color: #6a737d;
+    border-left: 4px solid #dfe2e5;
+    background-color: #f6f8fa;
+  }
+
+  // 表格样式 - 参考qianwenAI的GitHub Markdown样式
+  table {
+    border-spacing: 0;
+    border-collapse: collapse;
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow: auto;
+    margin: 16px 0;
+  }
+
+  th {
+    font-weight: 600;
+  }
+
+  th, td {
+    padding: 6px 13px;
+    border: 1px solid #d0d7de;
+    text-align: left;
+  }
+
+  tr {
+    background-color: #ffffff;
+    border-top: 1px solid #d0d7de;
+  }
+
+  tr:nth-child(2n) {
+    background-color: #f6f8fa;
+  }
+
+  // 链接样式
+  .markdown-link {
+    color: #0366d6;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // 分割线样式
+  hr {
+    height: 1px;
+    background-color: #e1e4e8;
+    border: none;
+    margin: 24px 0;
+  }
+
+  // 任务列表样式
+  input[type="checkbox"] {
+    margin-right: 8px;
+  }
+
+  // 数学公式样式（如果需要）
+  .math {
+    font-family: 'KaTeX_Main', 'Times New Roman', serif;
+  }
+
+  // 脚注样式
+  .footnote {
+    font-size: 0.875em;
+    color: #6a737d;
+  }
+
+  // 定义列表样式
+  dl {
+    margin: 16px 0;
+  }
+
+  dt {
+    font-weight: 600;
+    margin-top: 16px;
+  }
+
+  dd {
+    margin-left: 16px;
+    margin-bottom: 8px;
+  }
+} 
+
+.markdown-content{
+    line-height: 1 !important;
+}

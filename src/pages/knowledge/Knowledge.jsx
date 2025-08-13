@@ -47,6 +47,7 @@ const Knowledge = () => {
   const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
   const [isNavigating, setIsNavigating] = useState(false); // 防止导航干扰
   const [previewingFileId, setPreviewingFileId] = useState(null); // 当前预览的文件ID
+  const [questionInput, setQuestionInput] = useState(""); // 问题输入框
 
   // 源文件数据
   const sourceFiles = useMemo(() => [
@@ -119,6 +120,22 @@ const Knowledge = () => {
       setLoading(false);
     }, 500);
   }, [loading, hasMore, displayedFiles.length, sourceFiles, pageSize]);
+
+  // 处理问题提交
+  const handleQuestionSubmit = () => {
+    if (!questionInput.trim()) {
+      message.warning("请输入问题");
+      return;
+    }
+    
+    // 跳转到问答页面，并传递问题内容
+    navigate("/knowledge-qa", { 
+      state: { 
+        question: questionInput.trim(),
+        fromPage: "knowledge"
+      } 
+    });
+  };
 
   // 搜索结果数据
   const searchResults = [
@@ -262,14 +279,23 @@ const Knowledge = () => {
               <div className="input-section">
                 <div className="textarea-container">
                   <Input.TextArea 
+                    value={questionInput}
+                    onChange={(e) => setQuestionInput(e.target.value)}
                     placeholder="请在这里继续输入问题" 
                     rows={2} 
-                    style={{ marginBottom: 0 }} 
+                    style={{ marginBottom: 0 }}
+                    onPressEnter={(e) => {
+                      if (!e.shiftKey) {
+                        e.preventDefault();
+                        handleQuestionSubmit();
+                      }
+                    }}
                   />
                   <Button 
                     type="primary" 
                     icon={<SendOutlined />}
                     className="send-button"
+                    onClick={handleQuestionSubmit}
                   >
                     发送
                   </Button>

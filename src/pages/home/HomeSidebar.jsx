@@ -262,6 +262,7 @@ const HomeSidebar = () => {
   return (
     <Sider
       className="home-sidebar"
+       width={300}
     >
       <div className="sidebar-content">
         <div className="sidebar-title">全部分类</div>

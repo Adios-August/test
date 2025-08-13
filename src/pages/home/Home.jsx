@@ -5,9 +5,6 @@ import {
   TagOutlined,
   DownloadOutlined,
   ClockCircleOutlined,
-  FileTextOutlined,
-  FileExcelOutlined,
-  FilePdfOutlined,
   HeartOutlined,
   MoreOutlined,
 } from "@ant-design/icons";
