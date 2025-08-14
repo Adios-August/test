@@ -3,7 +3,7 @@ import { message } from "antd";
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // 使用环境变量中的API基础URL
+  baseURL: "/api",
   timeout: 10000, // 请求超时时间
   headers: {
     "Content-Type": "application/json",

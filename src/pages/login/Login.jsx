@@ -13,27 +13,8 @@ const Login = observer(() => {
 
   const onFinish = async (values) => {
     try {
-      // const result = await authStore.login(values.username, values.password);
-      const result  = {
-        success: true,
-        message: "登录成功",
-        data: {
-          success: true,
-          code: 200,
-          data: {
-            expiresIn: 604800,
-            success: true,
-            token: "eyJhbGciOiJIUZUxMiJ9.eyJzdWIiOiIONTQyODM5MiIsInJvbGUiOiJVUOVSIiwiaWF0IjoxNzU0OTA4NjkyLCJleHAiOjE3NTU1MTM0OTJ9.JUUFHGE5-5WkFTWAeVaWn8WuRykBg4_Z2BfAdOh5dCCUtepKJEz570VGQWGnF30cpyK0ySxx9_EvRXpw13B_fA",
-            user: {
-              id: 10,
-              username: "45428392",
-              email: "45428392@example.com",
-              role: "USER"
-            }
-          }
-        },
-        timestamp: Date.now()
-      };
+      const result = await authStore.login(values.username, values.password);
+     
       
       if (result.success) {
         message.success("Login success!");
