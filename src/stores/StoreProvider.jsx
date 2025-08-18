@@ -27,4 +27,9 @@ export const useStore = () => {
 export const useAuthStore = () => {
   const { authStore } = useStore();
   return authStore;
+};
+
+export const useSearchHistoryStore = () => {
+  const { searchHistoryStore } = useStore();
+  return searchHistoryStore;
 }; 

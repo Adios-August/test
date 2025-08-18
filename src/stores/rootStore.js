@@ -1,6 +1,7 @@
 import { makeAutoObservable } from "mobx";
 import { makePersistable } from "mobx-persist-store";
 import authStore from "./authStore";
+import searchHistoryStore from "./searchHistoryStore";
 
 class RootStore {
   constructor() {
@@ -16,6 +17,7 @@ class RootStore {
 
   // 子store
   authStore = authStore;
+  searchHistoryStore = searchHistoryStore;
 
   // 全局状态
   appLoading = false;

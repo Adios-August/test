@@ -1,86 +1,27 @@
 import React, { useState } from 'react';
-import { Layout, Tabs, Button, Avatar, Tag, Space, List, Card, Menu, Input } from 'antd';
+import { Layout, Tabs, Button, Avatar, Tag, Space, List, Card, Input } from 'antd';
 import {
   HeartOutlined, HistoryOutlined, TranslationOutlined, FilePdfOutlined, FileExcelOutlined,
   CloseOutlined, ArrowLeftOutlined, LeftOutlined, RightOutlined, SearchOutlined,
 } from '@ant-design/icons';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import CommonSidebar from '../../components/CommonSidebar';
 import './KnowledgeDetail.scss';
 
-const { Sider, Content } = Layout;
+const { Content } = Layout;
 const { TabPane } = Tabs;
-const { SubMenu } = Menu;
 
 const KnowledgeDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const categoryId = searchParams.get('category');
   const [activeTab, setActiveTab] = useState('1');
-  const [collapsed, setCollapsed] = useState(false);
   const [searchCollapsed, setSearchCollapsed] = useState(false);
-  const [selectedKeys, setSelectedKeys] = useState([]);
-  const [openKeys, setOpenKeys] = useState(['iws', 'deposit', 'loan-services', 'investment-products', 'digital-banking']);
   const [searchValue, setSearchValue] = useState('');
   const [activeTabKey, setActiveTabKey] = useState('1');
 
-  // 菜单数据
-  const menuItems = [
-    {
-      key: 'iws',
-      label: 'IWS',
-      children: [
-        {
-          key: 'product-solution',
-          label: 'Product Solution',
-          children: [
-            { key: 'fund', label: 'Fund' },
-            { key: 'investment', label: 'Investment' },
-            { key: 'insurance', label: 'Insurance' },
-            { key: 'credit', label: 'Credit' },
-            { key: 'retail-banking', label: 'Retail Banking' },
-          ],
-        },
-      ],
-    },
-    {
-      key: 'deposit',
-      label: 'Deposit',
-      children: [
-        { key: 'deposit-july', label: '7月存款礼包' },
-        { key: 'fixed-deposit', label: '定期存款' },
-        { key: 'current-deposit', label: '活期存款' },
-        { key: 'notice-deposit', label: '通知存款' },
-      ],
-    },
-    {
-      key: 'loan-services',
-      label: 'Loan Services',
-      children: [
-        { key: 'personal-loan', label: '个人贷款' },
-        { key: 'mortgage', label: '房贷' },
-        { key: 'car-loan', label: '车贷' },
-        { key: 'business-loan', label: '企业贷款' },
-      ],
-    },
-    {
-      key: 'investment-products',
-      label: 'Investment Products',
-      children: [
-        { key: 'funds', label: '基金产品' },
-        { key: 'wealth-management', label: '理财产品' },
-        { key: 'stock-investment', label: '股票投资' },
-        { key: 'bond-investment', label: '债券投资' },
-      ],
-    },
-    {
-      key: 'digital-banking',
-      label: 'Digital Banking',
-      children: [
-        { key: 'mobile-banking', label: '移动银行' },
-        { key: 'online-banking', label: '网上银行' },
-        { key: 'e-payment', label: '电子支付' },
-      ],
-    },
-  ];
+
 
   // 模拟文档数据
   const documentData = {
@@ -128,7 +69,8 @@ const KnowledgeDetail = () => {
   ];
 
   const handleBack = () => {
-    navigate('/knowledge');
+    const categoryParam = categoryId ? `?category=${categoryId}` : '';
+    navigate(`/knowledge${categoryParam}`);
   };
 
   const handleTabClose = (targetKey) => {
@@ -136,15 +78,7 @@ const KnowledgeDetail = () => {
     console.log('关闭标签页:', targetKey);
   };
 
-  const handleMenuSelect = ({ key, keyPath }) => {
-    console.log("选择菜单项:", key, keyPath);
-    setSelectedKeys([key]);
-  };
 
-  const handleMenuOpenChange = (keys) => {
-    console.log('展开/折叠状态变化:', keys);
-    setOpenKeys(keys);
-  };
 
   const handleSearch = () => {
     console.log('搜索内容:', searchValue);
@@ -234,74 +168,14 @@ const KnowledgeDetail = () => {
     <Layout className="knowledge-detail-layout">
       <Layout className="knowledge-main-layout">
         {/* 左侧侧边栏 */}
-        <div className="detail-sidebar-container">
-          <Sider className="detail-sidebar" width={300} collapsed={collapsed} collapsible trigger={null}>
-            <div className="sidebar-content">
-              <div className="sidebar-title">
-                <Button 
-                  type="link" 
-                  icon={<ArrowLeftOutlined />} 
-                  onClick={handleBack}
-                  className={collapsed ? 'collapsed' : ''}
-                >
-                  {!collapsed && '返回搜索'}
-                </Button>
-              </div>
-
-              <Menu
-                className="category-tree"
-                mode="inline"
-                openKeys={openKeys}
-                selectedKeys={selectedKeys}
-                onOpenChange={handleMenuOpenChange}
-                onSelect={handleMenuSelect}
-                style={{ borderRight: 'none' }}
-              >
-                {menuItems.map((item) => {
-                  if (item.children) {
-                    return (
-                      <SubMenu key={item.key} title={item.label}>
-                        {item.children.map((subItem) => {
-                          if (subItem.children) {
-                            return (
-                              <SubMenu key={subItem.key} title={subItem.label}>
-                                {subItem.children.map((subSubItem) => (
-                                  <Menu.Item key={subSubItem.key}>
-                                    {subSubItem.label}
-                                  </Menu.Item>
-                                ))}
-                              </SubMenu>
-                            );
-                          } else {
-                            return (
-                              <Menu.Item key={subItem.key}>
-                                {subItem.label}
-                              </Menu.Item>
-                            );
-                          }
-                        })}
-                      </SubMenu>
-                    );
-                  } else {
-                    return (
-                      <Menu.Item key={item.key}>
-                        {item.label}
-                      </Menu.Item>
-                    );
-                  }
-                })}
-              </Menu>
-            </div>
-          </Sider>
-          <div className="sidebar-toggle">
-            <Button
-              type="text"
-              icon={collapsed ? <RightOutlined /> : <LeftOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
-            />
-            {collapsed && <div className="filter-text">Filter</div>}
-          </div>
-        </div>
+        <CommonSidebar 
+          showBackButton={true}
+          onBackClick={handleBack}
+          height="calc(100vh - 134px)"
+          marginTop="16px"
+          enableNavigation={false}
+          filterCategoryId={categoryId}
+        />
 
         {/* 中间搜索栏 */}
         <div className='search-section-container'>

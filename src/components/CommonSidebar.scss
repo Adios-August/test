@@ -1,15 +1,12 @@
-.home-sidebar {
+.common-sidebar {
   background: white;
   border-radius: 12px;
-  margin: 16px 16px 16px 16px;
+  margin: 0 16px 16px 16px;
   overflow: visible;
-  height: calc(100vh - 152px);
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
  
- 
-  
   // 隐藏滚动条但保持滚动功能
   &::-webkit-scrollbar {
     display: none;
@@ -30,9 +27,33 @@
       font-weight: 500;
       border-bottom: 1px solid #f0f0f0;
       margin-bottom: 8px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .back-button {
+        padding: 0;
+        height: auto;
+        color: #666;
+        font-size: 12px;
+        
+        &:hover {
+          color: var(--ant-primary-color);
+        }
+      }
+
+      .title-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    // 当只有返回按钮时的样式
+    .sidebar-title:has(.back-button:only-child) {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 8px;
     }
 
     .loading-container {
@@ -74,8 +95,6 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
 
-    
-
       .ant-menu-item {
         padding: 6px 16px;
         border-radius: 4px;
@@ -91,6 +110,7 @@
         align-items: flex-start;
         padding-top: 8px;
         padding-bottom: 8px;
+        cursor: pointer;
 
         &:hover {
           background-color: #f5f5f5;
@@ -118,6 +138,7 @@
           align-items: flex-start;
           padding-top: 8px;
           padding-bottom: 8px;
+          cursor: pointer;
 
           &:hover {
             background-color: #f5f5f5;
@@ -152,13 +173,6 @@
   padding-right: 20px !important;
 }
 
-// 响应式设计
-@media (max-width: 768px) {
-  .home-sidebar {
-    margin: 16px 8px 8px 8px;
-  }
-}
-
 // 全局菜单选中状态样式覆盖 - 使用项目主题色
 :where(.css-dev-only-do-not-override-19pxc0).ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title,
 :where(.css-dev-only-do-not-override-19pxc0).ant-menu-light > .ant-menu .ant-menu-submenu-selected > .ant-menu-submenu-title {
@@ -184,4 +198,11 @@
 // 子菜单标题悬停状态
 .ant-menu-light .ant-menu-submenu-title:hover {
   color: #db0011 !important; // 使用项目主题色
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .common-sidebar {
+    margin: 16px 8px 8px 8px;
+  }
 } 

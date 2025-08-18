@@ -15,7 +15,7 @@ import {
   Avatar,
   Space,
 } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
   SearchOutlined,
   FileTextOutlined,
@@ -29,8 +29,13 @@ import {
   DownOutlined,
   SendOutlined,
   CalendarOutlined,
+  InboxOutlined,
+  FolderOpenOutlined,
 } from "@ant-design/icons";
-import KnowledgeSidebar from "./KnowledgeSidebar";
+import { observer } from "mobx-react-lite";
+import CommonSidebar from "../../components/CommonSidebar";
+import { knowledgeAPI } from "../../api/knowledge";
+import { useSearchHistoryStore } from "../../stores";
  
 import pdfFile1 from "../../assets/单士伟的简历.pdf";
 import pdfFile2 from "../../assets/财务自由之路.pdf";
@@ -39,8 +44,17 @@ import "./Knowledge.scss";
 const { Sider, Content } = Layout;
 const { Search } = Input;
 
-const Knowledge = () => {
+const Knowledge = observer(() => {
+  console.log('Knowledge组件开始渲染');
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const searchHistoryStore = useSearchHistoryStore();
+  const categoryId = searchParams.get('category');
+  
+  console.log('Knowledge组件状态:', { categoryId, location: location.pathname });
+  
   const [searchCurrentPage, setSearchCurrentPage] = useState(1); // 搜索结果分页
   const [currentPdf, setCurrentPdf] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -48,6 +62,32 @@ const Knowledge = () => {
   const [isNavigating, setIsNavigating] = useState(false); // 防止导航干扰
   const [previewingFileId, setPreviewingFileId] = useState(null); // 当前预览的文件ID
   const [questionInput, setQuestionInput] = useState(""); // 问题输入框
+  const [searchValue, setSearchValue] = useState(""); // 搜索输入值
+  const [currentCategoryId, setCurrentCategoryId] = useState(null); // 当前选中的分类ID
+  const [isCategorySearchMode, setIsCategorySearchMode] = useState(false); // 是否处于分类搜索模式
+  const [showAISourceModules, setShowAISourceModules] = useState(true); // 是否显示AI和source模块
+
+  // 分类知识列表相关状态
+  const [categoryKnowledge, setCategoryKnowledge] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryPagination, setCategoryPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
+
+  // 搜索结果相关状态
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchPagination, setSearchPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
+
+  // AI回答相关状态
+  const [aiAnswer, setAiAnswer] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   // 源文件数据
   const sourceFiles = useMemo(() => [
@@ -137,31 +177,222 @@ const Knowledge = () => {
     });
   };
 
-  // 搜索结果数据
-  const searchResults = [
-    {
-      id: 1,
-      title: "IWS 产品方案",
-      date: "2025-07-30",
-      description: "7月CIO观点及市场趋势分析，包含最新产品推荐和投资策略。",
-      type: "pdf",
-    },
-    {
-      id: 2,
-      title: "外币精选方案July'25",
-      date: "2025-07-25",
-      description: "更新了使用方式，同步到Smart Search平台，提供更便捷的服务。",
-      type: "pdf",
-    },
-    {
-      id: 3,
-      title: "财富来源回顾培训",
-      date: "2025-07-08",
-      description: "最新培训材料，包含产品知识和销售技巧。",
-      type: "pdf",
-    },
-  ];
+  // 处理推荐问题点击
+  const handleRecommendedQuestionClick = (question) => {
+    // 跳转到问答页面，并传递点击的问题内容
+    navigate("/knowledge-qa", { 
+      state: { 
+        question: question,
+        fromPage: "knowledge"
+      } 
+    });
+  };
 
+  // 静态搜索结果数据（已移除，现在使用API数据）
+
+  // 获取分类知识列表
+  const fetchCategoryKnowledge = useCallback(async (categoryId, page = 1, size = 10) => {
+    if (!categoryId) return;
+    
+    console.log('开始获取分类知识列表:', { categoryId, page, size });
+    setCategoryLoading(true);
+    try {
+      const response = await knowledgeAPI.getCategoryKnowledge(categoryId, {
+        page,
+        size
+      });
+      
+      console.log('分类知识API响应:', response);
+      
+      if (response.code === 200) {
+        // 根据实际API返回的数据结构进行调整
+        setCategoryKnowledge(response.data.records || []);
+        setCategoryPagination(prev => ({
+          ...prev,
+          current: response.data.current || page,
+          total: response.data.total || 0,
+          pageSize: response.data.size || size
+        }));
+        console.log('分类知识列表设置成功:', response.data.records?.length || 0);
+      } else {
+        message.error(response.message || '获取分类知识列表失败');
+        console.error('分类知识API错误:', response.message);
+      }
+    } catch (error) {
+      console.error('获取分类知识列表失败:', error);
+      message.error('获取分类知识列表失败');
+    } finally {
+      setCategoryLoading(false);
+    }
+  }, []);
+
+  // 处理分类知识列表分页
+  const handleCategoryPaginationChange = (page, pageSize) => {
+    fetchCategoryKnowledge(categoryId, page, pageSize);
+  };
+
+  // 获取搜索结果
+  const fetchSearchResults = useCallback(async (query, page = 1, size = 10) => {
+    if (!query || !query.trim()) return;
+    
+    console.log('开始获取搜索结果:', { query, page, size });
+    setSearchLoading(true);
+    setAiLoading(true); // 设置AI loading状态
+    try {
+      const response = await knowledgeAPI.searchKnowledgeByQuery({
+        query: query.trim(),
+        page: page - 1, // API使用0-based分页
+        size: size
+      });
+      
+      console.log('搜索API响应:', response);
+      
+      if (response.code === 200) {
+        console.log('API返回数据:', response.data);
+        // 处理搜索结果，如果name为空则使用description的前50个字符作为标题
+        const processedResults = (response.data.esResults || []).map(item => ({
+          ...item,
+          name: item.name || item.description?.substring(0, 50) + '...' || '无标题',
+          displayName: item.name || item.description?.substring(0, 50) + '...' || '无标题'
+        }));
+        
+        setSearchResults(processedResults);
+        setSearchPagination(prev => ({
+          ...prev,
+          current: page,
+          total: response.data.total || 0,
+          pageSize: size
+        }));
+        
+        // 处理AI回答结果
+        if (response.data.ragResults && response.data.ragResults.length > 0) {
+          setAiAnswer(response.data.ragResults[0]);
+        } else {
+          setAiAnswer(null);
+        }
+        
+        console.log('搜索结果设置成功:', processedResults.length);
+      } else {
+        message.error(response.message || '获取知识列表失败');
+        setSearchResults([]); // 清空搜索结果
+        console.error('搜索API错误:', response.message);
+      }
+    } catch (error) {
+      console.error('获取知识列表失败:', error);
+      message.error('获取知识列表失败');
+      setSearchResults([]); // 清空搜索结果
+    } finally {
+      setSearchLoading(false);
+      setAiLoading(false); // 清除AI loading状态
+    }
+  }, []);
+
+  // 处理搜索
+  const handleSearch = (value) => {
+    console.log('处理搜索:', value);
+    setSearchValue(value);
+    // 清空之前的搜索结果
+    setSearchResults([]);
+    
+    if (value.trim()) {
+      // 添加搜索历史
+      searchHistoryStore.addSearchHistory(value.trim());
+      
+      setCurrentCategoryId(1);
+      setIsCategorySearchMode(true); // 进入搜索模式
+      fetchSearchResults(value.trim(), 1, 10);
+      // 搜索时显示AI和source模块
+      setShowAISourceModules(true);
+    } else {
+      // 如果搜索框为空，隐藏AI和source模块
+      setShowAISourceModules(false);
+      setIsCategorySearchMode(false);
+      setSearchResults([]);
+    }
+  };
+
+  // 处理搜索分页
+  const handleSearchPaginationChange = (page, pageSize) => {
+    // 使用当前搜索关键词
+    if (searchValue.trim()) {
+      fetchSearchResults(searchValue.trim(), page, pageSize);
+    }
+  };
+
+  // 当categoryId变化时获取分类知识列表
+  useEffect(() => {
+    if (categoryId) {
+      console.log('URL参数变化，categoryId:', categoryId);
+      // 切换到路由分类时退出分类搜索模式，回到分类展示
+      setIsCategorySearchMode(false);
+      setSearchResults([]);
+      // 只有在没有当前搜索内容时才清空搜索框
+      if (!searchValue.trim()) {
+        setSearchValue(''); // 清空搜索框
+      }
+      setCurrentCategoryId(categoryId);
+      fetchCategoryKnowledge(categoryId, 1, 10);
+      // 隐藏AI和source模块
+      setShowAISourceModules(false);
+    } else {
+      // 如果没有categoryId，清空分类知识列表
+      setCategoryKnowledge([]);
+      setIsCategorySearchMode(false);
+    }
+  }, [categoryId, fetchCategoryKnowledge]);
+
+  // 处理侧边栏分类点击（不依赖URL参数变化）
+  const handleCategoryClick = (category, isTopLevel) => {
+    console.log('侧边栏分类点击:', category.name, category.id, isTopLevel);
+    // 清空之前的搜索结果
+    setSearchResults([]);
+    // 使用分类ID获取知识列表（进入分类搜索模式）
+    setIsCategorySearchMode(true);
+    setCurrentCategoryId(category.id);
+    // 不更新搜索框内容，保持用户输入的内容
+    // 使用分类知识接口获取该分类下的知识
+    fetchCategoryKnowledge(category.id, 1, 10);
+    // 隐藏AI和source模块
+    setShowAISourceModules(false);
+  };
+
+  // 调试：监控搜索结果状态
+  useEffect(() => {
+    console.log('搜索结果状态变化:', {
+      searchResults: searchResults.length,
+      searchValue,
+      currentCategoryId,
+      searchLoading,
+      categoryId,
+      isCategorySearchMode,
+      categoryKnowledge: categoryKnowledge.length,
+      categoryLoading,
+      showAISourceModules
+    });
+  }, [searchResults, searchValue, currentCategoryId, searchLoading, categoryId, isCategorySearchMode, categoryKnowledge, categoryLoading, showAISourceModules]);
+
+  // 组件初始化时清空搜索结果
+  useEffect(() => {
+    setSearchResults([]);
+    setSearchValue('');
+    setCurrentCategoryId(null);
+    // 从顶部菜单直接进入知识库页面时，隐藏AI和source模块
+    setShowAISourceModules(false);
+  }, []);
+
+  // 处理从首页传递的搜索关键词
+  useEffect(() => {
+    if (location.state?.searchKeyword) {
+      const keyword = location.state.searchKeyword;
+      setSearchValue(keyword);
+      // 自动触发搜索（handleSearch现在会自动设置showAISourceModules为true）
+      handleSearch(keyword);
+      // 清空location.state，避免重复触发
+      navigate(location.pathname + location.search, { replace: true });
+    }
+  }, [location.state]);
+
+ 
   // 自动预览第一个 PDF
   useEffect(() => {
     if (sourceFiles.length > 0 && !currentPdf) {
@@ -199,6 +430,11 @@ const Knowledge = () => {
     navigate(`/knowledge/${item.id}`);
   };
 
+  // 切换AI和source模块显示状态
+  const toggleAISourceModules = () => {
+    setShowAISourceModules(!showAISourceModules);
+  };
+
   return (
     <Layout className="knowledge-layout">
       {/* 顶部搜索栏 */}
@@ -206,12 +442,16 @@ const Knowledge = () => {
         <div className="search-container">
           <div className="search-input">
             <Input
-              placeholder="7月产品推荐"
+              placeholder="请输入..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onPressEnter={(e) => handleSearch(e.target.value)}
               prefix={<SearchOutlined />}
               suffix={
                 <Button
                   type="text"
                   size="small"
+                  onClick={() => handleSearch(searchValue)}
                   style={{
                     fontSize: "16px",
                     color: "var(--ant-primary-color)",
@@ -235,47 +475,93 @@ const Knowledge = () => {
       </div>
 
       <Layout className="knowledge-main-layout">
-        <KnowledgeSidebar />
-        <Content className="knowledge-content">
-          {/* AI助手聊天区域 */}
-          <div className="chat-section">
-            <div className="chat-message">
-              <div className="message-header">
-                <Avatar icon={<RobotOutlined />} className="ai-avatar" />
-              </div>
-              <div className="message-content">
-                <p>根据2025年7月市场动态及机构推荐，以下基金产品值得关注：</p>
-                <div className="highlighted-content">
-                  <h4>科创债指数基金</h4>
-                  <p>该基金在科技创新债券领域表现优异，预计将在7月发行新一期产品。</p>
+        <CommonSidebar 
+          height="calc(100vh - 196px)" 
+          marginTop="16px" 
+          enableNavigation={false}
+          filterCategoryId={categoryId}
+          onCategoryClick={handleCategoryClick}
+        />
+        <Content className={`knowledge-content ${!showAISourceModules ? 'category-mode' : ''}`}>
+          {/* AI助手聊天区域 - 只在显示AI模块时显示 */}
+          {showAISourceModules && (
+            <div className="chat-section">
+            {aiLoading ? (
+              <div className="chat-message">
+                <div className="message-header">
+                  <Avatar icon={<RobotOutlined />} className="ai-avatar" />
                 </div>
-                <div className="message-actions">
-                  <Button type="link" size="small">
-                    Learn More
-                  </Button>
-                  <Button type="link" size="small" icon={<FilePdfOutlined />}>
-                    财富来源回顾培训2025Jul.pdf
-                  </Button>
-                  <Space>
-                    <Button type="text" size="small" icon={<LikeOutlined />} />
-                    <Button type="text" size="small" icon={<DislikeOutlined />} />
-                    <Button type="text" size="small" icon={<DownOutlined />} />
-                  </Space>
+                <div className="message-content">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Spin size="small" />
+                    <p style={{ margin: 0 }}>AI正在思考中，请稍候...</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : aiAnswer ? (
+              <div className="chat-message">
+                <div className="message-header">
+                  <Avatar icon={<RobotOutlined />} className="ai-avatar" />
+                </div>
+                <div className="message-content">
+                  <p>{aiAnswer.answer}</p>
+                  {aiAnswer.references && aiAnswer.references.length > 0 && (
+                    <div className="message-actions">
+                      <Button type="link" size="small" icon={<FilePdfOutlined />}>
+                        {aiAnswer.references[0].sourceFile}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="chat-message">
+                <div className="message-header">
+                  <Avatar icon={<RobotOutlined />} className="ai-avatar" />
+                </div>
+                <div className="message-content">
+                  <p>请输入您的问题，我将为您提供专业的回答。</p>
+                </div>
+              </div>
+            )}
 
             {/* 继续解答区域 */}
             <div className="continue-section">
               <h4>继续为你解答</h4>
-              <div className="suggested-questions">
-                <Button type="default" size="small">
-                  这些推荐的产品中，哪款性价比最高？
-                </Button>
-                <Button type="default" size="small">
-                  银行主推哪些产品？
-                </Button>
-              </div>
+              {aiAnswer && aiAnswer.recommendedQuestions && aiAnswer.recommendedQuestions.length > 0 ? (
+                <div className="suggested-questions">
+                  {aiAnswer.recommendedQuestions.map((question, index) => (
+                    <Button 
+                      key={index} 
+                      type="default" 
+                      size="small"
+                      onClick={() => handleRecommendedQuestionClick(question)}
+                      disabled={aiLoading}
+                    >
+                      {question}
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <div className="suggested-questions">
+                  <Button 
+                    type="default" 
+                    size="small"
+                    onClick={() => handleRecommendedQuestionClick("请告诉我更多相关信息")}
+                    disabled={aiLoading}
+                  >
+                    请告诉我更多相关信息
+                  </Button>
+                  <Button 
+                    type="default" 
+                    size="small"
+                    onClick={() => handleRecommendedQuestionClick("还有其他问题吗？")}
+                    disabled={aiLoading}
+                  >
+                    还有其他问题吗？
+                  </Button>
+                </div>
+              )}
               <div className="input-section">
                 <div className="textarea-container">
                   <Input.TextArea 
@@ -284,8 +570,9 @@ const Knowledge = () => {
                     placeholder="请在这里继续输入问题" 
                     rows={2} 
                     style={{ marginBottom: 0 }}
+                    disabled={aiLoading}
                     onPressEnter={(e) => {
-                      if (!e.shiftKey) {
+                      if (!e.shiftKey && !aiLoading) {
                         e.preventDefault();
                         handleQuestionSubmit();
                       }
@@ -293,72 +580,220 @@ const Knowledge = () => {
                   />
                   <Button 
                     type="primary" 
-                    icon={<SendOutlined />}
+                    icon={aiLoading ? <Spin size="small" /> : <SendOutlined />}
                     className="send-button"
                     onClick={handleQuestionSubmit}
+                    loading={aiLoading}
+                    disabled={aiLoading}
                   >
-                    发送
+                    {aiLoading ? '发送中...' : '发送'}
                   </Button>
                 </div>
               </div>
             </div>
           </div>
+          )}
 
           {/* 搜索结果区域 */}
           <div className="search-results">
-            <div className="results-header">
-              <span className="results-count">共找到{searchResults.length}个结果</span>
-              <Button type="text" icon={<CalendarOutlined />}>
-                更新日期 <DownOutlined />
-              </Button>
-            </div>
+            {showAISourceModules && (
+              <div className="results-header">
+                <span className="results-count">共找到{searchResults.length}个结果</span>
+                <Button type="text" icon={<CalendarOutlined />}>
+                  更新日期 <DownOutlined />
+                </Button>
+              </div>
+            )}
 
-            <List
-              className="results-list"
-              itemLayout="horizontal"
-              dataSource={searchResults.slice((searchCurrentPage - 1) * 3, searchCurrentPage * 3)}
-              renderItem={(item) => (
-                <List.Item
-                  onClick={() => handleResultClick(item)}
-                  style={{ cursor: 'pointer' }}
-                  actions={[
-                    <Button type="text" icon={<EyeOutlined />} size="small" />,
-                    <Button type="text" icon={<DownloadOutlined />} size="small" />,
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={<FileTextOutlined className="file-icon" />}
-                    title={
-                      <div className="result-title">
-                        <span>{item.title}</span>
-                        <Tag color="red">{item.date}</Tag>
-                      </div>
-                    }
-                    description={item.description}
-                  />
-                </List.Item>
-              )}
-            />
 
-            <div className="pagination-section">
-              <Pagination
-                current={searchCurrentPage}
-                total={searchResults.length}
-                pageSize={3}
-                onChange={setSearchCurrentPage}
-                showSizeChanger={false}
-                showQuickJumper={false}
-                showPrevNextJumpers={true}
-                showLessItems={true}
-                prevIcon="上一页"
-                nextIcon="下一页"
-              />
-            </div>
+            {categoryId && !isCategorySearchMode ? (
+              <div className="category-content">
+                {categoryLoading ? (
+                  <div className="category-loading">
+                    <Spin size="large" />
+                    <p>正在加载知识内容...</p>
+                  </div>
+                ) : categoryKnowledge.length > 0 ? (
+                  <React.Fragment>
+                    <List
+                      className="results-list"
+                      itemLayout="horizontal"
+                      dataSource={categoryKnowledge}
+                      renderItem={(item) => (
+                        <List.Item
+                          onClick={() => handleResultClick(item)}
+                          style={{ cursor: 'pointer' }}
+                          actions={[
+                            <Button type="text" icon={<EyeOutlined />} size="small" />,
+                            <Button type="text" icon={<DownloadOutlined />} size="small" />,
+                          ]}
+                        >
+                          <List.Item.Meta
+                            avatar={<FileTextOutlined className="file-icon" />}
+                            title={
+                              <div className="result-title">
+                                <span>{item.name}</span>
+                                <Tag color="red">知识</Tag>
+                              </div>
+                            }
+                            description={item.description}
+                          />
+                        </List.Item>
+                      )}
+                    />
+                    <div className="pagination-section">
+                      <Pagination
+                        current={categoryPagination.current}
+                        total={categoryPagination.total}
+                        pageSize={categoryPagination.pageSize}
+                        onChange={handleCategoryPaginationChange}
+                        showSizeChanger={false}
+                        showQuickJumper={false}
+                        showPrevNextJumpers={true}
+                        showLessItems={true}
+                        prevIcon="上一页"
+                        nextIcon="下一页"
+                      />
+                    </div>
+                  </React.Fragment>
+                ) : (
+                  <div className="category-info">
+                    <InboxOutlined className="empty-icon" />
+                    <h3>暂无知识内容</h3>
+                    <p>当前分类下暂无知识内容，请稍后再试</p>
+                  </div>
+                )}
+              </div>
+            ) : isCategorySearchMode && !showAISourceModules ? (
+              // 侧边栏点击时的分类知识显示
+              <div className="category-content">
+                {categoryLoading ? (
+                  <div className="category-loading">
+                    <Spin size="large" />
+                    <p>正在加载知识内容...</p>
+                  </div>
+                ) : categoryKnowledge.length > 0 ? (
+                  <React.Fragment>
+                    <List
+                      className="results-list"
+                      itemLayout="horizontal"
+                      dataSource={categoryKnowledge}
+                      renderItem={(item) => (
+                        <List.Item
+                          onClick={() => handleResultClick(item)}
+                          style={{ cursor: 'pointer' }}
+                          actions={[
+                            <Button type="text" icon={<EyeOutlined />} size="small" />,
+                            <Button type="text" icon={<DownloadOutlined />} size="small" />,
+                          ]}
+                        >
+                          <List.Item.Meta
+                            avatar={<FileTextOutlined className="file-icon" />}
+                            title={
+                              <div className="result-title">
+                                <span>{item.name}</span>
+                                <Tag color="red">知识</Tag>
+                              </div>
+                            }
+                            description={item.description}
+                          />
+                        </List.Item>
+                      )}
+                    />
+                    <div className="pagination-section">
+                      <Pagination
+                        current={categoryPagination.current}
+                        total={categoryPagination.total}
+                        pageSize={categoryPagination.pageSize}
+                        onChange={handleCategoryPaginationChange}
+                        showSizeChanger={false}
+                        showQuickJumper={false}
+                        showPrevNextJumpers={true}
+                        showLessItems={true}
+                        prevIcon="上一页"
+                        nextIcon="下一页"
+                      />
+                    </div>
+                  </React.Fragment>
+                ) : (
+                  <div className="category-info">
+                    <InboxOutlined className="empty-icon" />
+                    <h3>暂无知识内容</h3>
+                    <p>当前分类下暂无知识内容，请稍后再试</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <React.Fragment>
+                {searchLoading ? (
+                  <div className="search-loading">
+                    <Spin size="large" />
+                    <p>正在加载知识内容...</p>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <React.Fragment>
+                    <List
+                      className="results-list"
+                      itemLayout="horizontal"
+                      dataSource={searchResults}
+                      renderItem={(item) => (
+                        <List.Item
+                          onClick={() => handleResultClick(item)}
+                          style={{ cursor: 'pointer' }}
+                          actions={[
+                            <Button type="text" icon={<EyeOutlined />} size="small" />,
+                            <Button type="text" icon={<DownloadOutlined />} size="small" />,
+                          ]}
+                        >
+                          <List.Item.Meta
+                            avatar={<FileTextOutlined className="file-icon" />}
+                            title={
+                              <div className="result-title">
+                                <span>{item.displayName || item.name}</span>
+                                <Tag color="red">知识</Tag>
+                              </div>
+                            }
+                            description={item.description}
+                          />
+                        </List.Item>
+                      )}
+                    />
+                    <div className="pagination-section">
+                      <Pagination
+                        current={searchPagination.current}
+                        total={searchPagination.total}
+                        pageSize={searchPagination.pageSize}
+                        onChange={handleSearchPaginationChange}
+                        showSizeChanger={false}
+                        showQuickJumper={false}
+                        showPrevNextJumpers={true}
+                        showLessItems={true}
+                        prevIcon="上一页"
+                        nextIcon="下一页"
+                      />
+                    </div>
+                  </React.Fragment>
+                ) : searchValue ? (
+                  <div className="search-empty">
+                    <InboxOutlined className="empty-icon" />
+                    <h3>暂无知识内容</h3>
+                    <p>当前分类下暂无知识内容，请稍后再试</p>
+                  </div>
+                ) : (
+                  <div className="search-placeholder">
+                    <FolderOpenOutlined className="empty-icon" />
+                    <h3>欢迎使用知识库</h3>
+                    <p>请在搜索框中输入关键词，或点击左侧分类查看相关知识内容</p>
+                  </div>
+                )}
+              </React.Fragment>
+            )}
           </div>
         </Content>
 
-        {/* 右侧Sources侧边栏 */}
-        <Sider className="sources-sider" width={420}>
+        {/* 右侧Sources侧边栏 - 只在显示source模块时显示 */}
+        {showAISourceModules && (
+          <Sider className="sources-sider" width={420}>
           <div className="sources-header">
             <h3>Sources</h3>
           </div>
@@ -386,12 +821,20 @@ const Knowledge = () => {
                       <Button type="text" size="small" icon={<CloseOutlined />} onClick={handlePdfClose} />
                     </div>
                     <div className="pdf-preview-container">
-                      { (
+                      {pdfLoading ? (
                         <div className="pdf-loading">
                           <Spin size="large" />
                           <p>PDF 加载中...</p>
                         </div>
-                      )  }
+                      ) : (
+                        <iframe
+                          src={currentPdf}
+                          width="100%"
+                          height="400px"
+                          style={{ border: 'none' }}
+                          title="PDF Preview"
+                        />
+                      )}
                     </div>
                   </div>
                 )}
@@ -413,9 +856,10 @@ const Knowledge = () => {
             )}
           </div>
         </Sider>
+        )}
       </Layout>
     </Layout>
   );
-};
+});
 
 export default Knowledge;

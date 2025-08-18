@@ -203,3 +203,38 @@ a:hover {
   border-color: var(--ant-primary-color) !important;
   box-shadow: 0 0 0 2px var(--ant-primary-color-outline) !important;
 }
+
+/* 通用输入框主题色覆盖 - 覆盖所有可能的CSS类 */
+.ant-input-outlined:focus,
+.ant-input-outlined:focus-within,
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-outlined:focus,
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-outlined:focus-within,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:focus,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:focus-within {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(219, 0, 17, 0.1) !important;
+  outline: 0 !important;
+}
+
+.ant-input-outlined:hover,
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-outlined:hover,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-outlined:hover {
+  border-color: var(--ant-primary-color) !important;
+}
+
+.ant-input-affix-wrapper-outlined:focus,
+.ant-input-affix-wrapper-outlined:focus-within,
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-affix-wrapper-outlined:focus,
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-affix-wrapper-outlined:focus-within,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:focus,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:focus-within {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(219, 0, 17, 0.1) !important;
+  outline: 0 !important;
+}
+
+.ant-input-affix-wrapper-outlined:hover,
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-affix-wrapper-outlined:hover,
+:where(.css-dev-only-do-not-override-1vjf2v5).ant-input-affix-wrapper-outlined:hover {
+  border-color: var(--ant-primary-color) !important;
+}

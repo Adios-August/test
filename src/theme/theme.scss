@@ -315,3 +315,54 @@
     }
   }
 } 
+
+// 菜单组件主题色覆盖
+.ant-menu-light {
+  .ant-menu-item-selected {
+    color: var(--ant-primary-color) !important;
+    background-color: rgba(219, 0, 17, 0.1) !important;
+  }
+  
+  .ant-menu-submenu-selected > .ant-menu-submenu-title {
+    color: var(--ant-primary-color) !important;
+  }
+  
+  .ant-menu-item:hover,
+  .ant-menu-submenu-title:hover {
+    color: var(--ant-primary-color) !important;
+  }
+}
+
+// 更高优先级的菜单样式覆盖
+:where(.css-dev-only-do-not-override-19pxc0).ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title,
+:where(.css-dev-only-do-not-override-19pxc0).ant-menu-light > .ant-menu .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: var(--ant-primary-color) !important;
+}
+
+// 输入框focus状态的主题色覆盖 - 针对您看到的CSS类
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-outlined:focus,
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-outlined:focus-within {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(219, 0, 17, 0.1) !important;
+  outline: 0 !important;
+  background-color: #ffffff !important;
+}
+
+// 输入框hover状态的主题色覆盖
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-outlined:hover {
+  border-color: var(--ant-primary-color) !important;
+}
+
+// 输入框包装器focus状态的主题色覆盖
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-affix-wrapper-outlined:focus,
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-affix-wrapper-outlined:focus-within {
+  border-color: var(--ant-primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(219, 0, 17, 0.1) !important;
+  outline: 0 !important;
+  background-color: #ffffff !important;
+}
+
+// 输入框包装器hover状态的主题色覆盖
+:where(.css-dev-only-do-not-override-19pxc0).ant-input-affix-wrapper-outlined:hover {
+  border-color: var(--ant-primary-color) !important;
+} 

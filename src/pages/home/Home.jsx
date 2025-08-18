@@ -1,25 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Card, Row, Col, Input, Button, Tag, List, Spin, message } from "antd";
+import { Layout, Input, Button, Card, Row, Col, List, Tag, message, Spin } from "antd";
+import { useNavigate } from "react-router-dom";
 import {
+  HeartOutlined,
+  ClockCircleOutlined,
+  FireOutlined,
   EyeOutlined,
   TagOutlined,
-  DownloadOutlined,
-  ClockCircleOutlined,
-  HeartOutlined,
-  MoreOutlined,
 } from "@ant-design/icons";
-import HomeSidebar from "./HomeSidebar";
+import { observer } from "mobx-react-lite";
+import CommonSidebar from "../../components/CommonSidebar";
+import { homeAPI } from "../../api/home";
+import { useSearchHistoryStore } from "../../stores";
 import homeBanner from "../../assets/image/home_banner.png";
-import { homeAPI } from "../../api";
 import "./Home.scss";
 
 const { Content } = Layout;
 
-const Home = () => {
+const Home = observer(() => {
+  const navigate = useNavigate();
+  const searchHistoryStore = useSearchHistoryStore();
+  const [searchValue, setSearchValue] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
+  const [showAllRecommended, setShowAllRecommended] = useState(false);
   const [popularKnowledge, setPopularKnowledge] = useState([]);
   const [latestKnowledgeData, setLatestKnowledgeData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [latestLoading, setLatestLoading] = useState(false);
+  const [hotDownloadsLoading, setHotDownloadsLoading] = useState(false);
+  const [recommendedQuestions, setRecommendedQuestions] = useState([]);
+  const [recommendedLoading, setRecommendedLoading] = useState(false);
 
   const hotTags = [
     { name: "热门标签" },
@@ -29,17 +40,8 @@ const Home = () => {
     { name: "信用卡问题" },
   ];
 
-  const hottestResources = [
-    { title: "每日基金价格.xlsx", downloads: 205, icon: <DownloadOutlined  /> },
-    { title: "产品推介.PDF", downloads: 200, icon: <DownloadOutlined /> },
-    { title: "投资策略报告.docx", downloads: 180, icon: <DownloadOutlined /> },
-    { title: "市场分析数据.xlsx", downloads: 165, icon: <DownloadOutlined /> },
-    { title: "产品手册.PDF", downloads: 150, icon: <DownloadOutlined  /> },
-  ];
-
-
-
-
+  // 最热资料
+  const [hotDownloads, setHotDownloads] = useState([]);
 
   // 获取热门知识列表
   const fetchPopularKnowledge = async () => {
@@ -77,46 +79,263 @@ const Home = () => {
     }
   };
 
+  // 获取最热资料
+  const fetchHotDownloads = async () => {
+    setHotDownloadsLoading(true);
+    try {
+      const resp = await homeAPI.getHotDownloads(10);
+      if (resp.code === 200) {
+        setHotDownloads(resp.data || []);
+      } else {
+        message.error(resp.message || '获取最热资料失败');
+        setHotDownloads([]);
+      }
+    } catch (e) {
+      console.error('获取最热资料失败:', e);
+      message.error('获取最热资料失败，请稍后重试');
+      setHotDownloads([]);
+    } finally {
+      setHotDownloadsLoading(false);
+    }
+  };
+
+  // 获取推荐问题
+  const fetchRecommendedQuestions = async () => {
+    setRecommendedLoading(true);
+    try {
+      const response = await homeAPI.getRecommendedQuestions(10);
+      if (response.code === 200) {
+        setRecommendedQuestions(response.data || []);
+      } else {
+        message.error(response.message || '获取推荐问题失败');
+        setRecommendedQuestions([]);
+      }
+    } catch (error) {
+      console.error('获取推荐问题失败:', error);
+      message.error('获取推荐问题失败，请稍后重试');
+      setRecommendedQuestions([]);
+    } finally {
+      setRecommendedLoading(false);
+    }
+  };
+
+  // 处理搜索
+  const handleSearch = () => {
+    if (!searchValue.trim()) {
+      message.warning("请输入搜索关键词");
+      return;
+    }
+    
+    // 添加搜索历史
+    searchHistoryStore.addSearchHistory(searchValue.trim());
+    
+    // 跳转到知识库页面，并传递搜索关键词
+    navigate("/knowledge", { 
+      state: { 
+        searchKeyword: searchValue.trim()
+      } 
+    });
+  };
+
+  // 处理回车搜索
+  const handleSearchEnter = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // 处理历史问题点击
+  const handleHistoryQuestionClick = (question) => {
+    setSearchValue(question);
+    // 添加搜索历史
+    searchHistoryStore.addSearchHistory(question);
+    // 自动跳转到知识库页面
+    navigate("/knowledge", { 
+      state: { 
+        searchKeyword: question
+      } 
+    });
+  };
+
+  // 处理推荐问题点击
+  const handleRecommendedQuestionClick = (question) => {
+    // 如果question是对象，提取问题文本
+    const questionText = typeof question === 'string' ? question : question.text || question.title || question;
+    setSearchValue(questionText);
+    // 添加搜索历史
+    searchHistoryStore.addSearchHistory(questionText);
+    // 自动跳转到知识库页面
+    navigate("/knowledge", { 
+      state: { 
+        searchKeyword: questionText
+      } 
+    });
+  };
+
+  // 重置搜索建议状态
+  const resetSearchSuggestions = () => {
+    setShowAllHistory(false);
+    setShowAllRecommended(false);
+  };
+
+  // 处理标签点击
+  const handleTagClick = (tag) => {
+    setSearchValue(tag.name);
+    // 自动跳转到知识库页面
+    navigate("/knowledge", { 
+      state: { 
+        searchKeyword: tag.name
+      } 
+    });
+  };
+
+
+
   // 组件挂载时获取数据
   useEffect(() => {
     fetchPopularKnowledge();
     fetchLatestKnowledge();
+    fetchHotDownloads();
+    fetchRecommendedQuestions(); // 添加获取推荐问题的调用
   }, []);
 
 
 
   return (
     <Layout className="home-layout">
-      <HomeSidebar />
+      <CommonSidebar marginTop="24px" enableNavigation={true} />
       <Content className="home-content">
         <div className="home-page">
           <div className="search-section">
             <div className="search-container">
               <div className="search-content">
-                <Input
-                  placeholder="请输入关键字"
-                  suffix={
-                    <Button
-                      type="text"
-                      size="small"
-                      style={{
-                        fontSize: "16px",
-                        color: "var(--ant-primary-color)",
-                        border: "none",
-                        padding: "0 8px",
-                        height: "auto",
-                      }}
+                {/* 搜索输入框容器 - 相对定位 */}
+                <div className="search-input-container">
+                  <Input
+                    placeholder="请输入关键字"
+                    value={searchValue}
+                    onChange={(e) => setSearchValue(e.target.value)}
+                    onPressEnter={handleSearchEnter}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setSearchFocused(false);
+                        resetSearchSuggestions();
+                      }, 300);
+                    }}
+                    suffix={
+                      <Button
+                        type="text"
+                        size="small"
+                        onClick={handleSearch}
+                        style={{
+                          fontSize: "16px",
+                          color: "var(--ant-primary-color)",
+                          border: "none",
+                          padding: "0 8px",
+                          height: "auto",
+                        }}
+                      >
+                        搜索
+                      </Button>
+                    }
+                    style={{
+                      fontSize: "16px",
+                      height: "48px",
+                      borderRadius: "8px",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                    }}
+                  />
+
+                  {/* 搜索建议区域 */}
+                  {searchFocused && (
+                    <div 
+                      className="search-suggestions"
+                      onMouseDown={(e) => e.preventDefault()}
                     >
-                      搜索
-                    </Button>
-                  }
-                  style={{
-                    fontSize: "16px",
-                    height: "48px",
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
+                      <div className="suggestions-content">
+                        <div className="history-questions">
+                          <div className="section-title">历史问题</div>
+                          {searchHistoryStore.hasHistory ? (
+                            <>
+                              {(showAllHistory ? searchHistoryStore.getSearchHistory() : searchHistoryStore.getSearchHistory(2)).map((historyItem) => (
+                                <div 
+                                  key={historyItem.id} 
+                                  className="question-item"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleHistoryQuestionClick(historyItem.query);
+                                  }}
+                                >
+                                  {historyItem.query}
+                                </div>
+                              ))}
+                              {searchHistoryStore.historyCount > 2 && (
+                                <div 
+                                  className="show-more-btn"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowAllHistory(!showAllHistory);
+                                  }}
+                                >
+                                  {showAllHistory ? '收起' : `查看更多 (${searchHistoryStore.historyCount - 2})`}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="no-history">
+                              <p>暂无搜索历史</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="recommended-questions">
+                          <div className="section-title">推荐问题</div>
+                          {recommendedLoading ? (
+                            <div className="loading-questions">
+                              <Spin size="small" />
+                              <span>加载中...</span>
+                            </div>
+                          ) : recommendedQuestions.length > 0 ? (
+                            <>
+                              {(showAllRecommended ? recommendedQuestions : recommendedQuestions.slice(0, 2)).map((question, index) => (
+                                <div 
+                                  key={index} 
+                                  className="question-item"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRecommendedQuestionClick(question);
+                                  }}
+                                >
+                                  {question}
+                                </div>
+                              ))}
+                              {recommendedQuestions.length > 2 && (
+                                <div 
+                                  className="show-more-btn"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowAllRecommended(!showAllRecommended);
+                                  }}
+                                >
+                                  {showAllRecommended ? '收起' : `查看更多 (${recommendedQuestions.length - 2})`}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="no-recommendations">
+                              <p>暂无推荐问题</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <div className="hot-tags-section">
                   <div className="hot-tags-header">
@@ -136,6 +355,8 @@ const Home = () => {
               <div className="search-banner">
                 <img src={homeBanner} alt="首页横幅" />
               </div>
+
+
             </div>
           </div>
 
@@ -167,25 +388,13 @@ const Home = () => {
                             <EyeOutlined /> {item.searchCount || 0}
                           </span>
                         </div>
-                        {item.tags && item.tags.length > 0 && (
-                          <div className="item-tags">
-                            {item.tags.slice(0, 2).map((tag, tagIndex) => (
-                              <Tag key={tagIndex} size="small" color="blue">
-                                {tag}
-                              </Tag>
-                            ))}
-                          </div>
-                        )}
+                        
                       </List.Item>
                     )}
                   />
                 )}
 
-                <div className="panel-footer">
-                  <Button type="link" icon={<MoreOutlined />}>
-                    更多
-                  </Button>
-                </div>
+                 
               </Card>
             </Col>
 
@@ -216,25 +425,13 @@ const Home = () => {
                             <ClockCircleOutlined /> {new Date(item.createdTime).toLocaleDateString()}
                           </span>
                         </div>
-                        {item.tags && item.tags.length > 0 && (
-                          <div className="item-tags">
-                            {item.tags.slice(0, 2).map((tag, tagIndex) => (
-                              <Tag key={tagIndex} size="small" color="green">
-                                {tag}
-                              </Tag>
-                            ))}
-                          </div>
-                        )}
+                       
                       </List.Item>
                     )}
                   />
                 )}
 
-                <div className="panel-footer">
-                  <Button type="link" icon={<MoreOutlined />}>
-                    更多
-                  </Button>
-                </div>
+                 
               </Card>
             </Col>
 
@@ -242,34 +439,34 @@ const Home = () => {
               <Card className="panel-card">
                 <div className="panel-header">
                   <div className="panel-title">
-                    <DownloadOutlined className="panel-icon"  />
+                    <FireOutlined className="panel-icon"  />
                     <span>最热资料</span>
                   </div>
                 </div>
 
-                <List
-                  className="panel-list"
-                  dataSource={hottestResources}
-                  renderItem={(item, index) => (
-                    <List.Item className="panel-item">
-                      <div className="item-content">
-                        <span className="item-number">{index + 1}</span>
-                        <span className="item-title">{item.title}</span>
-                        {item.downloads && (
+                {hotDownloadsLoading ? (
+                  <div className="loading-container">
+                    <Spin size="large" />
+                    <p>加载中...</p>
+                  </div>
+                ) : (
+                  <List
+                    className="panel-list"
+                    dataSource={hotDownloads}
+                    renderItem={(item, index) => (
+                      <List.Item className="panel-item">
+                        <div className="item-content">
+                          <span className="item-number">{index + 1}</span>
+                          <span className="item-title">{item.name}</span>
                           <span className="item-meta">
-                            {item.icon} {item.downloads}
+                            <FireOutlined /> {item.searchCount || 0}
                           </span>
-                        )}
-                      </div>
-                    </List.Item>
-                  )}
-                />
-
-                <div className="panel-footer">
-                  <Button type="link" icon={<MoreOutlined />}>
-                    更多
-                  </Button>
-                </div>
+                        </div>
+                      </List.Item>
+                    )}
+                  />
+                )}
+                 
               </Card>
             </Col>
 
@@ -278,6 +475,6 @@ const Home = () => {
       </Content>
     </Layout>
   );
-};
+});
 
 export default Home;
