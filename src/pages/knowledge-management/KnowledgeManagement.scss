@@ -1,0 +1,166 @@
+.knowledge-management-layout {
+  display: flex;
+  background: #e9f0fb;
+  max-height: calc(100vh - 94px);
+
+  .knowledge-management-content {
+    flex: 1;
+    padding: 24px 24px 0 24px;
+    margin-left: 0;
+    background: #e9f0fb;
+    overflow-y: auto;
+
+    .management-content {
+      .content-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding: 0;
+
+        h2 {
+          margin: 0;
+          color: #333;
+          font-size: 24px;
+          font-weight: 600;
+        }
+
+        .ant-space {
+          .ant-btn {
+            border-radius: 6px;
+            
+            &.ant-btn-primary {
+              background-color: var(--ant-primary-color);
+              border-color: var(--ant-primary-color);
+
+              &:hover {
+                background-color: var(--ant-primary-color-hover);
+                border-color: var(--ant-primary-color-hover);
+              }
+            }
+          }
+        }
+      }
+
+      .ant-row {
+        .ant-col {
+          .ant-card {
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+
+            &:hover {
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+              transform: translateY(-2px);
+            }
+
+            .ant-statistic {
+              .ant-statistic-title {
+                color: #666;
+                font-size: 14px;
+                margin-bottom: 8px;
+              }
+
+              .ant-statistic-content {
+                .ant-statistic-content-value {
+                  color: #333;
+                  font-size: 24px;
+                  font-weight: 600;
+                }
+
+                .ant-statistic-content-prefix {
+                  color: var(--ant-primary-color);
+                  margin-right: 8px;
+                }
+
+                .ant-statistic-content-suffix {
+                  color: #666;
+                  font-size: 16px;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      .ant-card {
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f0f0f0;
+
+        .ant-card-head {
+          border-bottom: 1px solid #f0f0f0;
+          padding: 0 24px;
+
+          .ant-card-head-title {
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+          }
+        }
+
+        .ant-card-body {
+          padding: 24px;
+          color: #666;
+          font-size: 14px;
+          line-height: 1.6;
+        }
+      }
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 1200px) {
+  .knowledge-management-layout {
+    .knowledge-management-content {
+      padding: 16px;
+
+      .management-content {
+        .content-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 16px;
+
+          h2 {
+            font-size: 20px;
+          }
+        }
+
+        .ant-row {
+          .ant-col {
+            margin-bottom: 16px;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .knowledge-management-layout {
+    .knowledge-management-content {
+      padding: 12px;
+
+      .management-content {
+        .content-header {
+          h2 {
+            font-size: 18px;
+          }
+
+          .ant-space {
+            width: 100%;
+            justify-content: space-between;
+          }
+        }
+
+        .ant-row {
+          .ant-col {
+            span: 12;
+          }
+        }
+      }
+    }
+  }
+} 

@@ -1,0 +1,142 @@
+.management-sidebar {
+  background: white;
+  border-radius: 12px;
+  margin: 24px 16px 16px 16px;
+  overflow: visible;
+  overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
+ 
+  // 隐藏滚动条但保持滚动功能
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  .sidebar-content {
+    padding: 16px 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+
+    .sidebar-header {
+    padding: 16px 16px 12px;
+    color: #333333;
+    font-size: 14px;
+    font-weight: 500;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 8px;
+
+    h3 {
+      margin: 0;
+      color: #333;
+      font-size: 16px;
+      font-weight: 600;
+    }
+  }
+
+  .management-menu {
+    border-right: none;
+    background: transparent;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: visible;
+    
+    // 隐藏滚动条但保持滚动功能
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    .ant-menu-item {
+      padding: 6px 16px;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+      margin: 1px 8px;
+      white-space: normal;
+      word-wrap: break-word;
+      word-break: break-all;
+      line-height: 1.5;
+      min-height: auto;
+      height: auto;
+      display: flex;
+      align-items: flex-start;
+      padding-top: 8px;
+      padding-bottom: 8px;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #f5f5f5;
+      }
+
+      &.ant-menu-item-selected {
+        background-color: rgba(219, 0, 17, 0.1); // 使用主题色的透明版本
+        color: #db0011 !important; // 使用项目主题色
+      }
+
+      .ant-menu-item-icon {
+        font-size: 16px;
+        margin-right: 12px;
+        margin-top: 2px;
+      }
+    }
+
+    .ant-menu-inline {
+      border-right: none;
+      width: 100%;
+    }
+  }
+  }
+}
+
+// 全局菜单选中状态样式覆盖 - 使用项目主题色
+:where(.css-dev-only-do-not-override-19pxc0).ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title,
+:where(.css-dev-only-do-not-override-19pxc0).ant-menu-light > .ant-menu .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: #db0011 !important; // 使用项目主题色
+}
+
+// 菜单项选中状态
+.ant-menu-light .ant-menu-item-selected {
+  color: #db0011 !important; // 使用项目主题色
+  background-color: rgba(219, 0, 17, 0.1) !important; // 使用主题色的透明版本
+}
+
+// 子菜单选中状态
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: #db0011 !important; // 使用项目主题色
+}
+
+// 菜单项悬停状态
+.ant-menu-light .ant-menu-item:hover {
+  color: #db0011 !important; // 使用项目主题色
+}
+
+// 子菜单标题悬停状态
+.ant-menu-light .ant-menu-submenu-title:hover {
+  color: #db0011 !important; // 使用项目主题色
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .management-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    
+    .sidebar-content {
+      padding: 12px 0;
+      
+      .sidebar-header {
+        padding: 12px 16px 8px;
+      }
+      
+      .management-menu {
+        .ant-menu-item {
+          padding: 4px 12px;
+          margin: 1px 4px;
+        }
+      }
+    }
+  }
+} 

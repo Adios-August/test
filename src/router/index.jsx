@@ -6,6 +6,11 @@ import Developing from '../components/Developing';
 import Knowledge from '../pages/knowledge/Knowledge';
 import KnowledgeDetail from '../pages/knowledge/KnowledgeDetail';
 import KnowledgeQA from '../pages/knowledge/KnowledgeQA';
+import KnowledgeManagement from '../pages/knowledge-management/KnowledgeManagement';
+import RoleManagement from '../pages/knowledge-management/RoleManagement';
+import CategoryManagement from '../pages/knowledge-management/CategoryManagement';
+import QueriesManagement from '../pages/knowledge-management/QueriesManagement';
+import FeedbackManagement from '../pages/knowledge-management/FeedbackManagement';
 import Login from '../pages/login/Login';
 import RouteGuard from './RouteGuard';
 
@@ -41,7 +46,29 @@ const router = createBrowserRouter([
            
           {
             path: '/knowledge-admin',
-            element: <Developing title="知识库管理功能开发中" />,
+            element: <KnowledgeManagement />,
+            children: [
+              {
+                path: '',
+                element: <RoleManagement />,
+              },
+              {
+                path: 'role-management',
+                element: <RoleManagement />,
+              },
+              {
+                path: 'category-management',
+                element: <CategoryManagement />,
+              },
+              {
+                path: 'queries',
+                element: <QueriesManagement />,
+              },
+              {
+                path: 'feedback',
+                element: <FeedbackManagement />,
+              },
+            ],
           },
           {
             path: '/stats',
