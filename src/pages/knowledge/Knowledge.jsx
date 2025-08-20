@@ -14,6 +14,7 @@ import {
   Tag,
   Avatar,
   Space,
+  Tooltip,
 } from "antd";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
@@ -31,14 +32,15 @@ import {
   CalendarOutlined,
   InboxOutlined,
   FolderOpenOutlined,
+  GlobalOutlined,
+  ExportOutlined,
 } from "@ant-design/icons";
 import { observer } from "mobx-react-lite";
 import CommonSidebar from "../../components/CommonSidebar";
+import KnowledgeDetailModal from "../../components/KnowledgeDetailModal";
 import { knowledgeAPI } from "../../api/knowledge";
 import { useSearchHistoryStore } from "../../stores";
  
-import pdfFile1 from "../../assets/单士伟的简历.pdf";
-import pdfFile2 from "../../assets/财务自由之路.pdf";
 import "./Knowledge.scss";
 
 const { Sider, Content } = Layout;
@@ -56,11 +58,6 @@ const Knowledge = observer(() => {
   console.log('Knowledge组件状态:', { categoryId, location: location.pathname });
   
   const [searchCurrentPage, setSearchCurrentPage] = useState(1); // 搜索结果分页
-  const [currentPdf, setCurrentPdf] = useState(null);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
-  const [isNavigating, setIsNavigating] = useState(false); // 防止导航干扰
-  const [previewingFileId, setPreviewingFileId] = useState(null); // 当前预览的文件ID
   const [questionInput, setQuestionInput] = useState(""); // 问题输入框
   const [searchValue, setSearchValue] = useState(""); // 搜索输入值
   const [currentCategoryId, setCurrentCategoryId] = useState(null); // 当前选中的分类ID
@@ -88,78 +85,12 @@ const Knowledge = observer(() => {
   // AI回答相关状态
   const [aiAnswer, setAiAnswer] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [references, setReferences] = useState([]); // 添加references状态
 
-  // 源文件数据
-  const sourceFiles = useMemo(() => [
-    {
-      id: 1,
-      title: "单士伟的简历.pdf",
-      type: "pdf",
-      path: pdfFile1,
-    },
-    {
-      id: 2,
-      title: "财务自由之路.pdf",
-      type: "pdf",
-      path: pdfFile2,
-    },
-    {
-      id: 3,
-      title: "投资策略分析.pdf",
-      type: "pdf",
-      path: pdfFile1,
-    },
-    {
-      id: 4,
-      title: "市场趋势报告.pdf",
-      type: "pdf",
-      path: pdfFile2,
-    },
-    {
-      id: 5,
-      title: "产品推荐指南.pdf",
-      type: "pdf",
-      path: pdfFile1,
-    },
-    {
-      id: 6,
-      title: "客户服务手册.pdf",
-      type: "pdf",
-      path: pdfFile1,
-    },
-    {
-      id: 7,
-      title: "风险管理指南.pdf",
-      type: "pdf",
-      path: pdfFile2,
-    },
-  ], []);
-
-  // 无限滚动配置
-  const [displayedFiles, setDisplayedFiles] = useState([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const pageSize = 5; // 每次加载5个文件
-
-  // 初始化显示的文件
-  useEffect(() => {
-    setDisplayedFiles(sourceFiles.slice(0, pageSize));
-    setHasMore(sourceFiles.length > pageSize);
-  }, []); // 只在组件挂载时执行一次
-
-  // 加载更多文件
-  const loadMore = useCallback(() => {
-    if (loading || !hasMore) return;
-    
-    setLoading(true);
-    setTimeout(() => {
-      const currentLength = displayedFiles.length;
-      const newFiles = sourceFiles.slice(currentLength, currentLength + pageSize);
-      setDisplayedFiles(prev => [...prev, ...newFiles]);
-      setHasMore(currentLength + pageSize < sourceFiles.length);
-      setLoading(false);
-    }, 500);
-  }, [loading, hasMore, displayedFiles.length, sourceFiles, pageSize]);
+  // 知识详情弹窗相关状态
+  const [knowledgeDetailVisible, setKnowledgeDetailVisible] = useState(false);
+  const [currentKnowledge, setCurrentKnowledge] = useState(null);
+  const [knowledgeDetailLoading, setKnowledgeDetailLoading] = useState(false);
 
   // 处理问题提交
   const handleQuestionSubmit = () => {
@@ -187,8 +118,6 @@ const Knowledge = observer(() => {
       } 
     });
   };
-
-  // 静态搜索结果数据（已移除，现在使用API数据）
 
   // 获取分类知识列表
   const fetchCategoryKnowledge = useCallback(async (categoryId, page = 1, size = 10) => {
@@ -267,8 +196,10 @@ const Knowledge = observer(() => {
         // 处理AI回答结果
         if (response.data.ragResults && response.data.ragResults.length > 0) {
           setAiAnswer(response.data.ragResults[0]);
+          setReferences(response.data.ragResults[0].references || []); // 设置references
         } else {
           setAiAnswer(null);
+          setReferences([]); // 清空references
         }
         
         console.log('搜索结果设置成功:', processedResults.length);
@@ -392,40 +323,6 @@ const Knowledge = observer(() => {
     }
   }, [location.state]);
 
- 
-  // 自动预览第一个 PDF
-  useEffect(() => {
-    if (sourceFiles.length > 0 && !currentPdf) {
-      handlePdfPreview(sourceFiles[0].path, sourceFiles[0].id);
-    }
-  }, []);
-
-  // PDF 预览相关函数
-  const handlePdfPreview = (pdfPath, fileId) => {
-    console.log('=== PDF 预览信息 ===');
-    console.log('PDF 文件路径:', pdfPath);
-    console.log('PDF 文件ID:', fileId);
-    console.log('PDF 完整URL:', window.location.origin + pdfPath);
-    console.log('PDF 文件名:', sourceFiles.find(file => file.id === fileId)?.title);
-    console.log('==================');
-   
-    setCurrentPdf(pdfPath);
-    setPreviewingFileId(fileId);
-    setPdfLoading(true);
-
-    // 模拟加载过程
-    setTimeout(() => {
-      setPdfLoading(false);
-      console.log("PDF 预览准备完成");
-    }, 500);
-  };
-
-  const handlePdfClose = () => {
-    setCurrentPdf(null);
-    setPreviewingFileId(null);
-    setPdfLoading(false);
-  };
-
   const handleResultClick = (item) => {
     navigate(`/knowledge/${item.id}`);
   };
@@ -433,6 +330,45 @@ const Knowledge = observer(() => {
   // 切换AI和source模块显示状态
   const toggleAISourceModules = () => {
     setShowAISourceModules(!showAISourceModules);
+  };
+
+  // 获取知识详情
+  const fetchKnowledgeDetail = async (knowledgeId) => {
+    if (!knowledgeId) return;
+    
+    setKnowledgeDetailLoading(true);
+    try {
+      const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+      
+      if (response.code === 200) {
+        setCurrentKnowledge(response.data);
+      } else {
+        message.error(response.message || '获取知识详情失败');
+      }
+    } catch (error) {
+      console.error('获取知识详情失败:', error);
+      message.error('获取知识详情失败');
+    } finally {
+      setKnowledgeDetailLoading(false);
+    }
+  };
+
+  // 处理Sources模块中的知识点击
+  const handleSourceKnowledgeClick = (reference) => {
+    setCurrentKnowledge(reference); // 先显示基本信息
+    setKnowledgeDetailVisible(true);
+    
+    // 如果有knowledgeId，则获取详细信息
+    if (reference.knowledgeId) {
+      fetchKnowledgeDetail(reference.knowledgeId);
+    }
+  };
+
+  // 关闭知识详情弹窗
+  const handleCloseKnowledgeDetail = () => {
+    setKnowledgeDetailVisible(false);
+    setCurrentKnowledge(null);
+    setKnowledgeDetailLoading(false);
   };
 
   return (
@@ -615,32 +551,36 @@ const Knowledge = observer(() => {
                   </div>
                 ) : categoryKnowledge.length > 0 ? (
                   <React.Fragment>
-                    <List
-                      className="results-list"
-                      itemLayout="horizontal"
-                      dataSource={categoryKnowledge}
-                      renderItem={(item) => (
-                        <List.Item
+                    <div className="results-grid">
+                      {categoryKnowledge.map((item) => (
+                        <Card
+                          key={item.id}
+                          className="result-card"
                           onClick={() => handleResultClick(item)}
-                          style={{ cursor: 'pointer' }}
-                          actions={[
-                            <Button type="text" icon={<EyeOutlined />} size="small" />,
-                            <Button type="text" icon={<DownloadOutlined />} size="small" />,
-                          ]}
+                          style={{ cursor: 'pointer', marginBottom: '16px' }}
                         >
-                          <List.Item.Meta
-                            avatar={<FileTextOutlined className="file-icon" />}
-                            title={
-                              <div className="result-title">
-                                <span>{item.name}</span>
-                                <Tag color="red">知识</Tag>
-                              </div>
-                            }
-                            description={item.description}
-                          />
-                        </List.Item>
-                      )}
-                    />
+                          <div className="card-header">
+                            <div className="card-title">
+                              <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                              <span className="title-text">{item.name}</span>
+                            </div>
+                            <div className="card-actions">
+                            
+                              <span className="date-text">2025-01-15</span>
+                              <Tooltip title="在当前标签页中打开">
+                                <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
+                              </Tooltip>
+                              <Tooltip title="在新标签页中打开">
+                                <ExportOutlined style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} />
+                              </Tooltip>
+                            </div>
+                          </div>
+                          <div className="card-content">
+                            <p>{item.description}</p>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
                     <div className="pagination-section">
                       <Pagination
                         current={categoryPagination.current}
@@ -674,32 +614,36 @@ const Knowledge = observer(() => {
                   </div>
                 ) : categoryKnowledge.length > 0 ? (
                   <React.Fragment>
-                    <List
-                      className="results-list"
-                      itemLayout="horizontal"
-                      dataSource={categoryKnowledge}
-                      renderItem={(item) => (
-                        <List.Item
+                    <div className="results-grid">
+                      {categoryKnowledge.map((item) => (
+                        <Card
+                          key={item.id}
+                          className="result-card"
                           onClick={() => handleResultClick(item)}
-                          style={{ cursor: 'pointer' }}
-                          actions={[
-                            <Button type="text" icon={<EyeOutlined />} size="small" />,
-                            <Button type="text" icon={<DownloadOutlined />} size="small" />,
-                          ]}
+                          style={{ cursor: 'pointer', marginBottom: '16px' }}
                         >
-                          <List.Item.Meta
-                            avatar={<FileTextOutlined className="file-icon" />}
-                            title={
-                              <div className="result-title">
-                                <span>{item.name}</span>
-                                <Tag color="red">知识</Tag>
-                              </div>
-                            }
-                            description={item.description}
-                          />
-                        </List.Item>
-                      )}
-                    />
+                          <div className="card-header">
+                            <div className="card-title">
+                              <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                              <span className="title-text">{item.name}</span>
+                            </div>
+                            <div className="card-actions">
+                              <DownOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
+                              <span className="date-text">2025-01-15</span>
+                              <Tooltip title="在当前标签页中打开">
+                                <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
+                              </Tooltip>
+                              <Tooltip title="在新标签页中打开">
+                                <ExportOutlined style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} />
+                              </Tooltip>
+                            </div>
+                          </div>
+                          <div className="card-content">
+                            <p>{item.description}</p>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
                     <div className="pagination-section">
                       <Pagination
                         current={categoryPagination.current}
@@ -732,32 +676,36 @@ const Knowledge = observer(() => {
                   </div>
                 ) : searchResults.length > 0 ? (
                   <React.Fragment>
-                    <List
-                      className="results-list"
-                      itemLayout="horizontal"
-                      dataSource={searchResults}
-                      renderItem={(item) => (
-                        <List.Item
+                    <div className="results-grid">
+                      {searchResults.map((item) => (
+                        <Card
+                          key={item.id}
+                          className="result-card"
                           onClick={() => handleResultClick(item)}
-                          style={{ cursor: 'pointer' }}
-                          actions={[
-                            <Button type="text" icon={<EyeOutlined />} size="small" />,
-                            <Button type="text" icon={<DownloadOutlined />} size="small" />,
-                          ]}
+                          style={{ cursor: 'pointer', marginBottom: '16px' }}
                         >
-                          <List.Item.Meta
-                            avatar={<FileTextOutlined className="file-icon" />}
-                            title={
-                              <div className="result-title">
-                                <span>{item.displayName || item.name}</span>
-                                <Tag color="red">知识</Tag>
-                              </div>
-                            }
-                            description={item.description}
-                          />
-                        </List.Item>
-                      )}
-                    />
+                          <div className="card-header">
+                            <div className="card-title">
+                              <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                              <span className="title-text">{item.displayName || item.name}</span>
+                            </div>
+                            <div className="card-actions">
+                             
+                              <span className="date-text">2025-01-15</span>
+                              <Tooltip title="在当前标签页中打开">
+                                <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
+                              </Tooltip>
+                              <Tooltip title="在新标签页中打开">
+                                <ExportOutlined style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} />
+                              </Tooltip>
+                            </div>
+                          </div>
+                          <div className="card-content">
+                            <p>{item.description}</p>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
                     <div className="pagination-section">
                       <Pagination
                         current={searchPagination.current}
@@ -799,64 +747,40 @@ const Knowledge = observer(() => {
           </div>
 
           <div className="sources-content">
-            {displayedFiles.map((file) => (
-              <div key={file.id}>
+            {references.length > 0 ? (
+              references.map((reference, index) => (
                 <Card 
+                  key={reference.knowledgeId || index}
                   className="source-card" 
                   size="small"
-                  onClick={() => handlePdfPreview(file.path, file.id)}
-                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleSourceKnowledgeClick(reference)}
+                  style={{ cursor: 'pointer', marginBottom: '12px' }}
                 >
-                  <div className="source-file">
-                    <FilePdfOutlined className="file-icon" />
-                    <span className="file-name">{file.title}</span>
+                  <div className="source-knowledge">
+                    <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                    <div className="knowledge-info">
+                      <div className="knowledge-name">{reference.knowledgeName}</div>
+                    </div>
                   </div>
                 </Card>
-
-                {/* PDF 预览区域 - 显示在对应文件下方 */}
-                {previewingFileId === file.id && currentPdf && (
-                  <div className="pdf-preview-area">
-                    <div className="pdf-preview-header">
-                      <span>PDF 预览</span>
-                      <Button type="text" size="small" icon={<CloseOutlined />} onClick={handlePdfClose} />
-                    </div>
-                    <div className="pdf-preview-container">
-                      {pdfLoading ? (
-                        <div className="pdf-loading">
-                          <Spin size="large" />
-                          <p>PDF 加载中...</p>
-                        </div>
-                      ) : (
-                        <iframe
-                          src={currentPdf}
-                          width="100%"
-                          height="400px"
-                          style={{ border: 'none' }}
-                          title="PDF Preview"
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* 无限滚动加载更多 */}
-            {hasMore && (
-              <div className="load-more-section">
-                <Button 
-                  type="text" 
-                  onClick={loadMore}
-                  loading={loading}
-                  style={{ width: '100%', marginTop: '12px' }}
-                >
-                  {loading ? '加载中...' : '加载更多'}
-                </Button>
+              ))
+            ) : (
+              <div className="no-sources">
+                <InboxOutlined style={{ fontSize: '24px', color: '#ccc', marginBottom: '8px' }} />
+                <p style={{ color: '#999', margin: 0 }}>暂无相关来源</p>
               </div>
             )}
           </div>
         </Sider>
         )}
+
+        {/* 知识详情弹窗 */}
+        <KnowledgeDetailModal
+          visible={knowledgeDetailVisible}
+          knowledge={currentKnowledge}
+          onClose={handleCloseKnowledgeDetail}
+          loading={knowledgeDetailLoading}
+        />
       </Layout>
     </Layout>
   );

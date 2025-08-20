@@ -1,0 +1,145 @@
+.knowledge-detail-modal {
+  .modal-header {
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+
+    p {
+      margin-top: 16px;
+      color: #666;
+      font-size: 14px;
+    }
+  }
+
+  .knowledge-content {
+    .knowledge-card {
+      border: none;
+      box-shadow: none;
+      padding: 0;
+
+      .knowledge-header {
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f0f0f0;
+
+        .knowledge-title {
+          font-size: 20px;
+          font-weight: 600;
+          color: #333;
+          margin: 0 0 12px 0;
+          line-height: 1.4;
+        }
+
+        .knowledge-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+      }
+
+      .knowledge-description {
+        margin-bottom: 24px;
+
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #333;
+          margin: 0 0 12px 0;
+        }
+
+        p {
+          font-size: 14px;
+          color: #666;
+          line-height: 1.6;
+          margin: 0;
+          padding: 12px;
+          background: #f8f9fa;
+          border-radius: 6px;
+          border-left: 4px solid #1890ff;
+        }
+      }
+
+      .knowledge-content-section {
+        margin-bottom: 24px;
+
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #333;
+          margin: 0 0 12px 0;
+        }
+
+        .content-text {
+          font-size: 14px;
+          color: #333;
+          line-height: 1.6;
+          margin: 0;
+          padding: 16px;
+          background: #f8f9fa;
+          border-radius: 6px;
+          border: 1px solid #e8e8e8;
+          max-height: 300px;
+          overflow-y: auto;
+          white-space: pre-wrap;
+        }
+      }
+
+      .knowledge-meta {
+        padding-top: 16px;
+        border-top: 1px solid #f0f0f0;
+
+        .meta-item {
+          display: flex;
+          align-items: center;
+          margin-bottom: 8px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          .meta-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+            min-width: 80px;
+            margin-right: 12px;
+          }
+
+          .meta-value {
+            font-size: 14px;
+            color: #333;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 自定义滚动条样式
+.knowledge-detail-modal .content-text::-webkit-scrollbar {
+  width: 6px;
+}
+
+.knowledge-detail-modal .content-text::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.knowledge-detail-modal .content-text::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.knowledge-detail-modal .content-text::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+} 

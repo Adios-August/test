@@ -3,12 +3,290 @@
   background: #e9f0fb;
   max-height: calc(100vh - 94px);
 
+  // 左侧边栏样式
+  .knowledge-sidebar {
+    background: white;
+    border-radius: 12px;
+    margin: 16px 16px 16px 16px;
+    overflow: visible;
+    height: calc(100vh - 152px);
+    overflow-y: scroll;
+    display: flex;
+    flex-direction: column;
+    
+    // 隐藏滚动条但保持滚动功能
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    .sidebar-content {
+      padding: 16px 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+
+      .sidebar-title {
+        padding: 0 16px 12px;
+        color: #333333;
+        font-size: 14px;
+        font-weight: 500;
+        border-bottom: 1px solid #f0f0f0;
+        margin-bottom: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+        color: #666;
+        
+        p {
+          margin-top: 12px;
+          font-size: 14px;
+        }
+      }
+
+      .empty-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 0;
+        color: #999;
+        
+        p {
+          font-size: 14px;
+        }
+      }
+
+      .category-tree {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: visible;
+        
+        // 隐藏滚动条但保持滚动功能
+        &::-webkit-scrollbar {
+          display: none;
+        }
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    }
+  }
+
+  // 右侧内容区样式
+  .knowledge-content {
+    flex: 1;
+    padding: 24px 24px 0 24px;
+    margin-left: 0;
+    background: #e9f0fb;
+    overflow-y: auto;
+
+    .content-area {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      min-height: calc(100vh - 152px);
+
+      .content-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding: 0;
+
+        .header-actions {
+          display: flex;
+          gap: 12px;
+        }
+      }
+    }
+  }
+
   .knowledge-management-content {
     flex: 1;
     padding: 24px 24px 0 24px;
     margin-left: 0;
     background: #e9f0fb;
     overflow-y: auto;
+
+    .management-content {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      min-height: calc(100vh - 152px);
+
+      .content-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding: 0;
+
+        .ant-space {
+          .ant-btn {
+            border-radius: 6px;
+            
+            &.ant-btn-primary {
+              background-color: var(--ant-primary-color);
+              border-color: var(--ant-primary-color);
+
+              &:hover {
+                background-color: var(--ant-primary-color-hover);
+                border-color: var(--ant-primary-color-hover);
+              }
+            }
+          }
+        }
+      }
+
+      .content-body {
+        .ant-table {
+          .ant-table-thead > tr > th {
+            background-color: #fafafa;
+            border-bottom: 1px solid #f0f0f0;
+            font-weight: 500;
+          }
+
+          .ant-table-tbody > tr > td {
+            border-bottom: 1px solid #f0f0f0;
+          }
+
+          .ant-table-tbody > tr:hover > td {
+            background-color: #f5f5f5;
+          }
+        }
+      }
+
+      .content-body {
+        .title-section {
+          margin-bottom: 16px;
+
+          .title-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 16px;
+            
+            &:focus {
+              outline: none;
+              border-color: var(--ant-primary-color);
+            }
+          }
+        }
+
+        .tags-section {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .editor-section {
+          margin-bottom: 24px;
+
+          .editor-toolbar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 4px;
+          }
+
+          .editor-content {
+            .content-textarea {
+              width: 100%;
+              min-height: 200px;
+              padding: 12px;
+              border: 1px solid #d9d9d9;
+              border-radius: 6px;
+              resize: vertical;
+              
+              &:focus {
+                outline: none;
+                border-color: var(--ant-primary-color);
+              }
+            }
+          }
+        }
+
+        .config-section {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          margin-bottom: 24px;
+
+          .config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+
+            label {
+              font-weight: 500;
+              color: #333;
+            }
+
+            .config-select {
+              padding: 8px 12px;
+              border: 1px solid #d9d9d9;
+              border-radius: 6px;
+              background: white;
+              
+              &:focus {
+                outline: none;
+                border-color: var(--ant-primary-color);
+              }
+            }
+          }
+        }
+
+        .footer-section {
+          .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 16px;
+
+            input[type="checkbox"] {
+              margin-top: 2px;
+            }
+
+            label {
+              font-size: 14px;
+              color: #666;
+              line-height: 1.4;
+            }
+          }
+
+          .attachment-section {
+            label {
+              display: block;
+              font-weight: 500;
+              color: #333;
+              margin-bottom: 8px;
+            }
+
+            .attachment-item {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 8px 12px;
+              background: #f5f5f5;
+              border-radius: 4px;
+              border: 1px solid #d9d9d9;
+            }
+          }
+        }
+      }
+    }
 
     .management-content {
       .content-header {
