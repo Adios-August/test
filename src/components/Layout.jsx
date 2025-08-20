@@ -24,7 +24,14 @@ const LayoutComponent = observer(() => {
 
   // 根据当前路径同步header选中状态
   useEffect(() => {
-    setHeaderSelectedKey(location.pathname);
+    const pathname = location.pathname;
+    
+    // 特殊处理知识库管理页面的子路由
+    if (pathname.startsWith('/knowledge-admin')) {
+      setHeaderSelectedKey('/knowledge-admin');
+    } else {
+      setHeaderSelectedKey(pathname);
+    }
   }, [location.pathname]);
 
   const handleHeaderMenuClick = ({ key }) => {
