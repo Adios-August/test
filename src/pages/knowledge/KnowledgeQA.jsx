@@ -37,6 +37,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import StreamingMarkdownRenderer from "../../components/StreamingMarkdownRenderer";
+import PdfPreview from "../../components/PdfPreview";
 import { chatAPI } from "../../api/chat";
 import "./KnowledgeQA.scss";
 
@@ -70,6 +71,9 @@ const KnowledgeQA = () => {
   // AI请求相关状态
   const [isLoading, setIsLoading] = useState(false);
   const [abortController, setAbortController] = useState(null);
+  const [previewFileUrl, setPreviewFileUrl] = useState("");
+  const [previewPage, setPreviewPage] = useState(1);
+  const [previewBboxes, setPreviewBboxes] = useState([]);
   const messagesEndRef = useRef(null);
 
   // 自动滚动到最新消息
@@ -201,6 +205,7 @@ const KnowledgeQA = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(requestData),
@@ -213,8 +218,15 @@ const KnowledgeQA = () => {
         let answer = '';
         let references = [];
         let buffer = '';
-        let currentEvent = '';
-        let currentData = '';
+
+        // 事件块解析：以空行分隔，一个事件可能包含多条 data:
+        const findDelimiter = () => {
+          const a = buffer.indexOf('\n\n');
+          const b = buffer.indexOf('\r\n\r\n');
+          if (a === -1) return b;
+          if (b === -1) return a;
+          return Math.min(a, b);
+        };
 
         while (true) {
           if (controller.signal?.aborted) {
@@ -226,54 +238,114 @@ const KnowledgeQA = () => {
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          
-          // 保留最后一行，因为它可能不完整
-          buffer = lines.pop() || '';
 
-          for (const line of lines) {
-            if (line.trim() === '') continue;
-            
-            if (line.startsWith('event: ')) {
-              currentEvent = line.slice(7);
-              currentData = ''; // 重置数据
-            } else if (line.startsWith('data: ')) {
-              currentData = line.slice(6);
+          let sepIdx;
+          while ((sepIdx = findDelimiter()) !== -1) {
+            const rawEvent = buffer.slice(0, sepIdx);
+            // 去掉分隔空行（兼容 \n\n 和 \r\n\r\n）
+            buffer = buffer.slice(sepIdx).replace(/^(?:\r?\n){2}/, '');
 
-              // 尝试解析JSON，如果失败则等待更多数据
-              try {
-                const parsed = JSON.parse(currentData);
-
-                // 根据事件类型处理数据
-                if (currentEvent === 'start') {
-                  console.log('RAG对话开始:', parsed.message);
-                } else if (currentEvent === 'message') {
-                  if (parsed.content) {
-                    answer += parsed.content;
-                    setMessages(prev => {
-                      const newMessages = [...prev];
-                      const lastMessage = newMessages[newMessages.length - 1];
-                      if (lastMessage.type === "ai") {
-                        lastMessage.content = answer;
-                        lastMessage.references = references;
-                      }
-                      return newMessages;
-                    });
-                  }
-                } else if (currentEvent === 'references') {
-                  references = parsed;
-                } else if (currentEvent === 'end') {
-                  console.log('RAG对话完成:', parsed.message);
-                  setIsLoading(false);
-                  return;
-                }
-              } catch (e) {
-                // 如果是JSON解析错误，可能是数据不完整，继续等待
-                // 只有在数据看起来完整时才记录错误
-                if (currentData.length > 10 && !currentData.includes('"')) {
-                  console.log('解析SSE数据失败，跳过此数据块:', e.message);
-                }
+            const lines = rawEvent.split(/\r?\n/);
+            let eventName = 'message';
+            const dataLines = [];
+            for (const line of lines) {
+              if (!line) continue;
+              if (line.startsWith('event:')) {
+                eventName = line.slice(6).trim();
+              } else if (line.startsWith('data:')) {
+                dataLines.push(line.slice(5).trimStart());
               }
+            }
+            const dataStr = dataLines.join('\n');
+            if (!dataStr) continue;
+
+            let parsed;
+            try {
+              parsed = JSON.parse(dataStr);
+            } catch (e) {
+              // 可能半包，放回缓冲等待后续片段
+              buffer = dataStr + '\n\n' + buffer;
+              break;
+            }
+
+            // 调试日志，观察解析到的事件
+            // eslint-disable-next-line no-console
+            console.log('[SSE]', eventName, parsed);
+
+            if (eventName === 'start') {
+              // 可在此保存后端生成的sessionId
+              // if (parsed.sessionId) setSessionId(parsed.sessionId)
+            } else if (eventName === 'message') {
+              const { content } = parsed;
+              if (typeof content === 'string' && content.length) {
+                answer += content;
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const aiIndex = [...newMessages].reverse().findIndex(m => m?.type === 'ai');
+                  if (aiIndex !== -1) {
+                    const realIndex = newMessages.length - 1 - aiIndex;
+                    const aiMsg = newMessages[realIndex];
+                    newMessages[realIndex] = { ...aiMsg, content: answer, references: references };
+                  }
+                  return newMessages;
+                });
+              }
+            } else if (eventName === 'references') {
+              // 仅AI命中的块，后端包含 download_url
+              const arr = Array.isArray(parsed) ? parsed : [];
+              references = arr.map(ref => ({
+                knowledgeId: ref.knowledge_id,
+                knowledgeName: ref.knowledge_name,
+                description: ref.description,
+                tags: ref.tags,
+                effectiveTime: ref.effective_time,
+                sourceFile: ref.source_file,
+                relevance: ref.relevance,
+                pageNum: ref.page_num,
+                chunkIndex: ref.chunk_index,
+                chunkType: ref.chunk_type,
+                bboxUnion: ref.bbox_union,
+                charStart: ref.char_start,
+                charEnd: ref.char_end,
+                downloadUrl: ref.download_url,
+              }));
+              // 自动加载首条引用到右侧预览
+              if (references.length && references[0].downloadUrl) {
+                try {
+                  fetch(references[0].downloadUrl)
+                    .then(r => r.blob())
+                    .then(b => {
+                      const url = URL.createObjectURL(b);
+                      setPreviewFileUrl(url);
+                      setPreviewPage(references[0].pageNum || 1);
+                      setPreviewBboxes(references[0].bboxUnion ? [references[0].bboxUnion] : []);
+                    });
+                } catch {}
+              }
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const aiIndex = [...newMessages].reverse().findIndex(m => m?.type === 'ai');
+                if (aiIndex !== -1) {
+                  const realIndex = newMessages.length - 1 - aiIndex;
+                  const aiMsg = newMessages[realIndex];
+                  newMessages[realIndex] = { ...aiMsg, references: references };
+                }
+                return newMessages;
+              });
+            } else if (eventName === 'end') {
+              // 兜底同步一次内容与引用并关闭loading
+              setMessages(prev => {
+                const newMessages = [...prev];
+                const aiIndex = [...newMessages].reverse().findIndex(m => m?.type === 'ai');
+                if (aiIndex !== -1) {
+                  const realIndex = newMessages.length - 1 - aiIndex;
+                  const aiMsg = newMessages[realIndex];
+                  newMessages[realIndex] = { ...aiMsg, content: answer, references: references };
+                }
+                return newMessages;
+              });
+              setIsLoading(false);
+              return;
             }
           }
         }
@@ -463,12 +535,36 @@ const KnowledgeQA = () => {
                           <StreamingMarkdownRenderer 
                             content={message.content} 
                             isStreaming={isLoading && message.id === messages.length}
+                            onLinkClick={(href) => {
+                              // 若回答中渲染为链接且带有 data-index，可解析并联动
+                              try {
+                                const m = /#ref-(\d+)/.exec(href || "");
+                                if (m) {
+                                  const idx = Number(m[1]);
+                                  const ref = message.references?.[idx];
+                                  if (ref?.downloadUrl) {
+                                    fetch(ref.downloadUrl)
+                                      .then(r => r.blob())
+                                      .then(b => {
+                                        const url = URL.createObjectURL(b);
+                                        setPreviewFileUrl(url);
+                                        setPreviewPage(ref.pageNum || 1);
+                                        setPreviewBboxes(ref.bboxUnion ? [ref.bboxUnion] : []);
+                                      });
+                                  }
+                                }
+                              } catch {}
+                            }}
                           />
                         ) : (
-                          <div className="thinking-indicator">
-                            <Spin size="small" />
-                            <span>AI正在思考中...</span>
-                          </div>
+                          isLoading && message.id === messages.length ? (
+                            <div className="thinking-indicator">
+                              <Spin size="small" />
+                              <span>AI正在思考中...</span>
+                            </div>
+                          ) : (
+                            <span />
+                          )
                         )}
                       </div>
                       
@@ -477,9 +573,37 @@ const KnowledgeQA = () => {
                           <div className="learn-more">
                             <span>Learn More</span>
                             {message.references.map((ref, index) => (
-                              <div key={index} className="reference-item">
+                              <div
+                                key={index}
+                                className="reference-item"
+                                onClick={() => {
+                                  if (ref.downloadUrl) {
+                                    fetch(ref.downloadUrl)
+                                      .then(r => r.blob())
+                                      .then(b => {
+                                        const url = URL.createObjectURL(b);
+                                        setPreviewFileUrl(url);
+                                        setPreviewPage(ref.pageNum || 1);
+                                        setPreviewBboxes(ref.bboxUnion ? [ref.bboxUnion] : []);
+                                      });
+                                  }
+                                }}
+                              >
                                 <FilePdfOutlined className="pdf-icon" />
-                                <span>{ref.title}</span>
+                                <span style={{ cursor: "pointer" }}>
+                                  {ref.sourceFile || ref.knowledgeName || "引用文档"}（第{ref.pageNum}页）
+                                </span>
+                                {ref.downloadUrl && (
+                                  <a
+                                    href={ref.downloadUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{ marginLeft: 8 }}
+                                  >
+                                    下载
+                                  </a>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -570,7 +694,20 @@ const KnowledgeQA = () => {
             <div className="reference-header">
               <Tabs
                 defaultActiveKey="1"
-                items={referenceData}
+                items={[
+                  {
+                    key: "1",
+                    label: "Related Text",
+                    children: (
+                      previewFileUrl ? (
+                        <PdfPreview fileUrl={previewFileUrl} pageNum={previewPage} bboxes={previewBboxes} />
+                      ) : (
+                        <Empty description="等待引用加载" />
+                      )
+                    ),
+                  },
+                  ...referenceData.filter(i => i.key !== "2"),
+                ]}
                 className="reference-tabs"
               />
             </div>
