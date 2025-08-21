@@ -21,6 +21,29 @@ export const knowledgeAPI = {
   searchKnowledgeByQuery: (data) => {
     return http.post("/search", data);
   },
+
+  // 创建知识
+  createKnowledge: (data) => {
+    return http.post("/knowledge/create", data);
+  },
+
+  // 上传图片
+  uploadImage: (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return http.post("/uploads/image", formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  // 上传附件
+  uploadAttachment: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return http.post("/uploads/attachment", formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
 };
 
 export default knowledgeAPI;
