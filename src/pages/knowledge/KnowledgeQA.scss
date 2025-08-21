@@ -413,7 +413,8 @@
         .stop-section {
           display: flex;
           justify-content: center;
-          margin-top: 16px;
+          margin-bottom: 12px;
+          padding: 8px 0;
 
           .stop-button {
             border-radius: 8px;
@@ -556,6 +557,70 @@
               padding: 0 0 12px 0;
               color: #666;
               line-height: 1.6;
+
+              .reference-item {
+                .reference-description {
+                  margin-bottom: 12px;
+                  color: #333;
+                  font-size: 14px;
+                }
+
+                .reference-meta {
+                  display: flex;
+                  gap: 12px;
+                  margin-bottom: 12px;
+                  font-size: 12px;
+                  color: #999;
+
+                  .relevance-score {
+                    color: #52c41a;
+                    font-weight: 500;
+                  }
+
+                  .page-info {
+                    color: #1890ff;
+                  }
+
+                  .chunk-type {
+                    color: #722ed1;
+                  }
+                }
+
+                .reference-tags {
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 6px;
+                  margin-bottom: 12px;
+
+                  .reference-tag {
+                    background: #f0f0f0;
+                    color: #666;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                  }
+                }
+
+                .reference-attachments {
+                  .attachment-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    color: var(--ant-primary-color);
+                    cursor: pointer;
+                    padding: 4px 0;
+                    font-size: 13px;
+
+                    .pdf-icon {
+                      font-size: 14px;
+                    }
+
+                    &:hover {
+                      text-decoration: underline;
+                    }
+                  }
+                }
+              }
 
               .pdf-reference {
                 display: flex;

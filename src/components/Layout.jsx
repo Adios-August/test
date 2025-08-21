@@ -13,7 +13,7 @@ const headerMenuItems = [
   { key: "/", label: "首页" },
   { key: "/knowledge", label: "知识库" },
   { key: "/knowledge-admin", label: "知识库管理" },
-  { key: "/stats", label: "数据统计" },
+  // { key: "/stats", label: "数据统计" }, // 暂时隐藏数据统计模块
 ];
 
 const LayoutComponent = observer(() => {

@@ -90,6 +90,7 @@ const Knowledge = observer(() => {
   const [aiAnswer, setAiAnswer] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [references, setReferences] = useState([]); // 添加references状态
+  const [sourcesLoading, setSourcesLoading] = useState(false); // Sources模块loading状态
 
   // 知识详情弹窗相关状态
   const [knowledgeDetailVisible, setKnowledgeDetailVisible] = useState(false);
@@ -104,6 +105,31 @@ const Knowledge = observer(() => {
   // 生成sessionId
   const generateSessionId = () => {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  // 获取AI回答（用于搜索时）
+  const fetchAIAnswer = async (question) => {
+    setAiLoading(true);
+    setAiAnswer(null);
+    setReferences([]); // 清空之前的引用数据
+    
+    try {
+      // 准备请求数据
+      const requestData = {
+        question: question,
+        userId: "user123", // 这里应该从用户状态获取
+        sessionId: generateSessionId(),
+        knowledgeIds: [], // 搜索时不限制特定知识ID
+        stream: true
+      };
+      
+      await handleStreamResponse(requestData);
+    } catch (error) {
+      console.error('获取AI回答失败:', error);
+      message.error('获取AI回答失败，请稍后重试');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   // 处理流式AI响应
@@ -168,9 +194,26 @@ const Knowledge = observer(() => {
                   setAiLoading(false);
                 }
               } else if (currentEvent === 'references') {
-                references = parsed;
-                console.log('收到引用:', references.length, '个');
-                setReferences(parsed);
+                // 转换数据格式以匹配Sources模块期望的格式，包含所有可用字段
+                const formattedReferences = parsed.map(ref => ({
+                  knowledgeId: ref.knowledge_id,
+                  knowledgeName: ref.knowledge_name,
+                  description: ref.description,
+                  tags: ref.tags,
+                  effectiveTime: ref.effective_time,
+                  attachments: ref.attachments,
+                  sourceFile: ref.source_file || ref.attachments?.[0] || '未知文件',
+                  relevance: ref.relevance,
+                  pageNum: ref.page_num,
+                  chunkIndex: ref.chunk_index,
+                  chunkType: ref.chunk_type,
+                  bboxUnion: ref.bbox_union,
+                  charStart: ref.char_start,
+                  charEnd: ref.char_end
+                }));
+                references = formattedReferences;
+                console.log('收到引用:', formattedReferences.length, '个');
+                setReferences(formattedReferences);
               } else if (currentEvent === 'end') {
                 console.log('RAG对话完成:', parsed.message);
                 setAiLoading(false);
@@ -202,24 +245,36 @@ const Knowledge = observer(() => {
       return;
     }
     
-    // 跳转到问答页面，并传递问题内容
-    navigate("/knowledge-qa", { 
-      state: { 
-        question: questionInput.trim(),
-        fromPage: "knowledge"
-      } 
-    });
+    // 显示loading效果
+    setAiLoading(true);
+    
+    // 延迟跳转，让用户看到loading效果
+    setTimeout(() => {
+      // 跳转到问答页面，并传递问题内容
+      navigate("/knowledge-qa", { 
+        state: { 
+          question: questionInput.trim(),
+          fromPage: "knowledge"
+        } 
+      });
+    }, 500); // 显示500ms的loading效果
   };
 
   // 处理推荐问题点击
   const handleRecommendedQuestionClick = (question) => {
-    // 跳转到问答页面，并传递问题内容
-    navigate("/knowledge-qa", { 
-      state: { 
-        question: question,
-        fromPage: "knowledge"
-      } 
-    });
+    // 显示loading效果
+    setAiLoading(true);
+    
+    // 延迟跳转，让用户看到loading效果
+    setTimeout(() => {
+      // 跳转到问答页面，并传递问题内容
+      navigate("/knowledge-qa", { 
+        state: { 
+          question: question,
+          fromPage: "knowledge"
+        } 
+      });
+    }, 500); // 显示500ms的loading效果
   };
 
   // 获取分类知识列表
@@ -274,6 +329,9 @@ const Knowledge = observer(() => {
     
 
     setSearchLoading(true);
+    // 搜索时也显示AI模块和Sources模块的loading效果
+    setAiLoading(true);
+    setSourcesLoading(true);
     try {
       const response = await knowledgeAPI.searchKnowledgeByQuery({
         query: query.trim(),
@@ -303,19 +361,45 @@ const Knowledge = observer(() => {
           pageSize: size
         }));
         
-        // 处理AI回答和references数据
+        // 处理RAG结果（AI回答和引用）
         if (response.data.ragResults && response.data.ragResults.length > 0) {
           const ragResult = response.data.ragResults[0];
-          setAiAnswer({
-            answer: ragResult.answer || '',
-            references: ragResult.references || [],
-            recommendedQuestions: ragResult.recommendedQuestions || []
-          });
-          setReferences(ragResult.references || []);
+          
+          // 设置AI回答
+          if (ragResult.answer) {
+            setAiAnswer({
+              answer: ragResult.answer,
+              references: ragResult.references || [],
+              recommendedQuestions: ragResult.recommendedQuestions || []
+            });
+            // 设置AI回答后立即清除loading状态
+            setAiLoading(false);
+          }
+          
+          // 设置引用数据
+          if (ragResult.references && Array.isArray(ragResult.references)) {
+            // 转换数据格式以匹配Sources模块期望的格式
+            const formattedReferences = ragResult.references.map(ref => ({
+              knowledgeId: ref.knowledgeId,
+              knowledgeName: ref.knowledgeName,
+              description: ref.description,
+              tags: ref.tags,
+              effectiveTime: ref.effectiveTime,
+              attachments: ref.attachments,
+              sourceFile: ref.sourceFile || ref.attachments?.[0] || '未知文件'
+            }));
+            setReferences(formattedReferences);
+            console.log('从搜索API设置引用:', formattedReferences.length, '个');
+            // 设置引用数据后立即清除Sources loading状态
+            setSourcesLoading(false);
+          }
         } else {
-          setAiAnswer(null);
-          setReferences([]);
+          // 如果没有RAG结果，也要清除loading状态
+          setAiLoading(false);
+          setSourcesLoading(false);
         }
+        
+        console.log('搜索API响应:', response.data);
 
       } else {
         message.error(response.message || '获取知识列表失败');
@@ -328,6 +412,8 @@ const Knowledge = observer(() => {
       setSearchResults([]); // 清空搜索结果
     } finally {
       setSearchLoading(false);
+      // 如果没有RAG结果，在这里清除AI和Sources模块的loading状态
+      // 如果有RAG结果，loading状态已经在上面清除了
     }
   }, [knowledgeStore]);
 
@@ -619,6 +705,7 @@ const Knowledge = observer(() => {
                       type="default" 
                       size="small"
                       onClick={() => handleRecommendedQuestionClick(question)}
+                      disabled={aiLoading}
                     >
                       {question}
                     </Button>
@@ -630,6 +717,7 @@ const Knowledge = observer(() => {
                     type="default" 
                     size="small"
                     onClick={() => handleRecommendedQuestionClick("请告诉我更多相关信息")}
+                    disabled={aiLoading}
                   >
                     请告诉我更多相关信息
                   </Button>
@@ -637,6 +725,7 @@ const Knowledge = observer(() => {
                     type="default" 
                     size="small"
                     onClick={() => handleRecommendedQuestionClick("还有其他问题吗？")}
+                    disabled={aiLoading}
                   >
                     还有其他问题吗？
                   </Button>
@@ -660,11 +749,13 @@ const Knowledge = observer(() => {
                   />
                   <Button 
                     type="primary" 
-                    icon={<SendOutlined />}
+                    icon={aiLoading ? <Spin size="small" /> : <SendOutlined />}
                     className="send-button"
                     onClick={handleQuestionSubmit}
+                    loading={aiLoading}
+                    disabled={aiLoading}
                   >
-                    发送
+                    {aiLoading ? '发送中...' : '发送'}
                   </Button>
                 </div>
               </div>
@@ -913,7 +1004,12 @@ const Knowledge = observer(() => {
           </div>
 
           <div className="sources-content">
-            {references.length > 0 ? (
+            {sourcesLoading ? (
+              <div className="sources-loading">
+                <Spin size="large" />
+                <p style={{ color: '#999', marginTop: '16px' }}>正在查找相关来源...</p>
+              </div>
+            ) : references.length > 0 ? (
               references.map((reference, index) => (
                 <Card 
                   key={reference.knowledgeId || index}

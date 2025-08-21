@@ -80,10 +80,10 @@ const router = createBrowserRouter([
               },
             ],
           },
-          {
-            path: '/stats',
-            element: <Developing title="数据统计功能开发中" />,
-          },
+          // {
+          //   path: '/stats',
+          //   element: <Developing title="数据统计功能开发中" />,
+          // },
         ],
       },
     ],

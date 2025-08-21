@@ -380,7 +380,11 @@ const Home = observer(() => {
                     className="panel-list"
                     dataSource={popularKnowledge}
                     renderItem={(item, index) => (
-                      <List.Item className="panel-item">
+                      <List.Item 
+                        className="panel-item"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/knowledge-detail/${item.id}`)}
+                      >
                         <div className="item-content">
                           <span className="item-number">{index + 1}</span>
                           <span className="item-title">{item.name}</span>
@@ -417,7 +421,11 @@ const Home = observer(() => {
                     className="panel-list"
                     dataSource={latestKnowledgeData}
                     renderItem={(item, index) => (
-                      <List.Item className="panel-item">
+                      <List.Item 
+                        className="panel-item"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/knowledge-detail/${item.id}`)}
+                      >
                         <div className="item-content">
                           <span className="item-number">{index + 1}</span>
                           <span className="item-title">{item.name}</span>
@@ -454,7 +462,11 @@ const Home = observer(() => {
                     className="panel-list"
                     dataSource={hotDownloads}
                     renderItem={(item, index) => (
-                      <List.Item className="panel-item">
+                      <List.Item 
+                        className="panel-item"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/knowledge-detail/${item.id}`)}
+                      >
                         <div className="item-content">
                           <span className="item-number">{index + 1}</span>
                           <span className="item-title">{item.name}</span>
