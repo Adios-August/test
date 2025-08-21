@@ -198,32 +198,39 @@ const CategoryManagement = () => {
 
   return (
     
-      <div className="management-content">
-        <div className="content-header">
+    <div className="management-content">
+      <div className="content-header">
           <div></div>
-          <Space>
-                      <Button 
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />}
+            onClick={() => handleAddKnowledge()}
+          >
+            一级菜单
+          </Button>
+          <Button 
             type="primary" 
             icon={<PlusOutlined />}
             onClick={() => handleAddKnowledge()}
           >
             新增知识
           </Button>
-          </Space>
         </div>
+      </div>
 
-        <div className="content-body">
-          <Table
-            columns={columns}
-            dataSource={dataSource}
-            loading={loading}
-            pagination={false}
-            expandable={{
-              defaultExpandAllRows: true,
-            }}
-            rowKey="key"
-          />
-        </div>
+      <div className="content-body">
+        <Table
+          columns={columns}
+          dataSource={dataSource}
+          loading={loading}
+          pagination={false}
+          expandable={{
+            defaultExpandAllRows: true,
+          }}
+          rowKey="key"
+        />
+      </div>
      
 
       {/* 添加/编辑弹窗 */}

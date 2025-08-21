@@ -31,9 +31,7 @@ const CommonSidebar = ({
       if (response.code === 200) {
         const data = response.data || [];
         setCategoryTree(data);
-        // 默认展开第一级分类
-        const firstLevelKeys = data.map(item => item.id.toString());
-        setOpenKeys(firstLevelKeys);
+        // 不在这里设置默认展开，让后续的useEffect来处理
       } else {
         message.error(response.message || '获取分类树失败');
         // 如果API失败，设置空数组避免显示错误
@@ -54,17 +52,64 @@ const CommonSidebar = ({
     fetchCategoryTree();
   }, []);
 
+  // 处理默认展开状态（只在没有特定目标时展开第一级）
+  useEffect(() => {
+    if (categoryTree.length === 0) return;
+    
+    // 检查是否有特定的目标分类
+    const hasSpecificTarget = filterCategoryId || new URLSearchParams(window.location.search).get('category');
+    
+    if (!hasSpecificTarget) {
+      // 只有在没有特定目标时才默认展开第一级分类
+      const firstLevelKeys = categoryTree.map(item => item.id.toString());
+      setOpenKeys(firstLevelKeys);
+    }
+  }, [categoryTree, filterCategoryId]);
+
   // 当有filterCategoryId时，初始化选中状态和展开父级
   useEffect(() => {
     if (!filterCategoryId || categoryTree.length === 0) return;
     const targetKey = filterCategoryId.toString();
     setSelectedKeys([targetKey]);
-    // 展开父级（对于顶级分类无父级）
-    const targetIdNum = Number(filterCategoryId);
+    
+    // 收集需要展开的分类ID（目标分类及其所有父级）
+    const expandKeys = new Set();
+    
+    const collectExpandKeys = (categoryId) => {
+      const targetIdNum = Number(categoryId);
     const parent = findParentCategory(categoryTree, targetIdNum);
     if (parent) {
-      setOpenKeys((prev) => Array.from(new Set([...(prev || []), parent.id.toString()])));
+        expandKeys.add(parent.id.toString());
+        // 递归收集所有父级
+        collectExpandKeys(parent.id);
+      }
+    };
+    
+    collectExpandKeys(filterCategoryId);
+    
+    // 添加目标分类本身到展开列表（如果它有子分类的话）
+    const hasChildren = (categoryId) => {
+      const findCategory = (categories, targetId) => {
+        for (const category of categories) {
+          if (category.id.toString() === targetId.toString()) {
+            return category.children && category.children.length > 0;
+          }
+          if (category.children) {
+            const found = findCategory(category.children, targetId);
+            if (found !== undefined) return found;
+          }
+        }
+        return false;
+      };
+      return findCategory(categoryTree, categoryId);
+    };
+    
+    if (hasChildren(filterCategoryId)) {
+      expandKeys.add(filterCategoryId.toString());
     }
+    
+    // 设置展开的键，其他分类保持折叠
+    setOpenKeys(Array.from(expandKeys));
   }, [filterCategoryId, categoryTree]);
 
   // 根据URL参数设置选中状态（不过滤分类树）
@@ -75,44 +120,55 @@ const CommonSidebar = ({
     const urlParams = new URLSearchParams(window.location.search);
     const urlCategoryId = urlParams.get('category');
     
-    if (urlCategoryId) {
+    // 如果没有URL参数，不处理
+    if (!urlCategoryId) return;
+    
       const targetKey = urlCategoryId.toString();
       setSelectedKeys([targetKey]);
-      // 展开父级（对于顶级分类无父级）
-      const targetIdNum = Number(urlCategoryId);
+    
+    // 收集需要展开的分类ID（目标分类及其所有父级）
+    const expandKeys = new Set();
+    
+    const collectExpandKeys = (categoryId) => {
+      const targetIdNum = Number(categoryId);
       const parent = findParentCategory(categoryTree, targetIdNum);
       if (parent) {
-        setOpenKeys((prev) => Array.from(new Set([...(prev || []), parent.id.toString()])));
+        expandKeys.add(parent.id.toString());
+        // 递归收集所有父级
+        collectExpandKeys(parent.id);
       }
-    }
-  }, [categoryTree]);
-
-  // 根据filterCategoryId过滤分类树
-  const getFilteredCategoryTree = () => {
-    if (!filterCategoryId || categoryTree.length === 0) {
-      return categoryTree;
-    }
-    
-    // 查找目标分类
-    const findCategoryById = (categories, targetId) => {
-      for (const category of categories) {
-        if (category.id.toString() === targetId.toString()) {
-          return category;
-        }
-        if (category.children) {
-          const found = findCategoryById(category.children, targetId);
-          if (found) return found;
-        }
-      }
-      return null;
     };
     
-    const targetCategory = findCategoryById(categoryTree, filterCategoryId);
-    if (targetCategory) {
-      // 返回目标分类及其子分类
-      return [targetCategory];
+    collectExpandKeys(urlCategoryId);
+    
+    // 添加目标分类本身到展开列表（如果它有子分类的话）
+    const hasChildren = (categoryId) => {
+      const findCategory = (categories, targetId) => {
+      for (const category of categories) {
+        if (category.id.toString() === targetId.toString()) {
+            return category.children && category.children.length > 0;
+        }
+        if (category.children) {
+            const found = findCategory(category.children, targetId);
+            if (found !== undefined) return found;
+        }
+      }
+        return false;
+    };
+      return findCategory(categoryTree, categoryId);
+    };
+    
+    if (hasChildren(urlCategoryId)) {
+      expandKeys.add(urlCategoryId.toString());
     }
     
+    // 设置展开的键，其他分类保持折叠
+    setOpenKeys(Array.from(expandKeys));
+  }, [categoryTree]);
+
+  // 获取分类树（不过滤，只展开）
+  const getFilteredCategoryTree = () => {
+    // 直接返回完整的分类树，不进行过滤
     return categoryTree;
   };
 
@@ -154,7 +210,7 @@ const CommonSidebar = ({
               onCategoryClick(category, isTopLevel);
             } else if (enableNavigation) {
               // 否则使用原有的导航逻辑
-              console.log('点击分类:', category.name, category.id);
+          
               navigate(`/knowledge?category=${category.id}`);
             }
           }}
@@ -173,9 +229,7 @@ const CommonSidebar = ({
   const menuItems = convertToMenuItems(getFilteredCategoryTree());
 
   const handleMenuSelect = ({ key, keyPath }) => {
-    console.log("选择菜单项:", key, keyPath);
-    console.log("enableNavigation:", enableNavigation);
-    console.log("categoryTree:", categoryTree);
+
     setSelectedKeys([key]);
     
     // 如果启用了导航功能
@@ -195,31 +249,31 @@ const CommonSidebar = ({
       };
       
       const selectedItem = findCategoryItem(categoryTree, key);
-      console.log("selectedItem:", selectedItem);
+  
       
       if (selectedItem) {
         // 检查是否是顶级分类（没有父级）
         const isTopLevelCategory = categoryTree.some(cat => cat.id.toString() === key);
-        console.log("isTopLevelCategory:", isTopLevelCategory);
+    
         
         // 无论是顶级分类还是子分类，都跳转到知识库页面
-        console.log('跳转到知识库页面:', selectedItem.name, selectedItem.id);
+    
         navigate(`/knowledge?category=${selectedItem.id}`);
       } else {
-        console.log("未找到选中的项目");
+    
       }
     } else {
-      console.log("导航功能未启用");
+  
     }
   };
 
   const handleMenuOpenChange = (keys) => {
-    console.log('展开/折叠状态变化:', keys);
+
     setOpenKeys(keys);
   };
 
   const handleSubMenuTitleClick = ({ key }) => {
-    console.log("子菜单标题点击:", key);
+
     
     // 如果启用了导航功能
     if (enableNavigation) {
@@ -238,7 +292,7 @@ const CommonSidebar = ({
       };
       
       const selectedItem = findCategoryItem(categoryTree, key);
-      console.log("子菜单标题选中项:", selectedItem);
+  
       
       if (selectedItem) {
         // 检查是否是顶级分类
@@ -246,7 +300,7 @@ const CommonSidebar = ({
         
         if (isTopLevelCategory) {
           // 点击的是顶级分类，跳转到知识库页面
-          console.log('子菜单标题跳转到知识库页面:', selectedItem.name);
+      
           navigate('/knowledge');
         }
       }
@@ -286,7 +340,7 @@ const CommonSidebar = ({
              selectedKeys={selectedKeys}
              onOpenChange={handleMenuOpenChange}
              onSelect={handleMenuSelect}
-             onTitleClick={handleSubMenuTitleClick}
+             onClick={handleSubMenuTitleClick}
              inlineIndent={16}
              style={{ borderRight: 'none' }}
              items={menuItems}

@@ -5,6 +5,7 @@ import NotFound from '../pages/common/NotFound';
 import Developing from '../components/Developing';
 import Knowledge from '../pages/knowledge/Knowledge';
 import KnowledgeDetail from '../pages/knowledge/KnowledgeDetail';
+import KnowledgeDetailPage from '../pages/knowledge-detail/KnowledgeDetailPage';
 import KnowledgeQA from '../pages/knowledge/KnowledgeQA';
 import KnowledgeManagement from '../pages/knowledge-management/KnowledgeManagement';
 import RoleManagement from '../pages/knowledge-management/RoleManagement';
@@ -39,6 +40,10 @@ const router = createBrowserRouter([
           {
             path: '/knowledge/:id',
             element: <KnowledgeDetail />,
+          },
+          {
+            path: '/knowledge-detail/:id',
+            element: <KnowledgeDetailPage />,
           },
           {
             path: '/knowledge-qa',

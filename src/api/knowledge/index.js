@@ -21,6 +21,11 @@ export const knowledgeAPI = {
   searchKnowledgeByQuery: (data) => {
     return http.post("/search", data);
   },
+
+  // 获取知识详情
+  getKnowledgeDetail: (id) => {
+    return http.get(`/knowledge/${id}`);
+  },
 };
 
 export default knowledgeAPI;

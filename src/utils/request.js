@@ -23,7 +23,6 @@ request.interceptors.request.use(
 
     // 开发环境下打印请求信息
     if (import.meta.env.VITE_DEV_MODE === "true") {
-      console.log("Request:", config.method?.toUpperCase(), config.url, config);
     }
 
     return config;
@@ -42,7 +41,6 @@ request.interceptors.response.use(
 
     // 开发环境下打印响应信息
     if (import.meta.env.VITE_DEV_MODE === "true") {
-      console.log("Response:", response.config.url, response.data);
     }
 
     // 如果响应成功，直接返回数据

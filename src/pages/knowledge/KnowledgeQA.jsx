@@ -37,7 +37,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import StreamingMarkdownRenderer from "../../components/StreamingMarkdownRenderer";
-import { API_CONFIG, getQianwenHeaders, getQianwenRequestData } from "../../config/api";
+import { chatAPI } from "../../api/chat";
 import "./KnowledgeQA.scss";
 
 const { Sider, Content } = Layout;
@@ -139,7 +139,7 @@ const KnowledgeQA = () => {
       label: (
         <span>
           Related Text
-          <Badge count={1} size="small" style={{ marginLeft: 8 }} />
+          
         </span>
       ),
       children: <div className="related-content">相关文本内容</div>,
@@ -187,29 +187,105 @@ const KnowledgeQA = () => {
     setAbortController(controller);
 
     try {
-      // 调用千问AI API，使用智能流式渲染
-      await qianwenStreamRequest(userQuestion, (content, isComplete) => {
-        setMessages(prev => {
-          const newMessages = [...prev];
-          const lastMessage = newMessages[newMessages.length - 1];
-          if (lastMessage.type === "ai") {
-            if (isComplete) {
-              // 如果是完整的内容，直接更新
-              lastMessage.content = content;
-            } else {
-              // 如果是流式内容，累积更新
-              lastMessage.content += content;
+      // 准备请求数据
+      const requestData = {
+        question: userQuestion,
+        userId: "user123", // 这里应该从用户状态获取
+        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        knowledgeIds: [], // 这里可以从store获取知识ID列表
+        stream: true
+      };
+
+      // 调用新的RAG流式对话接口
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(requestData),
+        signal: controller.signal
+      });
+
+      if (response.ok) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let answer = '';
+        let references = [];
+        let buffer = '';
+        let currentEvent = '';
+        let currentData = '';
+
+        while (true) {
+          if (controller.signal?.aborted) {
+            reader.cancel();
+            break;
+          }
+
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          
+          // 保留最后一行，因为它可能不完整
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.trim() === '') continue;
+            
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7);
+              currentData = ''; // 重置数据
+            } else if (line.startsWith('data: ')) {
+              currentData = line.slice(6);
+
+              // 尝试解析JSON，如果失败则等待更多数据
+              try {
+                const parsed = JSON.parse(currentData);
+
+                // 根据事件类型处理数据
+                if (currentEvent === 'start') {
+                  console.log('RAG对话开始:', parsed.message);
+                } else if (currentEvent === 'message') {
+                  if (parsed.content) {
+                    answer += parsed.content;
+                    setMessages(prev => {
+                      const newMessages = [...prev];
+                      const lastMessage = newMessages[newMessages.length - 1];
+                      if (lastMessage.type === "ai") {
+                        lastMessage.content = answer;
+                        lastMessage.references = references;
+                      }
+                      return newMessages;
+                    });
+                  }
+                } else if (currentEvent === 'references') {
+                  references = parsed;
+                } else if (currentEvent === 'end') {
+                  console.log('RAG对话完成:', parsed.message);
+                  setIsLoading(false);
+                  return;
+                }
+              } catch (e) {
+                // 如果是JSON解析错误，可能是数据不完整，继续等待
+                // 只有在数据看起来完整时才记录错误
+                if (currentData.length > 10 && !currentData.includes('"')) {
+                  console.log('解析SSE数据失败，跳过此数据块:', e.message);
+                }
+              }
             }
           }
-          return newMessages;
-        });
-      }, controller.signal);
+        }
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
     } catch (error) {
       if (error.name !== "AbortError") {
         let errorMessage = "AI回复生成失败，请重试";
         
         if (error.message.includes("401")) {
-          errorMessage = "API密钥无效，请检查配置";
+          errorMessage = "认证失败，请重新登录";
         } else if (error.message.includes("429")) {
           errorMessage = "请求过于频繁，请稍后再试";
         } else if (error.message.includes("500")) {
@@ -237,128 +313,7 @@ const KnowledgeQA = () => {
     }
   };
 
-  // 千问AI流式请求
-  const qianwenStreamRequest = async (question, onData, signal) => {
-    const url = API_CONFIG.QIANWEN.BASE_URL;
-    
-    const requestData = getQianwenRequestData([
-      {
-        role: "user",
-        content: question
-      }
-    ]);
 
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: getQianwenHeaders(),
-        body: JSON.stringify(requestData),
-        signal: signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let accumulatedContent = "";
-      let lastTableState = null;
-
-      try {
-        while (true) {
-          if (signal?.aborted) {
-            reader.cancel();
-            break;
-          }
-
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (line.startsWith("data: ") && line !== "data: [DONE]") {
-              try {
-                const jsonStr = line.substring(6);
-                const json = JSON.parse(jsonStr);
-
-                if (json.choices && json.choices.length > 0 && json.choices[0].delta && json.choices[0].delta.content) {
-                  const newContent = json.choices[0].delta.content;
-                  accumulatedContent += newContent;
-                  
-                  // 检查是否包含表格结构
-                  const tableState = detectTableState(accumulatedContent);
-                  
-                  if (tableState.isInTable && tableState.isCompleteRow) {
-                    // 如果表格行完整，重新渲染整个内容
-                    onData(accumulatedContent, false);
-                    lastTableState = tableState;
-                  } else if (tableState.isInTable && !tableState.isCompleteRow) {
-                    // 如果表格行不完整，继续累积
-                    onData(accumulatedContent, false);
-                  } else {
-                    // 如果不是表格或表格行完整，正常流式更新
-                    onData(newContent, false);
-                  }
-                }
-              } catch (e) {
-                console.error("解析JSON失败:", e);
-              }
-            }
-          }
-          
-          // 流式请求结束，发送完整内容
-          onData(accumulatedContent, true);
-        }
-      } finally {
-        reader.releaseLock();
-      }
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        throw error;
-      }
-    }
-  };
-
-  // 检测表格状态的辅助函数
-  const detectTableState = (content) => {
-    const lines = content.split('\n');
-    let isInTable = false;
-    let isCompleteRow = false;
-    let tableStartIndex = -1;
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      
-      // 检测表格开始
-      if (line.includes('|') && line.split('|').length > 2) {
-        if (tableStartIndex === -1) {
-          tableStartIndex = i;
-          isInTable = true;
-        }
-      }
-      
-      // 检测表格行是否完整
-      if (isInTable && line.includes('|')) {
-        const columns = line.split('|').filter(col => col.trim() !== '');
-        if (columns.length >= 2) {
-          isCompleteRow = true;
-        }
-      }
-      
-      // 检测表格结束（空行或非表格行）
-      if (isInTable && line === '' && i > tableStartIndex) {
-        isInTable = false;
-        break;
-      }
-    }
-    
-    return { isInTable, isCompleteRow };
-  };
 
   const handleSend = () => {
     if (!inputValue.trim()) {

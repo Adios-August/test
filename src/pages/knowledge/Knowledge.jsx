@@ -15,6 +15,7 @@ import {
   Avatar,
   Space,
   Tooltip,
+  Modal,
 } from "antd";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
@@ -38,8 +39,10 @@ import {
 import { observer } from "mobx-react-lite";
 import CommonSidebar from "../../components/CommonSidebar";
 import KnowledgeDetailModal from "../../components/KnowledgeDetailModal";
+import KnowledgeDetailContent from "../../components/KnowledgeDetailContent";
 import { knowledgeAPI } from "../../api/knowledge";
-import { useSearchHistoryStore } from "../../stores";
+import { chatAPI } from "../../api/chat";
+import { useSearchHistoryStore, useKnowledgeStore } from "../../stores";
  
 import "./Knowledge.scss";
 
@@ -47,15 +50,16 @@ const { Sider, Content } = Layout;
 const { Search } = Input;
 
 const Knowledge = observer(() => {
-  console.log('Knowledge组件开始渲染');
+
   
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const searchHistoryStore = useSearchHistoryStore();
+  const knowledgeStore = useKnowledgeStore();
   const categoryId = searchParams.get('category');
   
-  console.log('Knowledge组件状态:', { categoryId, location: location.pathname });
+
   
   const [searchCurrentPage, setSearchCurrentPage] = useState(1); // 搜索结果分页
   const [questionInput, setQuestionInput] = useState(""); // 问题输入框
@@ -91,6 +95,105 @@ const Knowledge = observer(() => {
   const [knowledgeDetailVisible, setKnowledgeDetailVisible] = useState(false);
   const [currentKnowledge, setCurrentKnowledge] = useState(null);
   const [knowledgeDetailLoading, setKnowledgeDetailLoading] = useState(false);
+  
+  // Sources弹窗相关状态
+  const [sourcesModalVisible, setSourcesModalVisible] = useState(false);
+  const [sourcesModalData, setSourcesModalData] = useState(null);
+  const [sourcesModalLoading, setSourcesModalLoading] = useState(false);
+  
+  // 生成sessionId
+  const generateSessionId = () => {
+    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  };
+
+  // 处理流式AI响应
+  const handleStreamResponse = async (requestData) => {
+    console.log('开始流式请求:', requestData);
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}` // 从localStorage获取token
+      },
+      body: JSON.stringify(requestData)
+    });
+    
+    if (response.ok) {
+      console.log('流式响应开始');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let answer = '';
+      let references = [];
+      let buffer = '';
+      let currentEvent = '';
+      let currentData = '';
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        
+        // 保留最后一行，因为它可能不完整
+        buffer = lines.pop() || '';
+        
+        for (const line of lines) {
+          if (line.trim() === '') continue;
+          
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7);
+            currentData = ''; // 重置数据
+            console.log('收到事件:', currentEvent);
+          } else if (line.startsWith('data: ')) {
+            currentData = line.slice(6);
+            
+            // 尝试解析JSON，如果失败则等待更多数据
+            try {
+              const parsed = JSON.parse(currentData);
+              
+              // 根据事件类型处理数据
+              if (currentEvent === 'start') {
+                console.log('RAG对话开始:', parsed.message);
+              } else if (currentEvent === 'message') {
+                if (parsed.content) {
+                  answer += parsed.content;
+                  console.log('收到AI回答内容:', parsed.content);
+                  setAiAnswer({
+                    answer: answer,
+                    references: references,
+                    recommendedQuestions: []
+                  });
+                  // 清除loading状态，显示内容
+                  setAiLoading(false);
+                }
+              } else if (currentEvent === 'references') {
+                references = parsed;
+                console.log('收到引用:', references.length, '个');
+                setReferences(parsed);
+              } else if (currentEvent === 'end') {
+                console.log('RAG对话完成:', parsed.message);
+                setAiLoading(false);
+                return true;
+              }
+            } catch (e) {
+              // 如果是JSON解析错误，可能是数据不完整，继续等待
+              // 只有在数据看起来完整时才记录错误
+              if (currentData.length > 10 && !currentData.includes('"')) {
+                console.log('解析SSE数据失败，跳过此数据块:', e.message);
+              }
+            }
+          }
+        }
+      }
+      
+      return true;
+    } else {
+      console.error('流式响应失败:', response.status);
+      message.error('AI回答失败');
+      return false;
+    }
+  };
 
   // 处理问题提交
   const handleQuestionSubmit = () => {
@@ -110,7 +213,7 @@ const Knowledge = observer(() => {
 
   // 处理推荐问题点击
   const handleRecommendedQuestionClick = (question) => {
-    // 跳转到问答页面，并传递点击的问题内容
+    // 跳转到问答页面，并传递问题内容
     navigate("/knowledge-qa", { 
       state: { 
         question: question,
@@ -123,7 +226,7 @@ const Knowledge = observer(() => {
   const fetchCategoryKnowledge = useCallback(async (categoryId, page = 1, size = 10) => {
     if (!categoryId) return;
     
-    console.log('开始获取分类知识列表:', { categoryId, page, size });
+
     setCategoryLoading(true);
     try {
       const response = await knowledgeAPI.getCategoryKnowledge(categoryId, {
@@ -131,18 +234,23 @@ const Knowledge = observer(() => {
         size
       });
       
-      console.log('分类知识API响应:', response);
+
       
       if (response.code === 200) {
+        const knowledgeList = response.data.records || [];
+        
+        // 将知识列表存储到store中
+        knowledgeStore.setKnowledgeList(knowledgeList);
+        
         // 根据实际API返回的数据结构进行调整
-        setCategoryKnowledge(response.data.records || []);
+        setCategoryKnowledge(knowledgeList);
         setCategoryPagination(prev => ({
           ...prev,
           current: response.data.current || page,
           total: response.data.total || 0,
           pageSize: response.data.size || size
         }));
-        console.log('分类知识列表设置成功:', response.data.records?.length || 0);
+
       } else {
         message.error(response.message || '获取分类知识列表失败');
         console.error('分类知识API错误:', response.message);
@@ -153,7 +261,7 @@ const Knowledge = observer(() => {
     } finally {
       setCategoryLoading(false);
     }
-  }, []);
+  }, [knowledgeStore]);
 
   // 处理分类知识列表分页
   const handleCategoryPaginationChange = (page, pageSize) => {
@@ -164,26 +272,28 @@ const Knowledge = observer(() => {
   const fetchSearchResults = useCallback(async (query, page = 1, size = 10) => {
     if (!query || !query.trim()) return;
     
-    console.log('开始获取搜索结果:', { query, page, size });
+
     setSearchLoading(true);
-    setAiLoading(true); // 设置AI loading状态
     try {
       const response = await knowledgeAPI.searchKnowledgeByQuery({
         query: query.trim(),
-        page: page - 1, // API使用0-based分页
+        page: page , 
         size: size
       });
       
-      console.log('搜索API响应:', response);
+
       
       if (response.code === 200) {
-        console.log('API返回数据:', response.data);
+
         // 处理搜索结果，如果name为空则使用description的前50个字符作为标题
         const processedResults = (response.data.esResults || []).map(item => ({
           ...item,
           name: item.name || item.description?.substring(0, 50) + '...' || '无标题',
           displayName: item.name || item.description?.substring(0, 50) + '...' || '无标题'
         }));
+        
+        // 将搜索结果存储到store中
+        knowledgeStore.setKnowledgeList(processedResults);
         
         setSearchResults(processedResults);
         setSearchPagination(prev => ({
@@ -193,16 +303,20 @@ const Knowledge = observer(() => {
           pageSize: size
         }));
         
-        // 处理AI回答结果
+        // 处理AI回答和references数据
         if (response.data.ragResults && response.data.ragResults.length > 0) {
-          setAiAnswer(response.data.ragResults[0]);
-          setReferences(response.data.ragResults[0].references || []); // 设置references
+          const ragResult = response.data.ragResults[0];
+          setAiAnswer({
+            answer: ragResult.answer || '',
+            references: ragResult.references || [],
+            recommendedQuestions: ragResult.recommendedQuestions || []
+          });
+          setReferences(ragResult.references || []);
         } else {
           setAiAnswer(null);
-          setReferences([]); // 清空references
+          setReferences([]);
         }
-        
-        console.log('搜索结果设置成功:', processedResults.length);
+
       } else {
         message.error(response.message || '获取知识列表失败');
         setSearchResults([]); // 清空搜索结果
@@ -214,13 +328,12 @@ const Knowledge = observer(() => {
       setSearchResults([]); // 清空搜索结果
     } finally {
       setSearchLoading(false);
-      setAiLoading(false); // 清除AI loading状态
     }
-  }, []);
+  }, [knowledgeStore]);
 
   // 处理搜索
   const handleSearch = (value) => {
-    console.log('处理搜索:', value);
+
     setSearchValue(value);
     // 清空之前的搜索结果
     setSearchResults([]);
@@ -242,6 +355,8 @@ const Knowledge = observer(() => {
     }
   };
 
+
+
   // 处理搜索分页
   const handleSearchPaginationChange = (page, pageSize) => {
     // 使用当前搜索关键词
@@ -253,7 +368,7 @@ const Knowledge = observer(() => {
   // 当categoryId变化时获取分类知识列表
   useEffect(() => {
     if (categoryId) {
-      console.log('URL参数变化，categoryId:', categoryId);
+
       // 切换到路由分类时退出分类搜索模式，回到分类展示
       setIsCategorySearchMode(false);
       setSearchResults([]);
@@ -274,7 +389,7 @@ const Knowledge = observer(() => {
 
   // 处理侧边栏分类点击（不依赖URL参数变化）
   const handleCategoryClick = (category, isTopLevel) => {
-    console.log('侧边栏分类点击:', category.name, category.id, isTopLevel);
+
     // 清空之前的搜索结果
     setSearchResults([]);
     // 使用分类ID获取知识列表（进入分类搜索模式）
@@ -287,19 +402,9 @@ const Knowledge = observer(() => {
     setShowAISourceModules(false);
   };
 
-  // 调试：监控搜索结果状态
+    // 调试：监控搜索结果状态
   useEffect(() => {
-    console.log('搜索结果状态变化:', {
-      searchResults: searchResults.length,
-      searchValue,
-      currentCategoryId,
-      searchLoading,
-      categoryId,
-      isCategorySearchMode,
-      categoryKnowledge: categoryKnowledge.length,
-      categoryLoading,
-      showAISourceModules
-    });
+    // 监控状态变化
   }, [searchResults, searchValue, currentCategoryId, searchLoading, categoryId, isCategorySearchMode, categoryKnowledge, categoryLoading, showAISourceModules]);
 
   // 组件初始化时清空搜索结果
@@ -369,6 +474,48 @@ const Knowledge = observer(() => {
     setKnowledgeDetailVisible(false);
     setCurrentKnowledge(null);
     setKnowledgeDetailLoading(false);
+  };
+
+  // 在当前页面打开知识详情
+  const handleOpenInCurrentPage = (item) => {
+    // 使用新的知识详情页面路由
+    const categoryParam = categoryId ? `?category=${categoryId}` : '';
+    navigate(`/knowledge-detail/${item.id}${categoryParam}`);
+  };
+
+  // 在新页面打开知识详情
+  const handleOpenInNewPage = (item) => {
+    const categoryParam = categoryId ? `?category=${categoryId}` : '';
+    const url = `/knowledge-detail/${item.id}${categoryParam}`;
+    window.open(url, '_blank');
+  };
+
+  // 打开Sources弹窗
+  const handleOpenSourcesModal = async (reference) => {
+    setSourcesModalVisible(true);
+    setSourcesModalLoading(true);
+    setSourcesModalData(null);
+    
+    try {
+      const response = await knowledgeAPI.getKnowledgeDetail(reference.knowledgeId);
+      if (response.code === 200) {
+        setSourcesModalData(response.data);
+      } else {
+        message.error(response.message || '获取知识详情失败');
+      }
+    } catch (error) {
+      console.error('获取知识详情失败:', error);
+      message.error('获取知识详情失败，请稍后重试');
+    } finally {
+      setSourcesModalLoading(false);
+    }
+  };
+
+  // 关闭Sources弹窗
+  const handleCloseSourcesModal = () => {
+    setSourcesModalVisible(false);
+    setSourcesModalData(null);
+    setSourcesModalLoading(false);
   };
 
   return (
@@ -472,7 +619,6 @@ const Knowledge = observer(() => {
                       type="default" 
                       size="small"
                       onClick={() => handleRecommendedQuestionClick(question)}
-                      disabled={aiLoading}
                     >
                       {question}
                     </Button>
@@ -484,7 +630,6 @@ const Knowledge = observer(() => {
                     type="default" 
                     size="small"
                     onClick={() => handleRecommendedQuestionClick("请告诉我更多相关信息")}
-                    disabled={aiLoading}
                   >
                     请告诉我更多相关信息
                   </Button>
@@ -492,7 +637,6 @@ const Knowledge = observer(() => {
                     type="default" 
                     size="small"
                     onClick={() => handleRecommendedQuestionClick("还有其他问题吗？")}
-                    disabled={aiLoading}
                   >
                     还有其他问题吗？
                   </Button>
@@ -508,7 +652,7 @@ const Knowledge = observer(() => {
                     style={{ marginBottom: 0 }}
                     disabled={aiLoading}
                     onPressEnter={(e) => {
-                      if (!e.shiftKey && !aiLoading) {
+                      if (!e.shiftKey) {
                         e.preventDefault();
                         handleQuestionSubmit();
                       }
@@ -516,13 +660,11 @@ const Knowledge = observer(() => {
                   />
                   <Button 
                     type="primary" 
-                    icon={aiLoading ? <Spin size="small" /> : <SendOutlined />}
+                    icon={<SendOutlined />}
                     className="send-button"
                     onClick={handleQuestionSubmit}
-                    loading={aiLoading}
-                    disabled={aiLoading}
                   >
-                    {aiLoading ? '发送中...' : '发送'}
+                    发送
                   </Button>
                 </div>
               </div>
@@ -630,11 +772,23 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                               <DownOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="在当前标签页中打开">
-                                <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
+                              <Tooltip title="在当前页面打开">
+                                <GlobalOutlined 
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInCurrentPage(item);
+                                  }}
+                                />
                               </Tooltip>
-                              <Tooltip title="在新标签页中打开">
-                                <ExportOutlined style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} />
+                              <Tooltip title="在新页面打开">
+                                <ExportOutlined 
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInNewPage(item);
+                                  }}
+                                />
                               </Tooltip>
                             </div>
                           </div>
@@ -692,11 +846,23 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                              
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="在当前标签页中打开">
-                                <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
+                              <Tooltip title="在当前页面打开">
+                                <GlobalOutlined 
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInCurrentPage(item);
+                                  }}
+                                />
                               </Tooltip>
-                              <Tooltip title="在新标签页中打开">
-                                <ExportOutlined style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} />
+                              <Tooltip title="在新页面打开">
+                                <ExportOutlined 
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInNewPage(item);
+                                  }}
+                                />
                               </Tooltip>
                             </div>
                           </div>
@@ -753,13 +919,33 @@ const Knowledge = observer(() => {
                   key={reference.knowledgeId || index}
                   className="source-card" 
                   size="small"
-                  onClick={() => handleSourceKnowledgeClick(reference)}
                   style={{ cursor: 'pointer', marginBottom: '12px' }}
+                  onClick={() => handleOpenSourcesModal(reference)}
                 >
                   <div className="source-knowledge">
                     <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
                     <div className="knowledge-info">
                       <div className="knowledge-name">{reference.knowledgeName}</div>
+                    </div>
+                    <div className="source-actions">
+                      <Tooltip title="在当前页面打开">
+                        <GlobalOutlined 
+                          style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenInCurrentPage(reference);
+                          }}
+                        />
+                      </Tooltip>
+                      <Tooltip title="在新页面打开">
+                        <ExportOutlined 
+                          style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenInNewPage(reference);
+                          }}
+                        />
+                      </Tooltip>
                     </div>
                   </div>
                 </Card>
@@ -781,6 +967,24 @@ const Knowledge = observer(() => {
           onClose={handleCloseKnowledgeDetail}
           loading={knowledgeDetailLoading}
         />
+
+        {/* Sources弹窗 */}
+        <Modal
+          title="知识详情"
+          open={sourcesModalVisible}
+          onCancel={handleCloseSourcesModal}
+          footer={null}
+          width={800}
+                              destroyOnHidden
+          style={{ top: 20 }}
+        >
+          <div style={{ height: '70vh', overflow: 'hidden' }}>
+            <KnowledgeDetailContent 
+              knowledgeDetail={sourcesModalData} 
+              loading={sourcesModalLoading} 
+            />
+          </div>
+        </Modal>
       </Layout>
     </Layout>
   );

@@ -75,6 +75,19 @@
             height: 40px;
             border-radius: 8px;
             font-weight: 500;
+            background-color: var(--ant-primary-color);
+            border-color: var(--ant-primary-color);
+            color: white;
+
+            &:hover {
+              background-color: var(--ant-primary-hover);
+              border-color: var(--ant-primary-hover);
+            }
+
+            &:focus {
+              background-color: var(--ant-primary-color);
+              border-color: var(--ant-primary-color);
+            }
           }
         }
 
@@ -487,8 +500,12 @@
             border-radius: 6px;
 
             &.ant-tabs-tab-active {
-              background-color: var(--ant-primary-color);
-              color: white;
+              background-color: transparent;
+              color: var(--ant-primary-color);
+            }
+
+            &:hover {
+              color: var(--ant-primary-color);
             }
           }
 

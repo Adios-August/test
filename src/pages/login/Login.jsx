@@ -21,7 +21,7 @@ const Login = observer(() => {
         // 登录成功后跳转到用户原来要访问的页面，如果没有则跳转到首页
         const from = location.state?.from?.pathname || '/';
         navigate(from, { replace: true });
-        console.log("Login successful:", result.data);
+  
       } else {
         message.error(result.error || "Invalid username or password!");
       }
