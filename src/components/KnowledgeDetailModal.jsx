@@ -24,7 +24,7 @@ const KnowledgeDetailModal = ({
       footer={null}
       width={800}
       className="knowledge-detail-modal"
-      destroyOnClose
+      destroyOnHidden
     >
       {loading ? (
         <div className="loading-container">

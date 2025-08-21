@@ -1,0 +1,24 @@
+.knowledge-detail-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #e9f0fb;
+  overflow: hidden;
+
+  .detail-content {
+    margin: 16px;
+    height: calc(100vh - 32px);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .knowledge-detail-page {
+    .detail-content {
+      margin: 8px;
+      height: calc(100vh - 16px);
+    }
+  }
+} 

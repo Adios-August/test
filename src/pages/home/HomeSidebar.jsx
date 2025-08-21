@@ -61,12 +61,12 @@ const HomeSidebar = () => {
   const menuItems = convertToMenuItems(categoryTree);
 
   const handleMenuSelect = ({ key, keyPath }) => {
-    console.log("选择菜单项:", key, keyPath);
+
     setSelectedKeys([key]);
   };
 
   const handleMenuOpenChange = (keys) => {
-    console.log('展开/折叠状态变化:', keys);
+
     setOpenKeys(keys);
   };
 

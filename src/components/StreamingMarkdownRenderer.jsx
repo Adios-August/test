@@ -7,7 +7,7 @@ import 'highlight.js/styles/github.css';
 
 const StreamingMarkdownRenderer = ({ content, isStreaming = false }) => {
   // 添加调试信息
-  console.log('StreamingMarkdownRenderer content:', content);
+
   
   return (
     <div className="markdown-renderer">
