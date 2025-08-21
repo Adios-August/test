@@ -1,16 +1,83 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Table, Space, Input, Button, Popconfirm, message } from 'antd';
+import { http } from '../../utils/request';
  
 import '../knowledge-management/KnowledgeManagement.scss';
 
 const FeedbackManagement = () => {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [size, setSize] = useState(10);
+  const [keyword, setKeyword] = useState('');
+
+  const fetchData = async (p = page, s = size) => {
+    setLoading(true);
+    try {
+      const res = await http.get('/engagement/feedbacks', {
+        page: p,
+        size: s,
+      });
+      const records = res?.data?.records || res?.records || [];
+      setData(records);
+      setTotal(res?.data?.total || res?.total || records.length);
+      setPage(p); setSize(s);
+    } catch (e) {
+      message.error('加载失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(1, size); }, []);
+
+  const handleDelete = async (id) => {
+    try {
+      await http.delete(`/engagement/feedback/${id}`);
+      message.success('已删除');
+      fetchData(1, size);
+    } catch (e) {
+      message.error('删除失败');
+    }
+  };
+
+  const columns = [
+    { title: 'ID', dataIndex: 'id', width: 80 },
+    { title: '知识ID', dataIndex: 'knowledgeId', width: 120 },
+    { title: '用户ID', dataIndex: 'userId', width: 120 },
+    { title: '内容', dataIndex: 'content' },
+    { title: '时间', dataIndex: 'createdTime', width: 200 },
+    {
+      title: '操作', width: 120, render: (_, r) => (
+        <Space>
+          <Popconfirm title="确定删除该反馈吗？" onConfirm={() => handleDelete(r.id)}>
+            <a>删除</a>
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ];
+
   return (
     <div className="management-content">
       <div className="content-header">
         <h2>Feedback管理</h2>
-       
+        <div style={{ marginLeft: 'auto' }}>
+          <Space>
+            <Input.Search allowClear placeholder="搜索（ID/内容）" onSearch={() => fetchData(1, size)} />
+            <Button onClick={() => fetchData(1, size)}>刷新</Button>
+          </Space>
+        </div>
       </div>
-      
-    
+
+      <Table
+        rowKey="id"
+        loading={loading}
+        dataSource={data}
+        columns={columns}
+        pagination={{ current: page, pageSize: size, total, onChange: (p, s) => fetchData(p, s) }}
+      />
     </div>
   );
 };
