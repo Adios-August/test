@@ -3,6 +3,7 @@ import { Table, Button, Space, message, Spin, Modal, Form, Input, Select } from 
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { homeAPI } from '../../api/home';
+import { knowledgeAPI } from '../../api/knowledge';
 import '../knowledge-management/KnowledgeManagement.scss';
 
 const { Option } = Select;
@@ -15,46 +16,47 @@ const CategoryManagement = () => {
   const [editingRecord, setEditingRecord] = useState(null);
   const [form] = Form.useForm();
 
-  // 获取分类树数据
+  // 获取知识树数据（完整）
   const fetchCategoryTree = async () => {
     setLoading(true);
     try {
-      const response = await homeAPI.getCategoryTree();
+      const response = await homeAPI.getKnowledgeFullTree();
       if (response.code === 200) {
         const data = response.data || [];
         // 转换数据格式以适应Table组件
         const tableData = transformToTableData(data);
         setDataSource(tableData);
       } else {
-        message.error(response.message || '获取分类树失败');
+        message.error(response.message || '获取知识树失败');
         setDataSource([]);
       }
     } catch (error) {
-      console.error('获取分类树失败:', error);
-      message.error('获取分类树失败，请稍后重试');
+      console.error('获取知识树失败:', error);
+      message.error('获取知识树失败，请稍后重试');
       setDataSource([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // 转换数据格式以适应Table组件
-  const transformToTableData = (categories, parentKey = null) => {
-    return categories.map((category, index) => {
+  // 转换数据格式以适应Table组件（带层级缩进）
+  const transformToTableData = (categories, parentKey = null, currentLevel = 0) => {
+    return (categories || []).map((category, index) => {
       const key = parentKey ? `${parentKey}-${index}` : index.toString();
-      return {
+      const node = {
         key,
         id: category.id,
         name: category.name,
         description: category.description || '',
-        parentId: category.parentId,
-        level: category.level || 0,
+        parentId: category.parentId ?? null,
+        level: currentLevel,
         updateStaff: category.updateStaff || '-',
         updateTime: category.updateTime || '-',
-        children: category.children && category.children.length > 0 
-          ? transformToTableData(category.children, key) 
-          : undefined
       };
+      if (category.children && category.children.length > 0) {
+        node.children = transformToTableData(category.children, key, currentLevel + 1);
+      }
+      return node;
     });
   };
 
@@ -132,8 +134,34 @@ const CategoryManagement = () => {
   ];
 
   // 处理新增知识操作
-  const handleAddKnowledge = (record = null) => {
-    navigate('/add-knowledge');
+  const handleAddKnowledge = async (record = null) => {
+    const parentId = record?.id || 0;
+    Modal.confirm({
+      title: '新增节点',
+      content: '选择要创建的节点类型',
+      okText: '创建文档',
+      cancelText: '创建文件夹',
+      onOk: async () => {
+        const res = await knowledgeAPI.createKnowledge({
+          name: '新建文档',
+          description: '',
+          parentId,
+          nodeType: 'doc',
+          tags: []
+        });
+        if (res.code === 200) { message.success('创建成功'); fetchCategoryTree(); }
+      },
+      onCancel: async () => {
+        const res = await knowledgeAPI.createKnowledge({
+          name: '新建文件夹',
+          description: '',
+          parentId,
+          nodeType: 'folder',
+          tags: []
+        });
+        if (res.code === 200) { message.success('创建成功'); fetchCategoryTree(); }
+      }
+    });
   };
 
   // 处理编辑操作
@@ -150,13 +178,15 @@ const CategoryManagement = () => {
   const handleDelete = (record) => {
     Modal.confirm({
       title: '确认删除',
-      content: `确定要删除栏目"${record.name}"吗？删除后不可恢复。`,
+      content: `确定要删除知识节点"${record.name}"吗？删除后不可恢复。`,
       okText: '确定',
       cancelText: '取消',
       onOk: async () => {
         try {
-          // 这里调用删除API
-          message.success('删除成功');
+          const res = await knowledgeAPI.deleteKnowledge(record.id);
+          if (res.code === 200) {
+            message.success('删除成功');
+          }
           fetchCategoryTree(); // 重新加载数据
         } catch (error) {
           message.error('删除失败');

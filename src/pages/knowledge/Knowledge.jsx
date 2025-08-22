@@ -41,6 +41,7 @@ import CommonSidebar from "../../components/CommonSidebar";
 import KnowledgeDetailModal from "../../components/KnowledgeDetailModal";
 import KnowledgeDetailContent from "../../components/KnowledgeDetailContent";
 import { knowledgeAPI } from "../../api/knowledge";
+import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
 import { useSearchHistoryStore, useKnowledgeStore } from "../../stores";
  
@@ -57,7 +58,7 @@ const Knowledge = observer(() => {
   const [searchParams] = useSearchParams();
   const searchHistoryStore = useSearchHistoryStore();
   const knowledgeStore = useKnowledgeStore();
-  const categoryId = searchParams.get('category');
+  const categoryId = searchParams.get('parent');
   
 
   
@@ -153,6 +154,7 @@ const Knowledge = observer(() => {
       let buffer = '';
       let currentEvent = '';
       let currentData = '';
+      let aiMessageId = '';
       
       while (true) {
         const { done, value } = await reader.read();
@@ -216,6 +218,13 @@ const Knowledge = observer(() => {
                 setReferences(formattedReferences);
               } else if (currentEvent === 'end') {
                 console.log('RAG对话完成:', parsed.message);
+                if (parsed.sessionId) {
+                  window.__ragSessionId = parsed.sessionId;
+                }
+                if (parsed.messageId) {
+                  aiMessageId = parsed.messageId;
+                  window.__ragAnswerMessageId = parsed.messageId;
+                }
                 setAiLoading(false);
                 return true;
               }
@@ -277,14 +286,14 @@ const Knowledge = observer(() => {
     }, 500); // 显示500ms的loading效果
   };
 
-  // 获取分类知识列表
+  // 获取父知识下的子知识列表
   const fetchCategoryKnowledge = useCallback(async (categoryId, page = 1, size = 10) => {
     if (!categoryId) return;
     
 
     setCategoryLoading(true);
     try {
-      const response = await knowledgeAPI.getCategoryKnowledge(categoryId, {
+      const response = await knowledgeAPI.getChildren(categoryId, {
         page,
         size
       });
@@ -307,8 +316,8 @@ const Knowledge = observer(() => {
         }));
 
       } else {
-        message.error(response.message || '获取分类知识列表失败');
-        console.error('分类知识API错误:', response.message);
+        message.error(response.message || '获取子知识列表失败');
+        console.error('子知识API错误:', response.message);
       }
     } catch (error) {
       console.error('获取分类知识列表失败:', error);
@@ -370,7 +379,9 @@ const Knowledge = observer(() => {
             setAiAnswer({
               answer: ragResult.answer,
               references: ragResult.references || [],
-              recommendedQuestions: ragResult.recommendedQuestions || []
+              recommendedQuestions: ragResult.recommendedQuestions || [],
+              sessionId: ragResult.sessionId,
+              messageId: ragResult.messageId
             });
             // 设置AI回答后立即清除loading状态
             setAiLoading(false);
@@ -393,6 +404,9 @@ const Knowledge = observer(() => {
             // 设置引用数据后立即清除Sources loading状态
             setSourcesLoading(false);
           }
+          // 无论是否有引用，均保存会话与回答ID（用于点赞/点踩）
+          if (ragResult.sessionId) { window.__ragSessionId = ragResult.sessionId; }
+          if (ragResult.messageId) { window.__ragAnswerMessageId = ragResult.messageId; }
         } else {
           // 如果没有RAG结果，也要清除loading状态
           setAiLoading(false);
@@ -679,6 +693,62 @@ const Knowledge = observer(() => {
                       <Button type="link" size="small" icon={<FilePdfOutlined />}>
                         {aiAnswer.references[0].sourceFile}
                       </Button>
+                      <Space size="small" style={{ marginLeft: 8 }}>
+                        <Tooltip title="点赞此回答">
+                          <Button
+                            type="text"
+                            icon={<LikeOutlined />}
+                            onClick={async () => {
+                              try {
+                                if (window.__ragSessionId && window.__ragAnswerMessageId) {
+                                  await engagementAPI.likeAnswer(window.__ragSessionId, window.__ragAnswerMessageId);
+                                } else {
+                                  await engagementAPI.like(aiAnswer.references[0]?.knowledgeId || 0);
+                                }
+                                message.success("已点赞");
+                              } catch (e) { message.error("点赞失败"); }
+                            }}
+                          />
+                        </Tooltip>
+                        <Tooltip title="点踩（可选填写原因）">
+                          <Button
+                            type="text"
+                            icon={<DislikeOutlined />}
+                            onClick={() => {
+                              Modal.confirm({
+                                title: "点踩原因",
+                                content: (
+                                  <Input.TextArea id="ai-dislike-reason" rows={3} placeholder="请填写不满意原因，如不准确/不完整/参考不相关等" />
+                                ),
+                                okText: "提交",
+                                cancelText: "取消",
+                                onOk: async () => {
+                                  const reason = document.getElementById("ai-dislike-reason")?.value || "";
+                                  try {
+                                    if (window.__ragSessionId && window.__ragAnswerMessageId) {
+                                      await engagementAPI.dislikeAnswer(window.__ragSessionId, window.__ragAnswerMessageId, reason);
+                                    } else {
+                                      await engagementAPI.feedback(aiAnswer.references[0]?.knowledgeId || 0, reason);
+                                    }
+                                    message.success("已提交反馈");
+                                  } catch (e) { message.error("提交失败"); }
+                                },
+                                onCancel: async () => {
+                                  try {
+                                    // 取消也记录一次点踩（空原因）
+                                    if (window.__ragSessionId && window.__ragAnswerMessageId) {
+                                      await engagementAPI.dislikeAnswer(window.__ragSessionId, window.__ragAnswerMessageId, "");
+                                    } else {
+                                      await engagementAPI.feedback(aiAnswer.references[0]?.knowledgeId || 0, "");
+                                    }
+                                    message.success("已记录点踩");
+                                  } catch (e) { message.error("记录失败"); }
+                                }
+                              });
+                            }}
+                          />
+                        </Tooltip>
+                      </Space>
                     </div>
                   )}
                 </div>
