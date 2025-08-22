@@ -16,6 +16,7 @@ import {
   Typography,
   Divider,
   Empty,
+  Modal,
 } from "antd";
 import {
   SearchOutlined,
@@ -39,6 +40,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import StreamingMarkdownRenderer from "../../components/StreamingMarkdownRenderer";
 import PdfPreview from "../../components/PdfPreview";
 import { chatAPI } from "../../api/chat";
+import { engagementAPI } from "../../api/engagement";
 import "./KnowledgeQA.scss";
 
 const { Sider, Content } = Layout;
@@ -75,6 +77,8 @@ const KnowledgeQA = () => {
   const [previewPage, setPreviewPage] = useState(1);
   const [previewBboxes, setPreviewBboxes] = useState([]);
   const messagesEndRef = useRef(null);
+  const sessionIdRef = useRef("");
+  const messageIdRef = useRef("");
 
   // 自动滚动到最新消息
   const scrollToBottom = () => {
@@ -87,6 +91,18 @@ const KnowledgeQA = () => {
 
   // 页面加载时自动调用AI接口回答传递的问题
   useEffect(() => {
+    // 初始化加载历史会话
+    (async () => {
+      try {
+        const res = await chatAPI.getSessions("user123");
+        if (res?.code === 200 && Array.isArray(res.data)) {
+          const list = res.data.map((s, idx) => ({ id: s.sessionId || idx + 1, title: s.sessionName || (s.sessionId || `会话${idx+1}`), isActive: idx === 0 }));
+          setConversations(list.length ? list : conversations);
+          if (list.length) setCurrentConversation(list[0].id);
+        }
+      } catch {}
+    })();
+
     if (initialQuestion && initialQuestion !== "易方达增强回报基金选择理由") {
       // 延迟一下，确保页面完全加载
       const timer = setTimeout(() => {
@@ -273,8 +289,11 @@ const KnowledgeQA = () => {
             console.log('[SSE]', eventName, parsed);
 
             if (eventName === 'start') {
-              // 可在此保存后端生成的sessionId
-              // if (parsed.sessionId) setSessionId(parsed.sessionId)
+              // 保存会话ID（后端会在end事件里补充messageId）
+              if (parsed.sessionId) {
+                sessionIdRef.current = parsed.sessionId;
+                window.__ragSessionId = parsed.sessionId;
+              }
             } else if (eventName === 'message') {
               const { content } = parsed;
               if (typeof content === 'string' && content.length) {
@@ -344,6 +363,14 @@ const KnowledgeQA = () => {
                 }
                 return newMessages;
               });
+              if (parsed.sessionId) {
+                sessionIdRef.current = parsed.sessionId;
+                window.__ragSessionId = parsed.sessionId;
+              }
+              if (parsed.messageId) {
+                messageIdRef.current = parsed.messageId;
+                window.__ragAnswerMessageId = parsed.messageId;
+              }
               setIsLoading(false);
               return;
             }
@@ -428,6 +455,26 @@ const KnowledgeQA = () => {
       }))
     );
     setCurrentConversation(conversationId);
+    // 加载该会话的历史消息（展示最近若干条）
+    (async () => {
+      try {
+        const res = await chatAPI.getHistory(conversationId, { limit: 20 });
+        if (res?.code === 200 && Array.isArray(res.data)) {
+          const msgs = res.data.map(m => ({
+            id: m.id || `${Date.now()}_${Math.random()}`,
+            type: m.role === 'user' ? 'user' : 'ai',
+            content: m.content || '',
+            references: m.references || [],
+            timestamp: new Date(m.timestamp || Date.now())
+          }));
+          setMessages(msgs);
+        } else {
+          setMessages([]);
+        }
+      } catch {
+        setMessages([]);
+      }
+    })();
   };
 
   const handleBackToKnowledge = () => {
@@ -439,8 +486,58 @@ const KnowledgeQA = () => {
     message.success("已复制到剪贴板");
   };
 
-  const handleFeedback = (messageId, type) => {
-    message.success(`已${type === "like" ? "点赞" : "点踩"}该回答`);
+  const handleLike = async () => {
+    try {
+      const sid = sessionIdRef.current || window.__ragSessionId;
+      const mid = messageIdRef.current || window.__ragAnswerMessageId;
+      if (sid && mid) {
+        await engagementAPI.likeAnswer(sid, mid);
+        message.success("已点赞");
+      } else {
+        message.error("本次回答ID缺失，无法点赞");
+      }
+    } catch (e) {
+      message.error("点赞失败");
+    }
+  };
+
+  const handleDislike = () => {
+    Modal.confirm({
+      title: "点踩原因",
+      content: (
+        <Input.TextArea rows={3} placeholder="请填写不满意原因，如不准确/不完整/参考不相关等" />
+      ),
+      okText: "提交",
+      cancelText: "取消",
+      onOk: async (close) => {
+        try {
+          const textarea = document.querySelector('.ant-modal textarea');
+          const reason = textarea?.value || "";
+          const sid = sessionIdRef.current || window.__ragSessionId;
+          const mid = messageIdRef.current || window.__ragAnswerMessageId;
+          if (sid && mid) {
+            await engagementAPI.dislikeAnswer(sid, mid, reason);
+            message.success("已提交反馈");
+          } else {
+            message.error("本次回答ID缺失，无法点踩");
+          }
+        } catch (e) {
+          message.error("提交失败");
+        }
+      },
+      onCancel: async () => {
+        try {
+          const sid = sessionIdRef.current || window.__ragSessionId;
+          const mid = messageIdRef.current || window.__ragAnswerMessageId;
+          if (sid && mid) {
+            await engagementAPI.dislikeAnswer(sid, mid, "");
+            message.success("已记录点踩");
+          }
+        } catch (e) {
+          message.error("记录失败");
+        }
+      }
+    });
   };
 
   // 取消AI请求
@@ -627,13 +724,13 @@ const KnowledgeQA = () => {
                             type="text"
                             size="small"
                             icon={<LikeOutlined />}
-                            onClick={() => handleFeedback(message.id, "like")}
+                            onClick={handleLike}
                           />
                           <Button
                             type="text"
                             size="small"
                             icon={<DislikeOutlined />}
-                            onClick={() => handleFeedback(message.id, "dislike")}
+                            onClick={handleDislike}
                           />
                         </div>
                       )}
