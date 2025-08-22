@@ -10,7 +10,7 @@ import KnowledgeQA from '../pages/knowledge/KnowledgeQA';
 import KnowledgeManagement from '../pages/knowledge-management/KnowledgeManagement';
 import RoleManagement from '../pages/knowledge-management/RoleManagement';
 import CategoryManagement from '../pages/knowledge-management/CategoryManagement';
-import AddKnowledge from '../pages/knowledge-management/AddKnowledge';
+import { AddKnowledge } from '../pages/knowledge-management';
 import QueriesManagement from '../pages/knowledge-management/QueriesManagement';
 import FeedbackManagement from '../pages/knowledge-management/FeedbackManagement';
 import Login from '../pages/login/Login';
