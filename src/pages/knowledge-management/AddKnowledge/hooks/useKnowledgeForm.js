@@ -24,14 +24,20 @@ export const useKnowledgeForm = () => {
 
   // Handle visibility scope selection
   const handlePrivateToChange = (value) => {
-    if (value.includes('ALL')) {
-      // Select ALL, clear other options
+    // If user selects ALL, clear other options and keep only ALL
+    if (value.includes('ALL') && !formData.privateToRoles.includes('ALL')) {
       setFormData(prev => ({ ...prev, privateToRoles: ['ALL'] }));
-    } else if (formData.privateToRoles.includes('ALL')) {
-      // Deselect ALL, keep current selection only
+    } 
+    // If user selects other options while ALL is already selected, remove ALL
+    else if (formData.privateToRoles.includes('ALL') && value.length > 1) {
       setFormData(prev => ({ ...prev, privateToRoles: value.filter(v => v !== 'ALL') }));
-    } else {
-      // Normal multi-select
+    }
+    // If user deselects ALL manually, keep other selections
+    else if (!value.includes('ALL') && formData.privateToRoles.includes('ALL')) {
+      setFormData(prev => ({ ...prev, privateToRoles: value }));
+    }
+    // Normal multi-select for non-ALL options
+    else {
       setFormData(prev => ({ ...prev, privateToRoles: value }));
     }
   };
