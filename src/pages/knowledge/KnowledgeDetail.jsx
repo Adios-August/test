@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Tabs, Button, Avatar, Space, List, Card, Input, message, Spin, Select } from 'antd';
+import { Layout, Tabs, Button, Avatar, Space, List, Card, Input, message, Spin, Select, Tooltip } from 'antd';
 import {
-  HeartOutlined, HistoryOutlined, TranslationOutlined, FilePdfOutlined, FileExcelOutlined,
+  HeartOutlined, HeartFilled, HistoryOutlined, TranslationOutlined, FilePdfOutlined, FileExcelOutlined,
   CloseOutlined, ArrowLeftOutlined, LeftOutlined, RightOutlined, SearchOutlined, TagOutlined,
   SendOutlined, MailOutlined, ArrowRightOutlined, UserOutlined,
 } from '@ant-design/icons';
@@ -27,6 +27,10 @@ const KnowledgeDetail = () => {
   // 知识详情数据状态
   const [knowledgeDetail, setKnowledgeDetail] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // 收藏相关状态
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
   
   // 获取knowledgeStore
   const knowledgeStore = useKnowledgeStore();
@@ -63,10 +67,58 @@ const KnowledgeDetail = () => {
     }
   };
 
-  // 组件挂载时获取知识详情
+  // 获取收藏状态
+  const fetchFavoriteStatus = async (knowledgeId) => {
+    if (!knowledgeId) return;
+    
+    try {
+      const response = await knowledgeAPI.getFavoriteStatus(knowledgeId);
+      if (response.code === 200) {
+        setIsFavorited(response.data?.isFavorited || false);
+      }
+    } catch (error) {
+      console.error('获取收藏状态失败:', error);
+    }
+  };
+
+  // 处理收藏/取消收藏
+  const handleFavorite = async () => {
+    if (!id || favoriteLoading) return;
+    
+    setFavoriteLoading(true);
+    try {
+      if (isFavorited) {
+        // 取消收藏
+        const response = await knowledgeAPI.unfavoriteKnowledge(id);
+        if (response.code === 200) {
+          setIsFavorited(false);
+          message.success('已取消收藏');
+        } else {
+          message.error(response.message || '取消收藏失败');
+        }
+      } else {
+        // 添加收藏
+        const response = await knowledgeAPI.favoriteKnowledge(id);
+        if (response.code === 200) {
+          setIsFavorited(true);
+          message.success('已添加到收藏');
+        } else {
+          message.error(response.message || '收藏失败');
+        }
+      }
+    } catch (error) {
+      console.error('收藏操作失败:', error);
+      message.error('操作失败，请重试');
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  // 组件挂载时获取知识详情和收藏状态
   useEffect(() => {
     if (id) {
       fetchKnowledgeDetail(id);
+      fetchFavoriteStatus(id);
     }
   }, [id]);
 
@@ -332,7 +384,18 @@ const KnowledgeDetail = () => {
                           </div>
                         </div>
                         <div className="header-right">
-                          <Button type="text" icon={<HeartOutlined />} />
+                          <Tooltip title={isFavorited ? "取消收藏" : "收藏"} placement="top">
+                            <Button 
+                              type="text" 
+                              icon={isFavorited ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
+                              onClick={handleFavorite}
+                              loading={favoriteLoading}
+                              style={{ 
+                                color: isFavorited ? '#ff4d4f' : 'inherit',
+                                transition: 'all 0.3s ease'
+                              }}
+                            />
+                          </Tooltip>
                         </div>
                       </div>
 

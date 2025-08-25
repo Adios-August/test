@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, Button, Avatar, Space, Dropdown, message } from "antd";
+import { Layout, Menu, Button, Avatar, Space, Dropdown, message, Tooltip } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { UserOutlined, MessageOutlined, StarOutlined, LogoutOutlined, SettingOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react-lite";
@@ -76,8 +76,13 @@ const LayoutComponent = observer(() => {
           </div>
           <div className="header-user">
             <Space>
-              <Button type="text" icon={<MessageOutlined />} />
-              <Button type="text" icon={<StarOutlined />} />
+              <Tooltip title="收藏夹" placement="bottom">
+                <Button 
+                  type="text" 
+                  icon={<StarOutlined />} 
+                  onClick={() => navigate('/favorites')}
+                />
+              </Tooltip>
               <Button type="text" className="wpd-button">WPB</Button>
               <Dropdown
                 menu={{ items: userMenuItems }}

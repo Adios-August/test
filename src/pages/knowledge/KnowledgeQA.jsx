@@ -16,6 +16,7 @@ import {
   Typography,
   Divider,
   Empty,
+  Modal,
 } from "antd";
 import {
   SearchOutlined,
@@ -39,6 +40,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import StreamingMarkdownRenderer from "../../components/StreamingMarkdownRenderer";
 import PdfPreview from "../../components/PdfPreview";
 import { chatAPI } from "../../api/chat";
+import { feedbackAPI } from "../../api/feedback";
 import "./KnowledgeQA.scss";
 
 const { Sider, Content } = Layout;
@@ -76,6 +78,12 @@ const KnowledgeQA = () => {
   const [previewBboxes, setPreviewBboxes] = useState([]);
   const messagesEndRef = useRef(null);
 
+  // 反馈相关状态
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [feedbackContent, setFeedbackContent] = useState("");
+  const [currentMessageId, setCurrentMessageId] = useState(null);
+  const [feedbackPosition, setFeedbackPosition] = useState({ x: 0, y: 0 });
+
   // 自动滚动到最新消息
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -100,14 +108,14 @@ const KnowledgeQA = () => {
   // 参考资料数据
   const referenceData = [
     {
-      key: "1",
+      key: "reference-tab",
       label: "Reference Text",
       children: (
         <div className="reference-content">
-          <Collapse defaultActiveKey={["1", "2", "3"]} ghost>
+          <Collapse defaultActiveKey={["panel-1", "panel-2", "panel-3"]} ghost>
             <Panel
               header="产品培训合集_易方达增强回报"
-              key="1"
+              key="panel-1"
               className="reference-panel"
             >
               <p>
@@ -117,7 +125,7 @@ const KnowledgeQA = () => {
             </Panel>
             <Panel
               header="【LUT】产品回顾及展望-易方达专场"
-              key="2"
+              key="panel-2"
               className="reference-panel"
             >
               <p>
@@ -126,7 +134,7 @@ const KnowledgeQA = () => {
             </Panel>
             <Panel
               header="财富来源回顾培训2025Jul.pdf"
-              key="3"
+              key="panel-3"
               className="reference-panel"
             >
               <div className="pdf-reference">
@@ -139,7 +147,7 @@ const KnowledgeQA = () => {
       ),
     },
     {
-      key: "2",
+      key: "related-tab",
       label: (
         <span>
           Related Text
@@ -158,7 +166,7 @@ const KnowledgeQA = () => {
 
     // 添加用户消息
     const newUserMessage = {
-      id: messages.length + 1,
+      id: Date.now() + Math.random(),
       type: "user",
       content: userQuestion,
       timestamp: new Date(),
@@ -166,7 +174,7 @@ const KnowledgeQA = () => {
 
     // 添加空的AI回复消息
     const newAIMessage = {
-      id: messages.length + 2,
+      id: Date.now() + Math.random() + 1,
       type: "ai",
       content: "",
       timestamp: new Date(),
@@ -404,17 +412,17 @@ const KnowledgeQA = () => {
   };
 
   const handleNewConversation = () => {
-    const newId = conversations.length + 1;
+    const newId = Date.now() + Math.random();
     const newConversation = {
       id: newId,
       title: "新会话问题",
       isActive: true,
     };
 
-    setConversations(
-      conversations.map((conv) => ({ ...conv, isActive: false }))
-    );
-    setConversations([...conversations, newConversation]);
+    setConversations(prev => {
+      const updatedConversations = prev.map((conv) => ({ ...conv, isActive: false }));
+      return [...updatedConversations, newConversation];
+    });
     setCurrentConversation(newId);
     setMessages([]);
     setInputValue(""); // 清空输入框
@@ -439,8 +447,106 @@ const KnowledgeQA = () => {
     message.success("已复制到剪贴板");
   };
 
-  const handleFeedback = (messageId, type) => {
-    message.success(`已${type === "like" ? "点赞" : "点踩"}该回答`);
+  const handleFeedback = async (messageId, type, event) => {
+    if (type === "dislike") {
+      // 点踩时需要打开反馈弹窗
+      setCurrentMessageId(messageId);
+      
+      // 获取点踩按钮的位置
+      const button = event?.target?.closest('.ant-btn');
+      if (button) {
+        const rect = button.getBoundingClientRect();
+        const modalWidth = 500;
+        const modalHeight = 300;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        // 计算弹窗位置，确保不超出屏幕边界
+        let x = rect.left;
+        let y = rect.bottom + 10;
+        
+        // 如果弹窗会超出右边界，则向左调整
+        if (x + modalWidth > windowWidth) {
+          x = windowWidth - modalWidth - 20;
+        }
+        
+        // 如果弹窗会超出下边界，则向上调整
+        if (y + modalHeight > windowHeight) {
+          y = rect.top - modalHeight - 10;
+        }
+        
+        // 确保不超出左边界和上边界
+        x = Math.max(20, x);
+        y = Math.max(20, y);
+        
+        setFeedbackPosition({ x, y });
+      }
+      
+      setFeedbackModalVisible(true);
+      return;
+    }
+
+    // 点赞直接提交
+    try {
+      const feedbackData = {
+        messageId: messageId,
+        type: type,
+        userId: "user123", // 这里应该从用户状态获取
+        sessionId: `session_${currentConversation}`,
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await feedbackAPI.submitFeedback(feedbackData);
+      
+      if (response.code === 200) {
+        message.success(`已${type === "like" ? "点赞" : "点踩"}该回答`);
+      } else {
+        message.error(response.message || "操作失败，请重试");
+      }
+    } catch (error) {
+      console.error("提交反馈失败:", error);
+      message.error("操作失败，请重试");
+    }
+  };
+
+  // 提交反馈弹窗中的反馈
+  const handleSubmitFeedback = async () => {
+    if (!feedbackContent.trim()) {
+      message.warning("请输入反馈内容");
+      return;
+    }
+
+    try {
+      const feedbackData = {
+        messageId: currentMessageId,
+        type: "dislike",
+        userId: "user123", // 这里应该从用户状态获取
+        sessionId: `session_${currentConversation}`,
+        timestamp: new Date().toISOString(),
+        content: feedbackContent.trim() // 添加反馈内容
+      };
+
+      const response = await feedbackAPI.submitFeedback(feedbackData);
+      
+      if (response.code === 200) {
+        message.success("已提交反馈");
+        setFeedbackModalVisible(false);
+        setFeedbackContent("");
+        setCurrentMessageId(null);
+      } else {
+        message.error(response.message || "提交失败，请重试");
+      }
+    } catch (error) {
+      console.error("提交反馈失败:", error);
+      message.error("提交失败，请重试");
+    }
+  };
+
+  // 取消反馈弹窗
+  const handleCancelFeedback = () => {
+    setFeedbackModalVisible(false);
+    setFeedbackContent("");
+    setCurrentMessageId(null);
   };
 
   // 取消AI请求
@@ -498,6 +604,7 @@ const KnowledgeQA = () => {
                   dataSource={conversations}
                   renderItem={(item) => (
                     <List.Item
+                      key={item.id}
                       className={`conversation-item ${
                         item.isActive ? "active" : ""
                       }`}
@@ -534,7 +641,7 @@ const KnowledgeQA = () => {
                         {message.content ? (
                           <StreamingMarkdownRenderer 
                             content={message.content} 
-                            isStreaming={isLoading && message.id === messages.length}
+                            isStreaming={isLoading && message.id === messages[messages.length - 1]?.id}
                             onLinkClick={(href) => {
                               // 若回答中渲染为链接且带有 data-index，可解析并联动
                               try {
@@ -557,7 +664,7 @@ const KnowledgeQA = () => {
                             }}
                           />
                         ) : (
-                          isLoading && message.id === messages.length ? (
+                          isLoading && message.id === messages[messages.length - 1]?.id ? (
                             <div className="thinking-indicator">
                               <Spin size="small" />
                               <span>AI正在思考中...</span>
@@ -574,7 +681,7 @@ const KnowledgeQA = () => {
                             <span>Learn More</span>
                             {message.references.map((ref, index) => (
                               <div
-                                key={index}
+                                key={`${message.id}-ref-${index}`}
                                 className="reference-item"
                                 onClick={() => {
                                   if (ref.downloadUrl) {
@@ -612,29 +719,37 @@ const KnowledgeQA = () => {
 
                       {message.type === "ai" && (
                         <div className="message-actions">
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<CopyOutlined />}
-                            onClick={() => handleCopyMessage(message.content)}
-                          />
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<ReloadOutlined />}
-                          />
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<LikeOutlined />}
-                            onClick={() => handleFeedback(message.id, "like")}
-                          />
-                          <Button
-                            type="text"
-                            size="small"
-                            icon={<DislikeOutlined />}
-                            onClick={() => handleFeedback(message.id, "dislike")}
-                          />
+                          <Tooltip title="复制回答">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<CopyOutlined />}
+                              onClick={() => handleCopyMessage(message.content)}
+                            />
+                          </Tooltip>
+                          <Tooltip title="重新生成">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<ReloadOutlined />}
+                            />
+                          </Tooltip>
+                          <Tooltip title="点赞回答">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<LikeOutlined />}
+                              onClick={() => handleFeedback(message.id, "like")}
+                            />
+                          </Tooltip>
+                          <Tooltip title="点踩回答（需要填写反馈）">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<DislikeOutlined />}
+                              onClick={(e) => handleFeedback(message.id, "dislike", e)}
+                            />
+                          </Tooltip>
                         </div>
                       )}
                     </div>
@@ -693,10 +808,10 @@ const KnowledgeQA = () => {
           <div className="reference-sider">
             <div className="reference-header">
               <Tabs
-                defaultActiveKey="1"
+                defaultActiveKey="preview-tab"
                 items={[
                   {
-                    key: "1",
+                    key: "preview-tab",
                     label: "Related Text",
                     children: (
                       previewFileUrl ? (
@@ -706,7 +821,7 @@ const KnowledgeQA = () => {
                       )
                     ),
                   },
-                  ...referenceData.filter(i => i.key !== "2"),
+                  ...referenceData.filter(i => i.key !== "related-tab"),
                 ]}
                 className="reference-tabs"
               />
@@ -714,6 +829,40 @@ const KnowledgeQA = () => {
           </div>
         </div>
       </div>
+
+      {/* 反馈弹窗 */}
+      <Modal
+        title="请提供反馈"
+        open={feedbackModalVisible}
+        onOk={handleSubmitFeedback}
+        onCancel={handleCancelFeedback}
+        okText="提交反馈"
+        cancelText="取消"
+        width={500}
+        className="feedback-modal"
+        style={{
+          position: 'fixed',
+          top: feedbackPosition.y,
+          left: feedbackPosition.x,
+          transform: 'none',
+          margin: 0
+        }}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: 8, color: '#666' }}>
+            请告诉我们您对这次回答不满意的地方，帮助我们改进：
+          </p>
+          <TextArea
+            value={feedbackContent}
+            onChange={(e) => setFeedbackContent(e.target.value)}
+            placeholder="请输入您的反馈意见..."
+            rows={4}
+            maxLength={500}
+            showCount
+            className="feedback-textarea"
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

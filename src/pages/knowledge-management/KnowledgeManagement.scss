@@ -89,6 +89,21 @@
     background: #e9f0fb;
     overflow-y: auto;
 
+    // 栏目管理表格样式
+    .content-body {
+      .category-table {
+        .ant-table-expand-icon {
+          color: #666;
+          font-size: 12px;
+          transition: color 0.2s;
+          
+          &:hover {
+            color: #1890ff;
+          }
+        }
+      }
+    }
+
     .content-area {
       background: white;
       border-radius: 12px;

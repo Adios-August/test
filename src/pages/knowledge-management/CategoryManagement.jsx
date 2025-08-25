@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, message, Spin, Modal, Form, Input, Select } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, ArrowUpOutlined, ArrowDownOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { homeAPI } from '../../api/home';
 import '../knowledge-management/KnowledgeManagement.scss';
@@ -39,20 +39,18 @@ const CategoryManagement = () => {
   };
 
   // 转换数据格式以适应Table组件
-  const transformToTableData = (categories, parentKey = null) => {
-    return categories.map((category, index) => {
-      const key = parentKey ? `${parentKey}-${index}` : index.toString();
+  const transformToTableData = (categories) => {
+    return categories.map((category) => {
       return {
-        key,
+        key: category.id.toString(),
         id: category.id,
         name: category.name,
         description: category.description || '',
         parentId: category.parentId,
-        level: category.level || 0,
         updateStaff: category.updateStaff || '-',
         updateTime: category.updateTime || '-',
         children: category.children && category.children.length > 0 
-          ? transformToTableData(category.children, key) 
+          ? transformToTableData(category.children) 
           : undefined
       };
     });
@@ -66,19 +64,12 @@ const CategoryManagement = () => {
   // 表格列定义
   const columns = [
     {
-      title: '',
-      key: 'empty',
-      width: 50,
-      render: () => null,
-    },
-    {
       title: 'Category',
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
         <span style={{ 
-          paddingLeft: record.level * 20,
-          fontWeight: record.level === 0 ? 'bold' : 'normal'
+          fontWeight: record.children && record.children.length > 0 ? 'bold' : 'normal'
         }}>
           {text}
         </span>
@@ -227,8 +218,39 @@ const CategoryManagement = () => {
           pagination={false}
           expandable={{
             defaultExpandAllRows: true,
+            indentSize: 20,
+            expandIcon: ({ expanded, onExpand, record }) => {
+              if (record.children && record.children.length > 0) {
+                return (
+                  <span 
+                    onClick={(e) => onExpand(record, e)}
+                    style={{ 
+                      cursor: 'pointer',
+                      color: '#666',
+                      fontSize: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'color 0.2s',
+                      width: '16px',
+                      height: '16px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.color = '#1890ff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.color = '#666';
+                    }}
+                  >
+                    {expanded ? <CaretUpOutlined /> : <CaretDownOutlined />}
+                  </span>
+                );
+              }
+              return null;
+            }
           }}
           rowKey="key"
+          className="category-table"
         />
       </div>
      
