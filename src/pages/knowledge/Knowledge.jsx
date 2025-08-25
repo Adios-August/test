@@ -35,6 +35,7 @@ import {
   FolderOpenOutlined,
   GlobalOutlined,
   ExportOutlined,
+  EditOutlined,
   HeartOutlined,
   HeartFilled,
 } from "@ant-design/icons";
@@ -759,6 +760,12 @@ const Knowledge = observer(() => {
     window.open(url, '_blank');
   };
 
+  // 编辑知识
+  const handleEditKnowledge = (item, event) => {
+    event?.stopPropagation(); // 阻止卡片点击事件
+    navigate(`/edit-knowledge/${item.id}`);
+  };
+
   // 打开Sources弹窗
   const handleOpenSourcesModal = async (reference) => {
     setSourcesModalVisible(true);
@@ -999,6 +1006,12 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                             
                               <span className="date-text">2025-01-15</span>
+                              <Tooltip title="编辑知识">
+                                <EditOutlined 
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  onClick={(e) => handleEditKnowledge(item, e)}
+                                />
+                              </Tooltip>
                               <Tooltip title="在当前标签页中打开">
                                 <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
                               </Tooltip>
@@ -1059,9 +1072,17 @@ const Knowledge = observer(() => {
                               <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
                               <span className="title-text">{item.name}</span>
                             </div>
+                            
                             <div className="card-actions">
                               <DownOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
                               <span className="date-text">2025-01-15</span>
+                              <Tooltip title="编辑知识">
+                                <EditOutlined 
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  onClick={(e) => handleEditKnowledge(item, e)}
+                                />
+                              </Tooltip>
+                              
                               <Tooltip title={favoriteStates[item.id] ? "取消收藏" : "收藏"} placement="top">
                                 <Button
                                   type="text"
@@ -1150,6 +1171,12 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                              
                               <span className="date-text">2025-01-15</span>
+                              <Tooltip title="编辑知识">
+                                <EditOutlined 
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  onClick={(e) => handleEditKnowledge(item, e)}
+                                />
+                              </Tooltip>
                               <Tooltip title="在当前页面打开">
                                 <GlobalOutlined 
                                   style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 

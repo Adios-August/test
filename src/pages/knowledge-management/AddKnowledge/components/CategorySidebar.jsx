@@ -13,7 +13,7 @@ const CategorySidebar = ({ selectedCategory, onCategoryChange }) => {
   return (
     <div className="knowledge-sidebar">
       <div className="sidebar-content">
-        <div className="sidebar-title">新增知识存放目录</div>
+        <div className="sidebar-title">知识存放目录</div>
         
         {loading ? (
           <div className="loading-container">
