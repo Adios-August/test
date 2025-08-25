@@ -13,6 +13,7 @@ import CategoryManagement from '../pages/knowledge-management/CategoryManagement
 import { AddKnowledge } from '../pages/knowledge-management';
 import QueriesManagement from '../pages/knowledge-management/QueriesManagement';
 import FeedbackManagement from '../pages/knowledge-management/FeedbackManagement';
+import Favorites from '../pages/favorites/Favorites';
 import Login from '../pages/login/Login';
 import RouteGuard from './RouteGuard';
 
@@ -56,6 +57,10 @@ const router = createBrowserRouter([
           {
             path: '/edit-knowledge/:id',
             element: <AddKnowledge mode="edit" />,
+          },
+          {
+            path: '/favorites',
+            element: <Favorites />,
           },
            
           {

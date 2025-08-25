@@ -45,19 +45,39 @@ export const knowledgeAPI = {
   // 上传图片
   uploadImage: (file) => {
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append("image", file);
     return http.post("/uploads/image", formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { "Content-Type": "multipart/form-data" },
     });
   },
 
   // 上传附件
   uploadAttachment: (file) => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
     return http.post("/uploads/attachment", formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { "Content-Type": "multipart/form-data" },
     });
+  },
+
+  // 收藏知识
+  favoriteKnowledge: (knowledgeId) => {
+    return http.post(`/engagement/favorite/${knowledgeId}`);
+  },
+
+  // 取消收藏知识
+  unfavoriteKnowledge: (knowledgeId) => {
+    return http.delete(`/api/engagement/favorite/${knowledgeId}`);
+  },
+
+  // 获取收藏状态
+  getFavoriteStatus: (knowledgeId) => {
+    return http.get(`/api/engagement/favorite/${knowledgeId}`);
+  },
+
+  // 获取收藏列表
+  getFavorites: (params) => {
+    return http.get("/api/engagement/favorites", params);
   },
 };
 

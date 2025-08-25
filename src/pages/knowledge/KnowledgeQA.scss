@@ -318,14 +318,55 @@
                 .ant-btn {
                   color: #666;
                   padding: 4px 8px;
+                  border-radius: 6px;
+                  transition: all 0.2s ease;
 
                   &:hover {
                     color: var(--ant-primary-color);
                     background-color: #f0f8ff;
+                    transform: translateY(-1px);
+                  }
+
+                  // 点赞按钮特殊样式
+                  &:has(.anticon-like) {
+                    &:hover {
+                      color: #52c41a;
+                      background-color: #f6ffed;
+                    }
+                  }
+
+                  // 点踩按钮特殊样式
+                  &:has(.anticon-dislike) {
+                    &:hover {
+                      color: #ff4d4f;
+                      background-color: #fff2f0;
+                    }
                   }
                 }
               }
             }
+          }
+        }
+      }
+
+      // 反馈弹窗样式
+      .feedback-modal {
+        .ant-modal {
+          position: fixed !important;
+          top: auto !important;
+          left: auto !important;
+          transform: none !important;
+          margin: 0 !important;
+        }
+
+        .ant-modal-body {
+          padding: 24px;
+        }
+
+        .feedback-textarea {
+          .ant-input {
+            border-radius: 8px;
+            resize: none;
           }
         }
       }

@@ -36,6 +36,8 @@ import {
   GlobalOutlined,
   ExportOutlined,
   EditOutlined,
+  HeartOutlined,
+  HeartFilled,
 } from "@ant-design/icons";
 import { observer } from "mobx-react-lite";
 import CommonSidebar from "../../components/CommonSidebar";
@@ -44,6 +46,7 @@ import KnowledgeDetailContent from "../../components/KnowledgeDetailContent";
 import { knowledgeAPI } from "../../api/knowledge";
 import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
+import { feedbackAPI } from "../../api/feedback";
 import { useSearchHistoryStore, useKnowledgeStore } from "../../stores";
  
 import "./Knowledge.scss";
@@ -98,6 +101,15 @@ const Knowledge = observer(() => {
   const [knowledgeDetailVisible, setKnowledgeDetailVisible] = useState(false);
   const [currentKnowledge, setCurrentKnowledge] = useState(null);
   const [knowledgeDetailLoading, setKnowledgeDetailLoading] = useState(false);
+  
+  // 收藏相关状态
+  const [favoriteStates, setFavoriteStates] = useState({});
+  const [favoriteLoading, setFavoriteLoading] = useState({});
+  
+  // 反馈相关状态
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [feedbackContent, setFeedbackContent] = useState("");
+  const [feedbackPosition, setFeedbackPosition] = useState({ x: 0, y: 0 });
   
   // Sources弹窗相关状态
   const [sourcesModalVisible, setSourcesModalVisible] = useState(false);
@@ -287,7 +299,111 @@ const Knowledge = observer(() => {
     }, 500); // 显示500ms的loading效果
   };
 
-  // 获取父知识下的子知识列表
+  // 处理AI回答的反馈（点赞/点踩）
+  const handleAIFeedback = async (type, event) => {
+    if (!aiAnswer) return;
+    
+    if (type === "dislike") {
+      // 点踩时需要打开反馈弹窗
+      
+      // 获取点踩按钮的位置
+      const button = event?.target?.closest('.ant-btn');
+      if (button) {
+        const rect = button.getBoundingClientRect();
+        const modalWidth = 500;
+        const modalHeight = 300;
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        // 计算弹窗位置，确保不超出屏幕边界
+        let x = rect.left;
+        let y = rect.bottom + 10;
+        
+        // 如果弹窗会超出右边界，则向左调整
+        if (x + modalWidth > windowWidth) {
+          x = windowWidth - modalWidth - 20;
+        }
+        
+        // 如果弹窗会超出下边界，则向上调整
+        if (y + modalHeight > windowHeight) {
+          y = rect.top - modalHeight - 10;
+        }
+        
+        // 确保不超出左边界和上边界
+        x = Math.max(20, x);
+        y = Math.max(20, y);
+        
+        setFeedbackPosition({ x, y });
+      }
+      
+      setFeedbackModalVisible(true);
+      return;
+    }
+
+    // 点赞直接提交
+    try {
+      const feedbackData = {
+        messageId: `ai_answer_${Date.now()}`, // 生成唯一ID
+        type: type,
+        userId: "user123", // 这里应该从用户状态获取
+        sessionId: `knowledge_page_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        content: aiAnswer.answer // 保存回答内容用于反馈
+      };
+
+      const response = await feedbackAPI.submitFeedback(feedbackData);
+      
+      if (response.code === 200) {
+        message.success(`已${type === "like" ? "点赞" : "点踩"}该回答`);
+      } else {
+        message.error(response.message || "操作失败，请重试");
+      }
+    } catch (error) {
+      console.error("提交反馈失败:", error);
+      message.error("操作失败，请重试");
+    }
+  };
+
+  // 提交反馈弹窗中的反馈
+  const handleSubmitFeedback = async () => {
+    if (!feedbackContent.trim()) {
+      message.warning("请输入反馈内容");
+      return;
+    }
+
+    try {
+      const feedbackData = {
+        messageId: `ai_answer_${Date.now()}`,
+        type: "dislike",
+        userId: "user123", // 这里应该从用户状态获取
+        sessionId: `knowledge_page_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        content: aiAnswer.answer, // 保存回答内容用于反馈
+        feedback: feedbackContent.trim() // 添加用户反馈内容
+      };
+
+      const response = await feedbackAPI.submitFeedback(feedbackData);
+      
+      if (response.code === 200) {
+        message.success("已提交反馈");
+        setFeedbackModalVisible(false);
+        setFeedbackContent("");
+      } else {
+        message.error(response.message || "提交失败，请重试");
+      }
+    } catch (error) {
+      console.error("提交反馈失败:", error);
+      message.error("提交失败，请重试");
+    }
+  };
+
+  // 取消反馈弹窗
+  const handleCancelFeedback = () => {
+    setFeedbackModalVisible(false);
+    setFeedbackContent("");
+  };
+
+  // 获取分类知识列表
   const fetchCategoryKnowledge = useCallback(async (categoryId, page = 1, size = 10) => {
     if (!categoryId) return;
     
@@ -538,6 +654,59 @@ const Knowledge = observer(() => {
     setShowAISourceModules(!showAISourceModules);
   };
 
+  // 获取收藏状态
+  const fetchFavoriteStatus = async (knowledgeId) => {
+    if (!knowledgeId) return;
+    
+    try {
+      const response = await knowledgeAPI.getFavoriteStatus(knowledgeId);
+      if (response.code === 200) {
+        setFavoriteStates(prev => ({
+          ...prev,
+          [knowledgeId]: response.data?.isFavorited || false
+        }));
+      }
+    } catch (error) {
+      console.error('获取收藏状态失败:', error);
+    }
+  };
+
+  // 处理收藏/取消收藏
+  const handleFavorite = async (knowledgeId, event) => {
+    event?.stopPropagation();
+    if (!knowledgeId || favoriteLoading[knowledgeId]) return;
+    
+    setFavoriteLoading(prev => ({ ...prev, [knowledgeId]: true }));
+    try {
+      const isCurrentlyFavorited = favoriteStates[knowledgeId];
+      
+      if (isCurrentlyFavorited) {
+        // 取消收藏
+        const response = await knowledgeAPI.unfavoriteKnowledge(knowledgeId);
+        if (response.code === 200) {
+          setFavoriteStates(prev => ({ ...prev, [knowledgeId]: false }));
+          message.success('已取消收藏');
+        } else {
+          message.error(response.message || '取消收藏失败');
+        }
+      } else {
+        // 添加收藏
+        const response = await knowledgeAPI.favoriteKnowledge(knowledgeId);
+        if (response.code === 200) {
+          setFavoriteStates(prev => ({ ...prev, [knowledgeId]: true }));
+          message.success('已添加到收藏');
+        } else {
+          message.error(response.message || '收藏失败');
+        }
+      }
+    } catch (error) {
+      console.error('收藏操作失败:', error);
+      message.error('操作失败，请重试');
+    } finally {
+      setFavoriteLoading(prev => ({ ...prev, [knowledgeId]: false }));
+    }
+  };
+
   // 获取知识详情
   const fetchKnowledgeDetail = async (knowledgeId) => {
     if (!knowledgeId) return;
@@ -695,69 +864,29 @@ const Knowledge = observer(() => {
                 </div>
                 <div className="message-content">
                   <p>{aiAnswer.answer}</p>
-                  {aiAnswer.references && aiAnswer.references.length > 0 && (
-                    <div className="message-actions">
+                  <div className="message-actions">
+                    {aiAnswer.references && aiAnswer.references.length > 0 && (
                       <Button type="link" size="small" icon={<FilePdfOutlined />}>
                         {aiAnswer.references[0].sourceFile}
                       </Button>
-                      <Space size="small" style={{ marginLeft: 8 }}>
-                        <Tooltip title="点赞此回答">
-                          <Button
-                            type="text"
-                            icon={<LikeOutlined />}
-                            onClick={async () => {
-                              try {
-                                if (window.__ragSessionId && window.__ragAnswerMessageId) {
-                                  await engagementAPI.likeAnswer(window.__ragSessionId, window.__ragAnswerMessageId);
-                                } else {
-                                  await engagementAPI.like(aiAnswer.references[0]?.knowledgeId || 0);
-                                }
-                                message.success("已点赞");
-                              } catch (e) { message.error("点赞失败"); }
-                            }}
-                          />
-                        </Tooltip>
-                        <Tooltip title="点踩（可选填写原因）">
-                          <Button
-                            type="text"
-                            icon={<DislikeOutlined />}
-                            onClick={() => {
-                              Modal.confirm({
-                                title: "点踩原因",
-                                content: (
-                                  <Input.TextArea id="ai-dislike-reason" rows={3} placeholder="请填写不满意原因，如不准确/不完整/参考不相关等" />
-                                ),
-                                okText: "提交",
-                                cancelText: "取消",
-                                onOk: async () => {
-                                  const reason = document.getElementById("ai-dislike-reason")?.value || "";
-                                  try {
-                                    if (window.__ragSessionId && window.__ragAnswerMessageId) {
-                                      await engagementAPI.dislikeAnswer(window.__ragSessionId, window.__ragAnswerMessageId, reason);
-                                    } else {
-                                      await engagementAPI.feedback(aiAnswer.references[0]?.knowledgeId || 0, reason);
-                                    }
-                                    message.success("已提交反馈");
-                                  } catch (e) { message.error("提交失败"); }
-                                },
-                                onCancel: async () => {
-                                  try {
-                                    // 取消也记录一次点踩（空原因）
-                                    if (window.__ragSessionId && window.__ragAnswerMessageId) {
-                                      await engagementAPI.dislikeAnswer(window.__ragSessionId, window.__ragAnswerMessageId, "");
-                                    } else {
-                                      await engagementAPI.feedback(aiAnswer.references[0]?.knowledgeId || 0, "");
-                                    }
-                                    message.success("已记录点踩");
-                                  } catch (e) { message.error("记录失败"); }
-                                }
-                              });
-                            }}
-                          />
-                        </Tooltip>
-                      </Space>
-                    </div>
-                  )}
+                    )}
+                    <Tooltip title="点赞回答">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<LikeOutlined />}
+                        onClick={() => handleAIFeedback("like")}
+                      />
+                    </Tooltip>
+                    <Tooltip title="点踩回答（需要填写反馈）">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<DislikeOutlined />}
+                        onClick={(e) => handleAIFeedback("dislike", e)}
+                      />
+                    </Tooltip>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -943,6 +1072,7 @@ const Knowledge = observer(() => {
                               <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
                               <span className="title-text">{item.name}</span>
                             </div>
+                            
                             <div className="card-actions">
                               <DownOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
                               <span className="date-text">2025-01-15</span>
@@ -952,9 +1082,24 @@ const Knowledge = observer(() => {
                                   onClick={(e) => handleEditKnowledge(item, e)}
                                 />
                               </Tooltip>
+                              
+                              <Tooltip title={favoriteStates[item.id] ? "取消收藏" : "收藏"} placement="top">
+                                <Button
+                                  type="text"
+                                  size="small"
+                                  icon={favoriteStates[item.id] ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
+                                  onClick={(e) => handleFavorite(item.id, e)}
+                                  loading={favoriteLoading[item.id]}
+                                  style={{ 
+                                    color: favoriteStates[item.id] ? '#ff4d4f' : '#666',
+                                    marginLeft: '4px',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                />
+                              </Tooltip>
                               <Tooltip title="在当前页面打开">
                                 <GlobalOutlined 
-                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleOpenInCurrentPage(item);
@@ -1082,7 +1227,7 @@ const Knowledge = observer(() => {
                 ) : (
                   <div className="search-placeholder">
                     <FolderOpenOutlined className="empty-icon" />
-                    <h3>欢迎使用知识库</h3>
+                    <h3>欢迎使用 SMART SEARCH</h3>
                     <p>请在搜索框中输入关键词，或点击左侧分类查看相关知识内容</p>
                   </div>
                 )}
@@ -1119,9 +1264,23 @@ const Knowledge = observer(() => {
                       <div className="knowledge-name">{reference.knowledgeName}</div>
                     </div>
                     <div className="source-actions">
+                      <Tooltip title={favoriteStates[reference.knowledgeId] ? "取消收藏" : "收藏"} placement="top">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={favoriteStates[reference.knowledgeId] ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
+                          onClick={(e) => handleFavorite(reference.knowledgeId, e)}
+                          loading={favoriteLoading[reference.knowledgeId]}
+                          style={{ 
+                            color: favoriteStates[reference.knowledgeId] ? '#ff4d4f' : '#666',
+                            marginLeft: '4px',
+                            transition: 'all 0.3s ease'
+                          }}
+                        />
+                      </Tooltip>
                       <Tooltip title="在当前页面打开">
                         <GlobalOutlined 
-                          style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                          style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenInCurrentPage(reference);
@@ -1173,6 +1332,40 @@ const Knowledge = observer(() => {
             <KnowledgeDetailContent 
               knowledgeDetail={sourcesModalData} 
               loading={sourcesModalLoading} 
+            />
+          </div>
+        </Modal>
+
+        {/* 反馈弹窗 */}
+        <Modal
+          title="请提供反馈"
+          open={feedbackModalVisible}
+          onOk={handleSubmitFeedback}
+          onCancel={handleCancelFeedback}
+          okText="提交反馈"
+          cancelText="取消"
+          width={500}
+          className="feedback-modal"
+          style={{
+            position: 'fixed',
+            top: feedbackPosition.y,
+            left: feedbackPosition.x,
+            transform: 'none',
+            margin: 0
+          }}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ marginBottom: 8, color: '#666' }}>
+              请告诉我们您对这次回答不满意的地方，帮助我们改进：
+            </p>
+            <Input.TextArea
+              value={feedbackContent}
+              onChange={(e) => setFeedbackContent(e.target.value)}
+              placeholder="请输入您的反馈意见..."
+              rows={4}
+              maxLength={500}
+              showCount
+              className="feedback-textarea"
             />
           </div>
         </Modal>
