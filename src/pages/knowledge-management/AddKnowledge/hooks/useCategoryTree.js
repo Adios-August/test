@@ -31,10 +31,32 @@ export const useCategoryTree = () => {
   // Convert to TreeSelect format data
   const treeData = convertToTreeData(categoryTree);
 
+  // Check if a category node is a leaf node (has no children)
+  const isLeafNode = useCallback((categoryId) => {
+    if (!categoryId || !categoryTree.length) return false;
+    
+    const findNode = (nodes, id) => {
+      for (const node of nodes) {
+        if (node.id === id) {
+          return node;
+        }
+        if (node.children && node.children.length > 0) {
+          const found = findNode(node.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const node = findNode(categoryTree, categoryId);
+    return node ? (!node.children || node.children.length === 0) : false;
+  }, [categoryTree]);
+
   return {
     loading,
     categoryTree,
     treeData,
-    fetchCategoryTree
+    fetchCategoryTree,
+    isLeafNode
   };
 };

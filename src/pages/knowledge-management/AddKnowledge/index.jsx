@@ -20,7 +20,7 @@ import { useKnowledgeForm } from './hooks/useKnowledgeForm';
 import { useFileUpload } from './hooks/useFileUpload';
 import CategorySidebar from './components/CategorySidebar';
 import KnowledgeEditor from './components/KnowledgeEditor';
-import SimpleTable from './components/SimpleTable';
+import SimpleTable from './components/categoryTable/SimpleTable';
 import TagsPopup from './components/TagsPopup';
 import TimePopup from './components/TimePopup';
 import AttachmentPopup from './components/AttachmentPopup';
@@ -33,6 +33,9 @@ const AddKnowledge = ({ mode = 'add' }) => {
   // Popup state management
   const [activePopup, setActivePopup] = useState(null);
   const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
+  
+  // Track if current category is a leaf node (knowledge item)
+  const [isCurrentCategoryLeafNode, setIsCurrentCategoryLeafNode] = useState(false);
   
   // Refs for anchor positioning
   const tagsButtonRef = useRef(null);
@@ -157,7 +160,34 @@ const AddKnowledge = ({ mode = 'add' }) => {
 
   // Handle table change
   const handleTableChange = (tableData) => {
-    setFormData(prev => ({ ...prev, tableData }));
+    setFormData(prev => {
+      const updatedFormData = { ...prev, tableData };
+      
+      // In edit mode, if table becomes empty (no columns and no rows), 
+      // user can now disable the table checkbox
+      if (isEditMode && 
+          (!tableData.columns || tableData.columns.length === 0) && 
+          (!tableData.rows || tableData.rows.length === 0)) {
+        // Table is now empty, checkbox will be re-enabled automatically
+        // by the isTableCheckboxDisabled function
+      }
+      
+      return updatedFormData;
+    });
+  };
+
+  // Check if table has data (columns or rows)
+  const hasTableData = () => {
+    const { tableData } = formData;
+    return (
+      (tableData.columns && tableData.columns.length > 0) ||
+      (tableData.rows && tableData.rows.length > 0)
+    );
+  };
+
+  // Check if checkbox should be disabled in edit mode
+  const isTableCheckboxDisabled = () => {
+    return isEditMode && formData.enableTable && hasTableData();
   };
 
   // Show loading spinner while data is being loaded in edit mode
@@ -183,6 +213,7 @@ const AddKnowledge = ({ mode = 'add' }) => {
       <CategorySidebar 
         selectedCategory={formData.category}
         onCategoryChange={handleCategoryChange}
+        onLeafNodeCheck={setIsCurrentCategoryLeafNode}
       />
 
       {/* Main content area */}
@@ -259,11 +290,38 @@ const AddKnowledge = ({ mode = 'add' }) => {
               onImageUpload={handleImageUpload}
             />
 
-            {/* Simple Table */}
-            <SimpleTable 
-              tableData={formData.tableData}
-              onChange={handleTableChange}
-            />
+            {/* Table toggle checkbox - only show for non-leaf nodes (categories/groups) */}
+            {!isCurrentCategoryLeafNode && (
+              <>
+                <div style={{ marginTop: '24px', marginBottom: '16px' }}>
+                  <Checkbox
+                    checked={formData.enableTable}
+                    disabled={isTableCheckboxDisabled()}
+                    onChange={(e) => setFormData(prev => ({ ...prev, enableTable: e.target.checked }))}
+                  >
+                    启用表格
+                  </Checkbox>
+                  {formData.enableTable && !isTableCheckboxDisabled() && (
+                    <Text type="secondary" style={{ marginLeft: '8px' }}>
+                      为此分类添加结构化表格数据
+                    </Text>
+                  )}
+                  {isTableCheckboxDisabled() && (
+                    <Text type="warning" style={{ marginLeft: '8px' }}>
+                      表格包含数据，无法取消启用。请先清空表格内容。
+                    </Text>
+                  )}
+                </div>
+
+                {/* Simple Table - only show when enabled */}
+                {formData.enableTable && (
+                  <SimpleTable 
+                    tableData={formData.tableData}
+                    onChange={handleTableChange}
+                  />
+                )}
+              </>
+            )}
 
             {/* Data disclaimer */}
             <div className="footer-section">

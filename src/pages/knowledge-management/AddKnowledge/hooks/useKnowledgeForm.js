@@ -20,7 +20,8 @@ export const useKnowledgeForm = (mode = 'add') => {
     effectiveTime: [null, null],
     attachments: [],
     tableData: createEmptyTable(),
-    disclaimer: false
+    disclaimer: false,
+    enableTable: false  // 默认不启用表格
   });
   // Content and UI state
   const [contentHtml, setContentHtml] = useState('');
@@ -50,6 +51,9 @@ export const useKnowledgeForm = (mode = 'add') => {
           data.effective_to ? dayjs(data.effective_to) : null
         ];
         
+        // Check if table data exists and has columns
+        const hasTableData = data.tableData && data.tableData.columns && data.tableData.columns.length > 0;
+        
         // Set form data
         setFormData({
           title: data.title || '',
@@ -59,7 +63,8 @@ export const useKnowledgeForm = (mode = 'add') => {
           effectiveTime: effectiveTime,
           attachments: data.attachments || [],
           tableData: data.tableData || createEmptyTable(),
-          disclaimer: true // Auto-check for edit mode
+          disclaimer: true, // Auto-check for edit mode
+          enableTable: hasTableData // 如果有表格数据则启用表格
         });
         
         // Set content

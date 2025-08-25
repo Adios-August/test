@@ -2,13 +2,28 @@ import React, { useEffect } from 'react';
 import { TreeSelect, Spin } from 'antd';
 import { useCategoryTree } from '../hooks/useCategoryTree';
 
-const CategorySidebar = ({ selectedCategory, onCategoryChange }) => {
-  const { loading, treeData, fetchCategoryTree } = useCategoryTree();
+const CategorySidebar = ({ selectedCategory, onCategoryChange, onLeafNodeCheck }) => {
+  const { loading, treeData, fetchCategoryTree, isLeafNode } = useCategoryTree();
 
   // Fetch category tree on component mount
   useEffect(() => {
     fetchCategoryTree();
   }, [fetchCategoryTree]);
+
+  // Check leaf node status when selectedCategory changes and tree data is available
+  useEffect(() => {
+    if (selectedCategory && treeData.length > 0 && onLeafNodeCheck) {
+      onLeafNodeCheck(isLeafNode(selectedCategory));
+    }
+  }, [selectedCategory, treeData, isLeafNode, onLeafNodeCheck]);
+
+  // Handle category change and check if it's a leaf node
+  const handleCategoryChange = (value) => {
+    onCategoryChange(value);
+    if (onLeafNodeCheck) {
+      onLeafNodeCheck(isLeafNode(value));
+    }
+  };
 
   return (
     <div className="knowledge-sidebar">
@@ -30,7 +45,7 @@ const CategorySidebar = ({ selectedCategory, onCategoryChange }) => {
             treeDefaultExpandAll
             showSearch
             allowClear
-            onChange={onCategoryChange}
+            onChange={handleCategoryChange}
           />
         )}
       </div>
