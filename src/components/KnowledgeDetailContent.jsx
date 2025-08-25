@@ -2,11 +2,19 @@ import React from 'react';
 import { Button, Avatar, Select, Input } from 'antd';
 import {
   HeartOutlined, FilePdfOutlined, FileExcelOutlined, TagOutlined,
-  SendOutlined, MailOutlined, UserOutlined,
+  SendOutlined, MailOutlined, UserOutlined, EditOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import './KnowledgeDetailContent.scss';
 
 const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
+  const navigate = useNavigate();
+
+  const handleEdit = () => {
+    if (knowledgeDetail?.id) {
+      navigate(`/edit-knowledge/${knowledgeDetail.id}`);
+    }
+  };
   if (loading) {
     return (
       <div className="knowledge-detail-content">
@@ -51,6 +59,14 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
             </div>
           </div>
           <div className="header-right">
+            <Button 
+              type="primary" 
+              icon={<EditOutlined />} 
+              onClick={handleEdit}
+              style={{ marginRight: 8 }}
+            >
+              编辑
+            </Button>
             <Button type="text" icon={<HeartOutlined />} />
           </div>
         </div>

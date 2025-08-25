@@ -80,6 +80,19 @@ export const validateKnowledgeForm = (formData, contentHtml) => {
   if (startTime && endTime && startTime >= endTime) {
     errors.push({ field: 'effectiveTime', message: '结束时间需晚于开始时间' });
   }
+  // Table validation
+  if (formData.tableData) {
+    try {
+      const { validateTableData } = require('./tableUtils');
+      const tableErrors = validateTableData(formData.tableData);
+      if (tableErrors.length > 0) {
+        errors.push({ field: 'table', message: tableErrors[0].message });
+      }
+    } catch (error) {
+      console.warn('Table validation error:', error);
+      // Don't block form submission if table validation fails
+    }
+  }
   // Disclaimer validation
   if (!formData.disclaimer) {
     errors.push({ field: 'disclaimer', message: '请确认内容不包含受限数据' });

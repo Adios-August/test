@@ -53,6 +53,10 @@ const router = createBrowserRouter([
             path: '/add-knowledge',
             element: <AddKnowledge />,
           },
+          {
+            path: '/edit-knowledge/:id',
+            element: <AddKnowledge mode="edit" />,
+          },
            
           {
             path: '/knowledge-admin',

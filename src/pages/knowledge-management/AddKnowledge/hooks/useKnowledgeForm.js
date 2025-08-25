@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { message } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { knowledgeAPI } from '../../../../api/knowledge';
 import { validateTag, normalizeTag, validateKnowledgeForm } from '../utils/knowledgeUtils';
+import { createEmptyTable } from '../utils/tableUtils';
 
-export const useKnowledgeForm = () => {
+export const useKnowledgeForm = (mode = 'add') => {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = mode === 'edit';
+  
   // Form data state
   const [formData, setFormData] = useState({
     title: '',
@@ -14,13 +19,63 @@ export const useKnowledgeForm = () => {
     tags: [],
     effectiveTime: [null, null],
     attachments: [],
+    tableData: createEmptyTable(),
     disclaimer: false
   });
   // Content and UI state
   const [contentHtml, setContentHtml] = useState('');
   const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [tagError, setTagError] = useState('');
+
+  // Load existing knowledge data for edit mode
+  useEffect(() => {
+    if (isEditMode && id) {
+      loadKnowledgeData(id);
+    }
+  }, [isEditMode, id]);
+
+  const loadKnowledgeData = async knowledgeId => {
+    try {
+      setDataLoading(true);
+      const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+      
+      if (response.code === 200) {
+        const data = response.data;
+        
+        // Parse effective time dates
+        const effectiveTime = [
+          data.effective_from ? dayjs(data.effective_from) : null,
+          data.effective_to ? dayjs(data.effective_to) : null
+        ];
+        
+        // Set form data
+        setFormData({
+          title: data.title || '',
+          category: data.category_id || null,
+          privateToRoles: data.audience_roles || ['ALL'],
+          tags: data.tags || [],
+          effectiveTime: effectiveTime,
+          attachments: data.attachments || [],
+          tableData: data.tableData || createEmptyTable(),
+          disclaimer: true // Auto-check for edit mode
+        });
+        
+        // Set content
+        setContentHtml(data.content_html || '');
+      } else {
+        message.error(response.message || '获取知识详情失败');
+        navigate('/knowledge-admin/category-management');
+      }
+    } catch (error) {
+      console.error('获取知识详情失败:', error);
+      message.error('获取知识详情失败');
+      navigate('/knowledge-admin/category-management');
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   // Handle visibility scope selection
   const handlePrivateToChange = (value) => {
@@ -78,7 +133,7 @@ export const useKnowledgeForm = () => {
     }));
   };
 
-  // Handle publish
+  // Handle publish/save
   const handlePublish = async (isUploading) => {
     const errors = validateKnowledgeForm(formData, contentHtml);
     if (errors.length > 0) {
@@ -108,20 +163,28 @@ export const useKnowledgeForm = () => {
           url: att.url,
           size: att.size
         })),
+        tableData: formData.tableData,
         disclaimer_checked: formData.disclaimer
       };
-      // Call publish API
-      const response = await knowledgeAPI.createKnowledge(submitData);
+      
+      // Call appropriate API based on mode
+      let response;
+      if (isEditMode) {
+        response = await knowledgeAPI.updateKnowledge(id, submitData);
+      } else {
+        response = await knowledgeAPI.createKnowledge(submitData);
+      }
+      
       if (response.code === 200) {
-        message.success('知识发布成功');
+        message.success(isEditMode ? '知识更新成功' : '知识发布成功');
         // Navigate to knowledge detail or list page
         navigate('/knowledge-admin/category-management');
       } else {
-        throw new Error(response.message || '发布失败');
+        throw new Error(response.message || (isEditMode ? '更新失败' : '发布失败'));
       }
     } catch (error) {
-      console.error('发布失败:', error);
-      message.error(error.message || '发布失败，请重试');
+      console.error(isEditMode ? '更新失败:' : '发布失败:', error);
+      message.error(error.message || (isEditMode ? '更新失败，请重试' : '发布失败，请重试'));
     } finally {
       setLoading(false);
     }
@@ -138,10 +201,12 @@ export const useKnowledgeForm = () => {
     contentHtml,
     setContentHtml,
     loading,
+    dataLoading,
     tagInput,
     setTagInput,
     tagError,
     setTagError,
+    isEditMode,
     handlePrivateToChange,
     handleAddTag,
     handleRemoveTag,

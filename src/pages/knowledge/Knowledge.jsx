@@ -35,6 +35,7 @@ import {
   FolderOpenOutlined,
   GlobalOutlined,
   ExportOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import { observer } from "mobx-react-lite";
 import CommonSidebar from "../../components/CommonSidebar";
@@ -590,6 +591,12 @@ const Knowledge = observer(() => {
     window.open(url, '_blank');
   };
 
+  // 编辑知识
+  const handleEditKnowledge = (item, event) => {
+    event?.stopPropagation(); // 阻止卡片点击事件
+    navigate(`/edit-knowledge/${item.id}`);
+  };
+
   // 打开Sources弹窗
   const handleOpenSourcesModal = async (reference) => {
     setSourcesModalVisible(true);
@@ -870,6 +877,12 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                             
                               <span className="date-text">2025-01-15</span>
+                              <Tooltip title="编辑知识">
+                                <EditOutlined 
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  onClick={(e) => handleEditKnowledge(item, e)}
+                                />
+                              </Tooltip>
                               <Tooltip title="在当前标签页中打开">
                                 <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
                               </Tooltip>
@@ -933,6 +946,12 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                               <DownOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
                               <span className="date-text">2025-01-15</span>
+                              <Tooltip title="编辑知识">
+                                <EditOutlined 
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  onClick={(e) => handleEditKnowledge(item, e)}
+                                />
+                              </Tooltip>
                               <Tooltip title="在当前页面打开">
                                 <GlobalOutlined 
                                   style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
@@ -1007,6 +1026,12 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                              
                               <span className="date-text">2025-01-15</span>
+                              <Tooltip title="编辑知识">
+                                <EditOutlined 
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                  onClick={(e) => handleEditKnowledge(item, e)}
+                                />
+                              </Tooltip>
                               <Tooltip title="在当前页面打开">
                                 <GlobalOutlined 
                                   style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 

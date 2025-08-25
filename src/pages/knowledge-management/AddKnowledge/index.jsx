@@ -6,7 +6,8 @@ import {
   Space,
   List,
   Typography,
-  message
+  message,
+  Spin
 } from 'antd';
 import { 
   DeleteOutlined,
@@ -19,6 +20,7 @@ import { useKnowledgeForm } from './hooks/useKnowledgeForm';
 import { useFileUpload } from './hooks/useFileUpload';
 import CategorySidebar from './components/CategorySidebar';
 import KnowledgeEditor from './components/KnowledgeEditor';
+import SimpleTable from './components/SimpleTable';
 import TagsPopup from './components/TagsPopup';
 import TimePopup from './components/TimePopup';
 import AttachmentPopup from './components/AttachmentPopup';
@@ -27,7 +29,7 @@ import './AddKnowledge.scss';
 
 const { Text, Title } = Typography;
 
-const AddKnowledge = () => {
+const AddKnowledge = ({ mode = 'add' }) => {
   // Popup state management
   const [activePopup, setActivePopup] = useState(null);
   const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
@@ -43,15 +45,17 @@ const AddKnowledge = () => {
     contentHtml,
     setContentHtml,
     loading,
+    dataLoading,
     tagInput,
     setTagInput,
     tagError,
+    isEditMode,
     handlePrivateToChange,
     handleAddTag,
     handleRemoveTag,
     handlePublish,
     handleCancel
-  } = useKnowledgeForm();
+  } = useKnowledgeForm(mode);
   const { createImageUploadHandler, handleRemoveAttachment, isUploading } = useFileUpload();
   // Create image upload handler
   const handleImageUpload = createImageUploadHandler();
@@ -151,6 +155,28 @@ const AddKnowledge = () => {
     setFormData(prev => ({ ...prev, category: value }));
   };
 
+  // Handle table change
+  const handleTableChange = (tableData) => {
+    setFormData(prev => ({ ...prev, tableData }));
+  };
+
+  // Show loading spinner while data is being loaded in edit mode
+  if (dataLoading) {
+    return (
+      <div className="knowledge-management-layout">
+        <div className="knowledge-management-content" style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '400px' 
+        }}>
+          <Spin size="large" />
+          <div style={{ marginLeft: 16 }}>正在加载知识详情...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="knowledge-management-layout">
       {/* Left category tree */}
@@ -165,7 +191,7 @@ const AddKnowledge = () => {
           {/* Page header area */}
           <div className="content-header">
             <div className="header-content">
-              <Title level={3} style={{ margin: 0 }}>新增知识</Title>
+              <Title level={3} style={{ margin: 0 }}>{isEditMode ? '修改知识' : '新增知识'}</Title>
               
               {/* Configuration buttons */}
               <div className="config-buttons">
@@ -233,6 +259,12 @@ const AddKnowledge = () => {
               onImageUpload={handleImageUpload}
             />
 
+            {/* Simple Table */}
+            <SimpleTable 
+              tableData={formData.tableData}
+              onChange={handleTableChange}
+            />
+
             {/* Data disclaimer */}
             <div className="footer-section">
               <div className="checkbox-item">
@@ -271,7 +303,7 @@ const AddKnowledge = () => {
                     }
                   }}
                 >
-                  发布
+                  {isEditMode ? '保存' : '发布'}
                 </Button>
                 <Button size="large" onClick={handleCancel}>
                   取消
