@@ -7,9 +7,9 @@ export const knowledgeAPI = {
     return http.get("/knowledge/list", params);
   },
 
-  // 获取分类下的知识列表
-  getCategoryKnowledge: (categoryId, params) => {
-    return http.get(`/knowledge/category/${categoryId}`, params);
+  // 获取父知识下的子节点
+  getChildren: (parentId, params) => {
+    return http.get(`/knowledge/${parentId}/children`, params);
   },
 
   // 搜索知识列表
@@ -29,7 +29,17 @@ export const knowledgeAPI = {
 
   // 创建知识
   createKnowledge: (data) => {
-    return http.post("/knowledge/create", data);
+    return http.post("/knowledge", data);
+  },
+
+  // 更新知识
+  updateKnowledge: (id, data) => {
+    return http.put(`/knowledge/${id}`, data);
+  },
+
+  // 删除知识
+  deleteKnowledge: (id) => {
+    return http.delete(`/knowledge/${id}`);
   },
 
   // 上传图片

@@ -14,25 +14,31 @@ const HomeSidebar = () => {
   const [categoryTree, setCategoryTree] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 获取分类树数据
+  // 获取知识树数据（根层）
   const fetchCategoryTree = async () => {
     setLoading(true);
     try {
-      const response = await homeAPI.getCategoryTree();
+      const response = await homeAPI.getKnowledgeFullTree();
       if (response.code === 200) {
-        const data = response.data || [];
+        const records = response.data || [];
+        const mapTree = (nodes) => (nodes || []).map(n => ({
+          id: n.id,
+          name: n.name,
+          children: mapTree(n.children)
+        }));
+        const data = mapTree(records);
         setCategoryTree(data);
-        // 默认展开第一级分类
-        const firstLevelKeys = data.map(item => item.id.toString());
+        // 默认展开第一级
+        const firstLevelKeys = data.map(item => item.id?.toString()).filter(Boolean);
         setOpenKeys(firstLevelKeys);
       } else {
-        message.error(response.message || '获取分类树失败');
+        message.error(response.message || '获取知识树失败');
         // 如果API失败，设置空数组避免显示错误
         setCategoryTree([]);
       }
     } catch (error) {
-      console.error('获取分类树失败:', error);
-      message.error('获取分类树失败，请稍后重试');
+      console.error('获取知识树失败:', error);
+      message.error('获取知识树失败，请稍后重试');
       // 如果API失败，设置空数组避免显示错误
       setCategoryTree([]);
     } finally {
@@ -47,7 +53,7 @@ const HomeSidebar = () => {
     fetchCategoryTree();
   }, []);
 
-  // 将API数据转换为菜单项格式
+  // 将API数据转换为菜单项格式（仅展示名称）
   const convertToMenuItems = (categories) => {
     return categories.map(category => ({
       key: category.id.toString(),
@@ -76,7 +82,7 @@ const HomeSidebar = () => {
        width={300}
     >
       <div className="sidebar-content">
-        <div className="sidebar-title">全部分类</div>
+        <div className="sidebar-title">全部知识</div>
 
         {loading ? (
           <div className="loading-container">
@@ -96,7 +102,7 @@ const HomeSidebar = () => {
           />
         ) : (
           <div className="empty-container">
-            <p>暂无分类数据</p>
+            <p>暂无知识节点</p>
             <Button 
               type="link" 
               icon={<ReloadOutlined />} 

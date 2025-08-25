@@ -3,7 +3,7 @@
   background: #e9f0fb;
   max-height: calc(100vh - 94px);
 
-  // 左侧边栏样式
+  // Left sidebar styles
   .knowledge-sidebar {
     background: white;
     border-radius: 12px;
@@ -16,7 +16,7 @@
     width: 280px;
     min-width: 280px;
     
-    // 隐藏滚动条但保持滚动功能
+    // Hide scrollbar while maintaining scroll functionality
     &::-webkit-scrollbar {
       display: none;
     }
@@ -71,7 +71,7 @@
     }
   }
 
-  // 右侧内容区样式 - 专门为新增知识页面定制
+  // Right content area styles - customized for add knowledge page
   .knowledge-management-content {
     flex: 1;
     padding: 16px 16px 0 8px;
@@ -86,12 +86,85 @@
       min-height: calc(100vh - 152px);
 
       .content-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         margin-bottom: 24px;
         padding: 0;
-        min-height: 32px;
+
+        .header-content {
+          display: flex;
+          align-items: center;
+          width: 100%;
+          gap: 32px;
+
+          .config-buttons {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-width: 0; // Allow flex items to shrink
+
+            .config-link-button {
+              background: none;
+              border: none;
+              color: #1890ff;
+              cursor: pointer;
+              font-size: 14px;
+              padding: 8px 12px;
+              display: flex;
+              align-items: center;
+              text-decoration: none;
+              transition: all 0.2s ease;
+              border-radius: 4px;
+              white-space: nowrap;
+              min-width: fit-content;
+              flex-shrink: 1;
+
+              &:hover {
+                color: #ff4d4f;
+                text-decoration: none;
+                background-color: rgba(255, 77, 79, 0.04);
+              }
+
+              &:focus {
+                outline: none;
+              }
+
+              &.has-content {
+                flex-grow: 1;
+                max-width: 250px;
+              }
+
+              &.has-time-config {
+                .status-indicator {
+                  color: #ff4d4f;
+                  margin-left: 4px;
+                  font-size: 12px;
+                  animation: pulse 2s infinite;
+                }
+              }
+
+              .anticon {
+                font-size: 14px;
+                flex-shrink: 0;
+              }
+
+              .content-display {
+                color: #666;
+                font-weight: normal;
+                margin-left: 2px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 160px;
+
+                .content-items {
+                  color: #ff4d4f;
+                  font-size: 13px;
+                  font-weight: 600;
+                }
+              }
+            }
+          }
+        }
 
         .ant-space {
           .ant-btn {
@@ -174,7 +247,7 @@
   }
 }
 
-// 配置抽屉中的样式
+// Configuration drawer styles
 .config-item {
   display: flex;
   flex-direction: column;
@@ -186,7 +259,45 @@
   }
 }
 
-// 响应式设计
+// Knowledge configuration popup styles
+.knowledge-popup {
+  .ant-card-head {
+    padding: 16px 20px;
+    min-height: auto;
+    
+    .ant-card-head-title {
+      font-size: 15px;
+      font-weight: 500;
+      padding: 0;
+    }
+  }
+
+  .ant-card-body {
+    padding: 20px;
+  }
+
+  .popup-overlay {
+    background: transparent;
+  }
+}
+
+// Animation effects
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Responsive design
 @media (max-width: 1200px) {
   .knowledge-management-layout {
     .knowledge-management-content {

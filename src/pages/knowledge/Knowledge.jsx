@@ -43,6 +43,7 @@ import CommonSidebar from "../../components/CommonSidebar";
 import KnowledgeDetailModal from "../../components/KnowledgeDetailModal";
 import KnowledgeDetailContent from "../../components/KnowledgeDetailContent";
 import { knowledgeAPI } from "../../api/knowledge";
+import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
 import { useSearchHistoryStore, useKnowledgeStore } from "../../stores";
@@ -60,7 +61,7 @@ const Knowledge = observer(() => {
   const [searchParams] = useSearchParams();
   const searchHistoryStore = useSearchHistoryStore();
   const knowledgeStore = useKnowledgeStore();
-  const categoryId = searchParams.get('category');
+  const categoryId = searchParams.get('parent');
   
 
   
@@ -165,6 +166,7 @@ const Knowledge = observer(() => {
       let buffer = '';
       let currentEvent = '';
       let currentData = '';
+      let aiMessageId = '';
       
       while (true) {
         const { done, value } = await reader.read();
@@ -228,6 +230,13 @@ const Knowledge = observer(() => {
                 setReferences(formattedReferences);
               } else if (currentEvent === 'end') {
                 console.log('RAG对话完成:', parsed.message);
+                if (parsed.sessionId) {
+                  window.__ragSessionId = parsed.sessionId;
+                }
+                if (parsed.messageId) {
+                  aiMessageId = parsed.messageId;
+                  window.__ragAnswerMessageId = parsed.messageId;
+                }
                 setAiLoading(false);
                 return true;
               }
@@ -400,7 +409,7 @@ const Knowledge = observer(() => {
 
     setCategoryLoading(true);
     try {
-      const response = await knowledgeAPI.getCategoryKnowledge(categoryId, {
+      const response = await knowledgeAPI.getChildren(categoryId, {
         page,
         size
       });
@@ -423,8 +432,8 @@ const Knowledge = observer(() => {
         }));
 
       } else {
-        message.error(response.message || '获取分类知识列表失败');
-        console.error('分类知识API错误:', response.message);
+        message.error(response.message || '获取子知识列表失败');
+        console.error('子知识API错误:', response.message);
       }
     } catch (error) {
       console.error('获取分类知识列表失败:', error);
@@ -486,7 +495,9 @@ const Knowledge = observer(() => {
             setAiAnswer({
               answer: ragResult.answer,
               references: ragResult.references || [],
-              recommendedQuestions: ragResult.recommendedQuestions || []
+              recommendedQuestions: ragResult.recommendedQuestions || [],
+              sessionId: ragResult.sessionId,
+              messageId: ragResult.messageId
             });
             // 设置AI回答后立即清除loading状态
             setAiLoading(false);
@@ -509,6 +520,9 @@ const Knowledge = observer(() => {
             // 设置引用数据后立即清除Sources loading状态
             setSourcesLoading(false);
           }
+          // 无论是否有引用，均保存会话与回答ID（用于点赞/点踩）
+          if (ragResult.sessionId) { window.__ragSessionId = ragResult.sessionId; }
+          if (ragResult.messageId) { window.__ragAnswerMessageId = ragResult.messageId; }
         } else {
           // 如果没有RAG结果，也要清除loading状态
           setAiLoading(false);

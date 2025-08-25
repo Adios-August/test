@@ -1,34 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Input, 
-  Select, 
   Checkbox, 
   Button, 
   Space,
-  Dropdown,
   List,
   Typography,
   message
 } from 'antd';
 import { 
   DeleteOutlined,
-  SettingOutlined,
   TagsOutlined,
   CalendarOutlined,
   FileTextOutlined,
-  DownOutlined
+  EyeOutlined
 } from '@ant-design/icons';
 import { useKnowledgeForm } from './hooks/useKnowledgeForm';
 import { useFileUpload } from './hooks/useFileUpload';
 import CategorySidebar from './components/CategorySidebar';
 import KnowledgeEditor from './components/KnowledgeEditor';
-import KnowledgeSettings from './components/KnowledgeSettings';
+import TagsPopup from './components/TagsPopup';
+import TimePopup from './components/TimePopup';
+import AttachmentPopup from './components/AttachmentPopup';
+import VisibilityPopup from './components/VisibilityPopup';
 import './AddKnowledge.scss';
 
 const { Text, Title } = Typography;
 
 const AddKnowledge = () => {
-  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  // Popup state management
+  const [activePopup, setActivePopup] = useState(null);
+  const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
+  
+  // Refs for anchor positioning
+  const tagsButtonRef = useRef(null);
+  const timeButtonRef = useRef(null);
+  const attachmentButtonRef = useRef(null);
+  const visibilityButtonRef = useRef(null);
   const {
     formData,
     setFormData,
@@ -51,27 +59,92 @@ const AddKnowledge = () => {
   // Check if publish button should be disabled
   const isPublishDisabled = isUploading() || loading;
 
-  // Settings button dropdown menu
-  const settingsMenuItems = [
-    {
-      key: 'tags',
-      icon: <TagsOutlined />,
-      label: '标签管理',
-      onClick: () => setSettingsDrawerOpen(true)
-    },
-    {
-      key: 'time',
-      icon: <CalendarOutlined />,
-      label: '有效时间',
-      onClick: () => setSettingsDrawerOpen(true)
-    },
-    {
-      key: 'attachment',
-      icon: <FileTextOutlined />,
-      label: '附件上传',
-      onClick: () => setSettingsDrawerOpen(true)
+  // Handle popup show/hide
+  const handlePopupToggle = (popupType, buttonRef) => {
+    if (activePopup === popupType) {
+      setActivePopup(null);
+      return;
     }
-  ];
+
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      
+      // Different popup widths
+      const popupWidths = {
+        tags: 390,
+        time: 416,
+        attachment: 390,
+        visibility: 390
+      };
+      
+      const popupWidth = popupWidths[popupType] || 390;
+      const windowWidth = window.innerWidth;
+      const contentPadding = 60; // Padding from container edges
+      
+      // Calculate left position, ensuring popup stays within bounds
+      let leftPosition = rect.left;
+      if (leftPosition + popupWidth > windowWidth - contentPadding) {
+        leftPosition = windowWidth - popupWidth - contentPadding;
+      }
+      
+      // Ensure popup doesn't go off left edge either
+      if (leftPosition < contentPadding) {
+        leftPosition = contentPadding;
+      }
+      
+      setPopupPosition({
+        top: rect.bottom + 8,
+        left: leftPosition
+      });
+      setActivePopup(popupType);
+    }
+  };
+
+  const handleClosePopup = () => {
+    setActivePopup(null);
+  };
+
+  // Render tags display with hybrid approach
+  const renderTagsDisplay = () => {
+    if (formData.tags.length === 0) return null;
+    
+    if (formData.tags.length <= 3) {
+      // Show actual tags for 3 or fewer
+      return (
+        <span className="content-display">
+          : <span className="content-items">{formData.tags.join(', ')}</span>
+        </span>
+      );
+    } else {
+      // Show count for more than 3
+      return (
+        <span className="content-display">
+          : <span className="content-items">{formData.tags.length}个标签</span>
+        </span>
+      );
+    }
+  };
+
+  // Render visibility display with hybrid approach  
+  const renderVisibilityDisplay = () => {
+    if (formData.privateToRoles.length === 0) return null;
+    
+    if (formData.privateToRoles.length <= 3) {
+      // Show actual roles for 3 or fewer
+      return (
+        <span className="content-display">
+          : <span className="content-items">{formData.privateToRoles.join(', ')}</span>
+        </span>
+      );
+    } else {
+      // Show count for more than 3
+      return (
+        <span className="content-display">
+          : <span className="content-items">{formData.privateToRoles.length}个角色</span>
+        </span>
+      );
+    }
+  };
 
   // Handle category selection
   const handleCategoryChange = (value) => {
@@ -91,35 +164,53 @@ const AddKnowledge = () => {
         <div className="management-content">
           {/* Page header area */}
           <div className="content-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <div className="header-content">
               <Title level={3} style={{ margin: 0 }}>新增知识</Title>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Text strong>可见范围：</Text>
-                <Select
-                  mode="multiple"
-                  style={{ width: 300 }}
-                  placeholder="选择可见范围"
-                  value={formData.privateToRoles}
-                  onChange={handlePrivateToChange}
-                  options={[
-                    { label: 'All', value: 'ALL' },
-                    { label: 'WPB', value: 'WPB' },
-                    { label: 'GPB', value: 'GPB' },
-                    { label: 'CCSS', value: 'CCSS' }
-                  ]}
-                />
+              
+              {/* Configuration buttons */}
+              <div className="config-buttons">
+                <button
+                  ref={tagsButtonRef}
+                  className={`config-link-button ${formData.tags.length > 0 ? 'has-content' : ''}`}
+                  onClick={() => handlePopupToggle('tags', tagsButtonRef)}
+                >
+                  <TagsOutlined style={{ marginRight: 4 }} />
+                  标签管理
+                  {renderTagsDisplay()}
+                </button>
+                
+                <button
+                  ref={visibilityButtonRef}
+                  className={`config-link-button ${formData.privateToRoles.length > 0 ? 'has-content' : ''}`}
+                  onClick={() => handlePopupToggle('visibility', visibilityButtonRef)}
+                >
+                  <EyeOutlined style={{ marginRight: 4 }} />
+                  可见范围
+                  {renderVisibilityDisplay()}
+                </button>
+                
+                <button
+                  ref={timeButtonRef}
+                  className={`config-link-button ${formData.effectiveTime && formData.effectiveTime[0] ? 'has-time-config' : ''}`}
+                  onClick={() => handlePopupToggle('time', timeButtonRef)}
+                >
+                  <CalendarOutlined style={{ marginRight: 4 }} />
+                  有效时间
+                  {formData.effectiveTime && formData.effectiveTime[0] && (
+                    <span className="status-indicator">●</span>
+                  )}
+                </button>
+                
+                <button
+                  ref={attachmentButtonRef}
+                  className="config-link-button"
+                  onClick={() => handlePopupToggle('attachment', attachmentButtonRef)}
+                >
+                  <FileTextOutlined style={{ marginRight: 4 }} />
+                  附件上传
+                </button>
               </div>
             </div>
-            <Space>
-              <Dropdown 
-                menu={{ items: settingsMenuItems }}
-                placement="bottomRight"
-              >
-                <Button icon={<SettingOutlined />}>
-                  配置 <DownOutlined />
-                </Button>
-              </Dropdown>
-            </Space>
           </div>
 
           {/* Main content body */}
@@ -142,6 +233,18 @@ const AddKnowledge = () => {
               onImageUpload={handleImageUpload}
             />
 
+            {/* Data disclaimer */}
+            <div className="footer-section">
+              <div className="checkbox-item">
+                <Checkbox
+                  checked={formData.disclaimer}
+                  onChange={(e) => setFormData(prev => ({ ...prev, disclaimer: e.target.checked }))}
+                >
+                  我已知晓Jarvis平台不适用于上传任何restricted data及个人信息（包含但不限于客户及员工信息）
+                </Checkbox>
+              </div>
+            </div>
+            
             {/* Action buttons */}
             <div style={{ textAlign: 'center', marginTop: 24, marginBottom: 16 }}>
               <Space size="large">
@@ -208,34 +311,46 @@ const AddKnowledge = () => {
                 />
               </div>
             )}
-
-            {/* Data disclaimer */}
-            <div className="footer-section">
-              <div className="checkbox-item">
-                <Checkbox
-                  checked={formData.disclaimer}
-                  onChange={(e) => setFormData(prev => ({ ...prev, disclaimer: e.target.checked }))}
-                >
-                  我已知晓Jarvis平台不适用于上传任何restricted data及个人信息（包含但不限于客户及员工信息）
-                </Checkbox>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Settings drawer */}
-      <KnowledgeSettings
-        open={settingsDrawerOpen}
-        onClose={() => setSettingsDrawerOpen(false)}
-        formData={formData}
-        setFormData={setFormData}
-        tagInput={tagInput}
-        setTagInput={setTagInput}
-        tagError={tagError}
-        onAddTag={handleAddTag}
-        onRemoveTag={handleRemoveTag}
-      />
+      {/* Configuration popups */}
+      <div style={{ position: 'relative' }}>
+        <div style={{ position: 'fixed', top: popupPosition.top, left: popupPosition.left }}>
+          <TagsPopup
+            visible={activePopup === 'tags'}
+            onClose={handleClosePopup}
+            formData={formData}
+            tagInput={tagInput}
+            setTagInput={setTagInput}
+            tagError={tagError}
+            onAddTag={handleAddTag}
+            onRemoveTag={handleRemoveTag}
+          />
+          
+          <TimePopup
+            visible={activePopup === 'time'}
+            onClose={handleClosePopup}
+            formData={formData}
+            setFormData={setFormData}
+          />
+          
+          <AttachmentPopup
+            visible={activePopup === 'attachment'}
+            onClose={handleClosePopup}
+            formData={formData}
+            setFormData={setFormData}
+          />
+          
+          <VisibilityPopup
+            visible={activePopup === 'visibility'}
+            onClose={handleClosePopup}
+            formData={formData}
+            handlePrivateToChange={handlePrivateToChange}
+          />
+        </div>
+      </div>
     </div>
   );
 };

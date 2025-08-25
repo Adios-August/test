@@ -2,8 +2,8 @@ import { http } from "../../utils/request";
 
 // 首页相关API
 export const homeAPI = {
-  // 获取分类树
-  getCategoryTree: () => {
+  // 获取完整知识树（兼容端点，内部由知识树生成）
+  getKnowledgeFullTree: () => {
     return http.get("/categories/tree");
   },
 

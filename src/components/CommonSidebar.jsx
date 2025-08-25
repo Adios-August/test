@@ -23,23 +23,30 @@ const CommonSidebar = ({
   const [categoryTree, setCategoryTree] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 获取分类树数据
+  // 获取知识树数据（根节点 children）
   const fetchCategoryTree = async () => {
     setLoading(true);
     try {
-      const response = await homeAPI.getCategoryTree();
+      const response = await homeAPI.getKnowledgeFullTree();
       if (response.code === 200) {
-        const data = response.data || [];
+        const records = response.data || [];
+        // 递归映射为通用树结构
+        const mapTree = (nodes) => (nodes || []).map(n => ({
+          id: n.id,
+          name: n.name,
+          children: mapTree(n.children)
+        }));
+        const data = mapTree(records);
         setCategoryTree(data);
         // 不在这里设置默认展开，让后续的useEffect来处理
       } else {
-        message.error(response.message || '获取分类树失败');
+        message.error(response.message || '获取知识树失败');
         // 如果API失败，设置空数组避免显示错误
         setCategoryTree([]);
       }
     } catch (error) {
-      console.error('获取分类树失败:', error);
-      message.error('获取分类树失败，请稍后重试');
+      console.error('获取知识树失败:', error);
+      message.error('获取知识树失败，请稍后重试');
       // 如果API失败，设置空数组避免显示错误
       setCategoryTree([]);
     } finally {
@@ -57,7 +64,7 @@ const CommonSidebar = ({
     if (categoryTree.length === 0) return;
     
     // 检查是否有特定的目标分类
-    const hasSpecificTarget = filterCategoryId || new URLSearchParams(window.location.search).get('category');
+    const hasSpecificTarget = filterCategoryId || new URLSearchParams(window.location.search).get('parent');
     
     if (!hasSpecificTarget) {
       // 只有在没有特定目标时才默认展开第一级分类
@@ -116,9 +123,9 @@ const CommonSidebar = ({
   useEffect(() => {
     if (categoryTree.length === 0) return;
     
-    // 从URL中获取category参数
+    // 从URL中获取parent参数
     const urlParams = new URLSearchParams(window.location.search);
-    const urlCategoryId = urlParams.get('category');
+    const urlCategoryId = urlParams.get('parent');
     
     // 如果没有URL参数，不处理
     if (!urlCategoryId) return;
@@ -211,7 +218,7 @@ const CommonSidebar = ({
             } else if (enableNavigation) {
               // 否则使用原有的导航逻辑
           
-              navigate(`/knowledge?category=${category.id}`);
+              navigate(`/knowledge?parent=${category.id}`);
             }
           }}
           style={{ cursor: (enableNavigation || onCategoryClick) ? 'pointer' : 'default' }}
@@ -258,7 +265,7 @@ const CommonSidebar = ({
         
         // 无论是顶级分类还是子分类，都跳转到知识库页面
     
-        navigate(`/knowledge?category=${selectedItem.id}`);
+        navigate(`/knowledge?parent=${selectedItem.id}`);
       } else {
     
       }
@@ -300,7 +307,6 @@ const CommonSidebar = ({
         
         if (isTopLevelCategory) {
           // 点击的是顶级分类，跳转到知识库页面
-      
           navigate('/knowledge');
         }
       }
@@ -347,7 +353,7 @@ const CommonSidebar = ({
            />
         ) : (
           <div className="empty-container">
-            <p>暂无分类数据</p>
+            <p>暂无知识节点</p>
             <Button 
               type="link" 
               icon={<ReloadOutlined />} 
