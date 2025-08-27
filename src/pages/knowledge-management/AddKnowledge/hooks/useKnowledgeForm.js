@@ -139,7 +139,7 @@ export const useKnowledgeForm = (mode = 'add') => {
   };
 
   // Handle publish/save
-  const handlePublish = async (isUploading) => {
+  const handlePublish = async (isUploading, nodeType = 'doc') => {
     const errors = validateKnowledgeForm(formData, contentHtml);
     if (errors.length > 0) {
       // Show first error and scroll to corresponding field
@@ -169,7 +169,8 @@ export const useKnowledgeForm = (mode = 'add') => {
           size: att.size
         })),
         tableData: formData.tableData,
-        disclaimer_checked: formData.disclaimer
+        disclaimer_checked: formData.disclaimer,
+        node_type: nodeType
       };
       
       // Call appropriate API based on mode

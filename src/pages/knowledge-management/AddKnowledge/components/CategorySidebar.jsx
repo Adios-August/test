@@ -1,52 +1,173 @@
-import React, { useEffect } from 'react';
-import { TreeSelect, Spin } from 'antd';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Menu, Spin } from 'antd';
+import { useSearchParams } from 'react-router-dom';
 import { useCategoryTree } from '../hooks/useCategoryTree';
+import '../../../../components/CommonSidebar.scss';
 
-const CategorySidebar = ({ selectedCategory, onCategoryChange, onLeafNodeCheck }) => {
-  const { loading, treeData, fetchCategoryTree, isLeafNode } = useCategoryTree();
+const CategorySidebar = ({
+  selectedCategory,
+  onCategoryChange,
+  onLeafNodeCheck,
+  onFolderNodeCheck,
+}) => {
+  const [searchParams] = useSearchParams();
+  const { loading, categoryTree, fetchCategoryTree, isLeafNode, isFolderNode } = useCategoryTree();
+  const [selectedKeys, setSelectedKeys] = useState([]);
+  const [openKeys, setOpenKeys] = useState([]);
 
-  // Fetch category tree on component mount
+  useEffect(() => { fetchCategoryTree(); }, [fetchCategoryTree]);
+
+  // —— URL参数处理：从URL中提取parentId并设置为选中状态 —— //
   useEffect(() => {
-    fetchCategoryTree();
-  }, [fetchCategoryTree]);
+    const parentId = searchParams.get('parentId');
+    const nodeType = searchParams.get('nodeType');
+    
+    // 如果URL中有parentId且不为0，并且当前没有选中的分类，则自动选中该分类
+    if (parentId && parentId !== '0' && !selectedCategory && categoryTree?.length > 0) {
+      const parentIdNum = parseInt(parentId, 10);
+      
+      // 调用回调函数通知父组件
+      onCategoryChange?.(parentIdNum);
+      onLeafNodeCheck?.(isLeafNode(parentIdNum));
+      onFolderNodeCheck?.(isFolderNode(parentIdNum));
+      
+      console.log('从URL参数自动选中分类:', { parentId: parentIdNum, nodeType });
+    }
+  }, [searchParams, selectedCategory, categoryTree, onCategoryChange, onLeafNodeCheck, onFolderNodeCheck, isLeafNode, isFolderNode]);
 
-  // Check leaf node status when selectedCategory changes and tree data is available
+  // —— 选中态同步 —— //
   useEffect(() => {
-    if (selectedCategory && treeData.length > 0 && onLeafNodeCheck) {
-      onLeafNodeCheck(isLeafNode(selectedCategory));
-    }
-  }, [selectedCategory, treeData, isLeafNode, onLeafNodeCheck]);
+    setSelectedKeys(selectedCategory ? [String(selectedCategory)] : []);
+  }, [selectedCategory]);
 
-  // Handle category change and check if it's a leaf node
-  const handleCategoryChange = (value) => {
-    onCategoryChange(value);
-    if (onLeafNodeCheck) {
-      onLeafNodeCheck(isLeafNode(value));
+  // —— 展开态联动（选中项或树更新时） —— //
+  const computeOpenKeysForSelection = useCallback((nodes, targetId) => {
+    if (!targetId || !Array.isArray(nodes)) return [];
+    const dfs = (arr, id, path=[]) => {
+      for (const n of arr) {
+        const p = [...path, String(n.id)];
+        if (n.id === id) {
+          const s = new Set(p.slice(0, -1));
+          if (Array.isArray(n.children) && n.children.length > 0) s.add(String(n.id));
+          return Array.from(s);
+        }
+        if (Array.isArray(n.children) && n.children.length > 0) {
+          const r = dfs(n.children, id, p);
+          if (r) return r;
+        }
+      }
+      return null;
+    };
+    return dfs(nodes, targetId) ?? [];
+  }, []);
+
+  useEffect(() => {
+    if (selectedCategory && (categoryTree?.length ?? 0) > 0) {
+      setOpenKeys(computeOpenKeysForSelection(categoryTree, selectedCategory));
+    } else if ((categoryTree?.length ?? 0) > 0) {
+      setOpenKeys([]);
     }
-  };
+  }, [selectedCategory, categoryTree, computeOpenKeysForSelection]);
+
+  // —— 事件 —— //
+  const handleMenuSelect = useCallback(
+    ({ key }) => {
+      const id = Number(key);
+      setSelectedKeys([key]);
+      onCategoryChange?.(id);
+      onLeafNodeCheck?.(isLeafNode(id));
+      onFolderNodeCheck?.(isFolderNode(id));
+    },
+    [onCategoryChange, onLeafNodeCheck, onFolderNodeCheck, isLeafNode, isFolderNode]
+  );
+
+  const handleOpenChange = useCallback((keys) => setOpenKeys(keys), []);
+
+  // 点击"文件夹标题"时，让它也可选中 + 保持打开
+  const handleFolderTitleClick = useCallback((e, idStr) => {
+    // 阻止默认"切换展开"的冒泡，避免与我们手动设置 openKeys 冲突
+    e.preventDefault();
+    e.stopPropagation();
+
+    const id = Number(idStr);
+    setSelectedKeys([idStr]);
+    onCategoryChange?.(id);
+    onLeafNodeCheck?.(isLeafNode(id));
+    onFolderNodeCheck?.(isFolderNode(id));
+    setOpenKeys((prev) => (prev.includes(idStr) ? prev : [...prev, idStr]));
+  }, [onCategoryChange, onLeafNodeCheck, onFolderNodeCheck, isLeafNode, isFolderNode]);
+
+  // 只保留 nodeType === 'folder'
+  const renderMenu = useCallback((nodes) => {
+    if (!Array.isArray(nodes)) return null;
+    return nodes
+      .filter(n => n?.nodeType === 'folder')
+      .map(n => {
+        const key = String(n.id);
+        const folderChildren = (n.children || []).filter(c => c?.nodeType === 'folder');
+        const isSelectedFolder = selectedKeys[0] === key;
+
+        if (folderChildren.length > 0) {
+          // 有子节点 → SubMenu（标题可点击以"选中文件夹本身"）
+          return (
+            <Menu.SubMenu
+              key={key}
+              title={
+                <div
+                  className={`submenu-title ${isSelectedFolder ? 'is-selected' : ''}`}
+                  onClick={(e) => handleFolderTitleClick(e, key)}
+                >
+                  {n.name}
+                </div>
+              }
+            >
+              {renderMenu(folderChildren)}
+            </Menu.SubMenu>
+          );
+        }
+
+        // 无子节点 → 普通可选 Menu.Item
+        return (
+          <Menu.Item key={key}>
+            {n.name}
+          </Menu.Item>
+        );
+      });
+  }, [handleFolderTitleClick, selectedKeys]);
 
   return (
-    <div className="knowledge-sidebar">
+    <div className="common-sidebar" style={{
+      height: 'calc(100vh - 110px)',
+      marginTop: '0px',
+      marginLeft: '16px',
+      marginRight: '8px',
+      marginBottom: '16px',
+      width: '280px',
+      minWidth: '280px',
+    }}>
       <div className="sidebar-content">
         <div className="sidebar-title">知识存放目录</div>
-        
+
         {loading ? (
           <div className="loading-container">
             <Spin size="large" />
             <p>加载中...</p>
           </div>
+        ) : (categoryTree?.length ?? 0) > 0 ? (
+          <Menu
+            className="category-tree"
+            mode="inline"
+            openKeys={openKeys}
+            selectedKeys={selectedKeys}
+            onOpenChange={handleOpenChange}
+            onSelect={handleMenuSelect}
+            inlineIndent={16}
+            style={{ borderRight: 'none', backgroundColor: 'transparent' }}
+          >
+            {renderMenu(categoryTree)}
+          </Menu>
         ) : (
-          <TreeSelect
-            className="category-tree-select"
-            style={{ width: '100%' }}
-            value={selectedCategory}
-            placeholder="请选择分类"
-            treeData={treeData}
-            treeDefaultExpandAll
-            showSearch
-            allowClear
-            onChange={handleCategoryChange}
-          />
+          <div className="empty-container"><p>暂无分类数据</p></div>
         )}
       </div>
     </div>

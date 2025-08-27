@@ -2,6 +2,7 @@
   display: flex;
   background: #e9f0fb;
   max-height: calc(100vh - 94px);
+  padding-top: 8px;
 
   // Left sidebar styles
   .knowledge-sidebar {
@@ -74,7 +75,7 @@
   // Right content area styles - customized for add knowledge page
   .knowledge-management-content {
     flex: 1;
-    padding: 16px 16px 0 8px;
+    padding: 0px 16px 0 8px;
     margin-left: 0;
     background: #e9f0fb;
     overflow-y: auto;
@@ -83,7 +84,7 @@
       background: white;
       border-radius: 12px;
       padding: 24px;
-      min-height: calc(100vh - 152px);
+      min-height: calc(100vh - 110px);
 
       .content-header {
         margin-bottom: 24px;
@@ -184,6 +185,34 @@
       }
 
       .content-body {
+        .node-type-selector {
+          margin-bottom: 16px;
+          padding: 12px;
+          background: #f8f9fa;
+          border-radius: 6px;
+          border: 1px solid #e9ecef;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+
+          .selector-label {
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+            white-space: nowrap;
+          }
+
+          .ant-radio-group {
+            .ant-radio-wrapper {
+              margin-right: 16px;
+              
+              .ant-radio + span {
+                font-size: 14px;
+              }
+            }
+          }
+        }
+
         .title-section {
           margin-bottom: 16px;
 

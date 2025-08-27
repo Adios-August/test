@@ -54,6 +54,11 @@ export const convertToTreeData = (categories) => {
     title: category.name,
     value: category.id,
     key: category.id,
+    // 根据nodeType添加不同的图标和样式
+    icon: category.nodeType === 'folder' ? '📁' : '📄',
+    isLeaf: category.nodeType === 'doc',
+    // 添加nodeType信息
+    nodeType: category.nodeType,
     children: category.children && category.children.length > 0 
       ? convertToTreeData(category.children) 
       : undefined

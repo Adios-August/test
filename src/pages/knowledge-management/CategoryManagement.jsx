@@ -106,7 +106,7 @@ const CategoryManagement = () => {
           <Button 
             type="link" 
             icon={<PlusOutlined />}
-            onClick={() => handleAddKnowledge(record)}
+            onClick={() => handleAddKnowledge(record, null)}
             size="small"
           />
           <Button 
@@ -127,34 +127,9 @@ const CategoryManagement = () => {
   ];
 
   // 处理新增知识操作
-  const handleAddKnowledge = async (record = null) => {
+  const handleAddKnowledge = async (record = null, nodeType = null) => {
     const parentId = record?.id || 0;
-    Modal.confirm({
-      title: '新增节点',
-      content: '选择要创建的节点类型',
-      okText: '创建文档',
-      cancelText: '创建文件夹',
-      onOk: async () => {
-        const res = await knowledgeAPI.createKnowledge({
-          name: '新建文档',
-          description: '',
-          parentId,
-          nodeType: 'doc',
-          tags: []
-        });
-        if (res.code === 200) { message.success('创建成功'); fetchCategoryTree(); }
-      },
-      onCancel: async () => {
-        const res = await knowledgeAPI.createKnowledge({
-          name: '新建文件夹',
-          description: '',
-          parentId,
-          nodeType: 'folder',
-          tags: []
-        });
-        if (res.code === 200) { message.success('创建成功'); fetchCategoryTree(); }
-      }
-    });
+    navigate(`/add-knowledge?parentId=${parentId}&nodeType=${nodeType}`);
   };
 
   // 处理编辑操作
@@ -228,14 +203,14 @@ const CategoryManagement = () => {
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
-            onClick={() => handleAddKnowledge()}
+            onClick={() => handleAddKnowledge(null, 'folder')}
           >
             一级菜单
           </Button>
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
-            onClick={() => handleAddKnowledge()}
+            onClick={() => handleAddKnowledge(null, 'doc')}
           >
             新增知识
           </Button>

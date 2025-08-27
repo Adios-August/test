@@ -11,7 +11,7 @@ export const useCategoryTree = () => {
   const fetchCategoryTree = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await homeAPI.getCategoryTree();
+      const response = await homeAPI.getKnowledgeFullTree();
       if (response.code === 200) {
         const data = response.data || [];
         setCategoryTree(data);
@@ -31,7 +31,7 @@ export const useCategoryTree = () => {
   // Convert to TreeSelect format data
   const treeData = convertToTreeData(categoryTree);
 
-  // Check if a category node is a leaf node (has no children)
+  // Check if a category node is a leaf node (document type)
   const isLeafNode = useCallback((categoryId) => {
     if (!categoryId || !categoryTree.length) return false;
     
@@ -49,7 +49,49 @@ export const useCategoryTree = () => {
     };
     
     const node = findNode(categoryTree, categoryId);
-    return node ? (!node.children || node.children.length === 0) : false;
+    // 使用nodeType字段判断是否为叶子节点（文档类型）
+    return node ? node.nodeType === 'doc' : false;
+  }, [categoryTree]);
+
+  // 新增：检查节点是否为文件夹
+  const isFolderNode = useCallback((categoryId) => {
+    if (!categoryId || !categoryTree.length) return false;
+    
+    const findNode = (nodes, id) => {
+      for (const node of nodes) {
+        if (node.id === id) {
+          return node;
+        }
+        if (node.children && node.children.length > 0) {
+          const found = findNode(node.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const node = findNode(categoryTree, categoryId);
+    return node ? node.nodeType === 'folder' : false;
+  }, [categoryTree]);
+
+  // 新增：获取节点的完整信息
+  const getNodeInfo = useCallback((categoryId) => {
+    if (!categoryId || !categoryTree.length) return null;
+    
+    const findNode = (nodes, id) => {
+      for (const node of nodes) {
+        if (node.id === id) {
+          return node;
+        }
+        if (node.children && node.children.length > 0) {
+          const found = findNode(node.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    return findNode(categoryTree, categoryId);
   }, [categoryTree]);
 
   return {
@@ -57,6 +99,8 @@ export const useCategoryTree = () => {
     categoryTree,
     treeData,
     fetchCategoryTree,
-    isLeafNode
+    isLeafNode,
+    isFolderNode,
+    getNodeInfo
   };
 };

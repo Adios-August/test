@@ -7,7 +7,8 @@ import {
   List,
   Typography,
   message,
-  Spin
+  Spin,
+  Radio
 } from 'antd';
 import { 
   DeleteOutlined,
@@ -36,6 +37,9 @@ const AddKnowledge = ({ mode = 'add' }) => {
   
   // Track if current category is a leaf node (knowledge item)
   const [isCurrentCategoryLeafNode, setIsCurrentCategoryLeafNode] = useState(false);
+  
+  // Track what type of node user wants to create (folder or doc)
+  const [nodeTypeToCreate, setNodeTypeToCreate] = useState('doc'); // default to document
   
   // Refs for anchor positioning
   const tagsButtonRef = useRef(null);
@@ -153,9 +157,17 @@ const AddKnowledge = ({ mode = 'add' }) => {
     }
   };
 
+  // Track if current category is a folder node
+  const [isCurrentCategoryFolderNode, setIsCurrentCategoryFolderNode] = useState(false);
+
   // Handle category selection
   const handleCategoryChange = (value) => {
     setFormData(prev => ({ ...prev, category: value }));
+  };
+
+  // Handle publish with node type
+  const handlePublishWithNodeType = (isUploading) => {
+    handlePublish(isUploading, nodeTypeToCreate);
   };
 
   // Handle table change
@@ -214,6 +226,7 @@ const AddKnowledge = ({ mode = 'add' }) => {
         selectedCategory={formData.category}
         onCategoryChange={handleCategoryChange}
         onLeafNodeCheck={setIsCurrentCategoryLeafNode}
+        onFolderNodeCheck={setIsCurrentCategoryFolderNode}
       />
 
       {/* Main content area */}
@@ -272,26 +285,41 @@ const AddKnowledge = ({ mode = 'add' }) => {
 
           {/* Main content body */}
           <div className="content-body">
+            {/* Node type selector - always show when category is selected (since we only show folders) */}
+            {formData.category && (
+              <div className="node-type-selector">
+                <div className="selector-label">创建类型：</div>
+                <Radio.Group 
+                  value={nodeTypeToCreate} 
+                  onChange={(e) => setNodeTypeToCreate(e.target.value)}
+                  size="small"
+                >
+                  <Radio value="doc">📄 文档</Radio>
+                  <Radio value="folder">📁 文件夹</Radio>
+                </Radio.Group>
+              </div>
+            )}
+
             {/* Title input */}
             <div className="title-section">
               <Input
                 className="title-input"
-                placeholder="请输入标题"
+                placeholder={nodeTypeToCreate === 'folder' ? "请输入文件夹名称" : "请输入标题"}
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 maxLength={200}
               />
             </div>
 
-            {/* Rich text editor */}
+            {/* Rich text editor - always show */}
             <KnowledgeEditor 
               contentHtml={contentHtml}
               onContentChange={setContentHtml}
               onImageUpload={handleImageUpload}
             />
 
-            {/* Table toggle checkbox - only show for non-leaf nodes (categories/groups) */}
-            {!isCurrentCategoryLeafNode && (
+            {/* Table toggle checkbox - only show for folder type creation */}
+            {nodeTypeToCreate === 'folder' && (
               <>
                 <div style={{ marginTop: '24px', marginBottom: '16px' }}>
                   <Checkbox
@@ -341,7 +369,7 @@ const AddKnowledge = ({ mode = 'add' }) => {
                 <Button 
                   type="primary" 
                   size="large"
-                  onClick={() => handlePublish(isUploading)}
+                  onClick={() => handlePublishWithNodeType(isUploading)}
                   disabled={isPublishDisabled}
                   loading={loading}
                   style={{ 
