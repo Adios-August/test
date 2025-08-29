@@ -23,8 +23,8 @@ const AttachmentPopup = ({
   
   if (!visible) return null;
 
-  // Get attachment upload configuration
-  const attachmentUploadProps = getAttachmentUploadProps(formData, setFormData);
+  // Get attachment upload configuration with auto-close callback
+  const attachmentUploadProps = getAttachmentUploadProps(formData, setFormData, onClose);
 
   return (
     <>

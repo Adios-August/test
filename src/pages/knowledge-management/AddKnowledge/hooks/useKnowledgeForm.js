@@ -154,7 +154,40 @@ export const useKnowledgeForm = (mode = 'add') => {
     }
     try {
       setLoading(true);
-      // Assemble submit data
+      
+      // First, upload any local files to the server
+      const uploadedAttachments = [];
+      for (const attachment of formData.attachments) {
+        if (attachment.isLocal && attachment.file) {
+          // This is a local file that needs to be uploaded
+          try {
+            message.loading(`正在上传 ${attachment.name}...`, 0);
+            const response = await knowledgeAPI.uploadAttachment(attachment.file);
+            message.destroy(); // Clear loading message
+            
+            uploadedAttachments.push({
+              name: attachment.name,
+              url: response.url,
+              size: attachment.size
+            });
+            
+            message.success(`${attachment.name} 上传成功`);
+          } catch (error) {
+            message.destroy(); // Clear loading message
+            message.error(`${attachment.name} 上传失败: ${error.message}`);
+            throw new Error(`附件上传失败: ${attachment.name}`);
+          }
+        } else {
+          // This file was already uploaded (edit mode or pre-existing)
+          uploadedAttachments.push({
+            name: attachment.name,
+            url: attachment.url,
+            size: attachment.size
+          });
+        }
+      }
+      
+      // Assemble submit data with uploaded attachment URLs
       const submitData = {
         title: formData.title.trim(),
         content_html: contentHtml,
@@ -163,11 +196,7 @@ export const useKnowledgeForm = (mode = 'add') => {
         tags: formData.tags,
         effective_from: formData.effectiveTime[0]?.toISOString() || null,
         effective_to: formData.effectiveTime[1]?.toISOString() || null,
-        attachments: formData.attachments.map(att => ({
-          name: att.name,
-          url: att.url,
-          size: att.size
-        })),
+        attachments: uploadedAttachments,
         tableData: formData.tableData,
         disclaimer_checked: formData.disclaimer,
         node_type: nodeType

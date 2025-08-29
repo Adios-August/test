@@ -38,11 +38,11 @@ export const useFileUpload = () => {
     };
   };
 
-  // Attachment upload configuration
-  const getAttachmentUploadProps = (formData, setFormData) => ({
+  // Attachment upload configuration - stores files locally until form submission
+  const getAttachmentUploadProps = (formData, setFormData, onSuccess) => ({
     name: 'file',
     multiple: true,
-    action: '/api/uploads/attachment',
+    action: undefined, // No automatic upload - store locally instead
     accept: '.txt,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.pdf,.zip,.rar,.jpg,.jpeg,.png,.mp3,.mp4',
     beforeUpload: (file) => {
       // Single file size check
@@ -56,30 +56,34 @@ export const useFileUpload = () => {
         message.error('附件总大小不能超过 200MB');
         return false;
       }
-      return true;
-    },
-    onChange: (info) => {
-      const { status } = info.file;
-      if (status === 'uploading') {
-        setUploading(prev => ({ ...prev, attachments: prev.attachments + 1 }));
-      } else if (status === 'done') {
-        setUploading(prev => ({ ...prev, attachments: prev.attachments - 1 }));
-        const newAttachment = {
-          uid: info.file.uid,
-          name: info.file.name,
-          size: info.file.size,
-          url: info.file.response?.url,
-          status: 'done'
-        };
-        setFormData(prev => ({
-          ...prev,
-          attachments: [...prev.attachments, newAttachment]
-        }));
-        message.success(`${info.file.name} 上传成功`);
-      } else if (status === 'error') {
-        setUploading(prev => ({ ...prev, attachments: prev.attachments - 1 }));
-        message.error(`${info.file.name} 上传失败`);
+      
+      // Store file locally instead of uploading
+      const newAttachment = {
+        uid: file.uid,
+        name: file.name,
+        size: file.size,
+        file: file, // Store the actual File object for later upload
+        status: 'done',
+        isLocal: true // Flag to indicate this is stored locally
+      };
+      
+      setFormData(prev => ({
+        ...prev,
+        attachments: [...prev.attachments, newAttachment]
+      }));
+      
+      message.success(`${file.name} 已添加到附件列表`);
+      
+      // Call success callback if provided (for auto-closing popup)
+      if (onSuccess) {
+        // Add small delay to let user see the success message
+        setTimeout(() => {
+          onSuccess();
+        }, 1000);
       }
+      
+      // Return false to prevent automatic upload
+      return false;
     }
   });
 

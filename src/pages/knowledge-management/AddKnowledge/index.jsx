@@ -400,13 +400,15 @@ const AddKnowledge = ({ mode = 'add' }) => {
             {/* Attachment display area */}
             {formData.attachments.length > 0 && (
               <div className="attachments-display">
-                <Text strong>已上传附件：</Text>
+                <Text strong>附件列表：</Text>
                 <List
                   size="small"
                   style={{ marginTop: 8 }}
                   dataSource={formData.attachments}
+                  rowKey="uid"
                   renderItem={(attachment) => (
                     <List.Item
+                      key={attachment.uid}
                       actions={[
                         <Button
                           key="delete"
