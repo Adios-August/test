@@ -11,6 +11,7 @@ import PdfPreview from '../../components/PdfPreview';
 import FeedbackMailButton from '../../components/FeedbackMailButton';
 import { knowledgeAPI } from '../../api/knowledge';
 import { feedbackAPI } from '../../api/feedback';
+import { engagementAPI } from '../../api/engagement';
 import { useKnowledgeStore, useAuthStore } from '../../stores';
 import { useFeedbackTypes } from '../../hooks/useFeedbackTypes';
 import './KnowledgeDetail.scss';
@@ -35,6 +36,7 @@ const KnowledgeDetail = () => {
   // 收藏相关状态
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [favoriteStatusLoading, setFavoriteStatusLoading] = useState(true);
   
   // 获取knowledgeStore和authStore
   const knowledgeStore = useKnowledgeStore();
@@ -81,27 +83,76 @@ const KnowledgeDetail = () => {
     }
   };
 
+  // 检查收藏状态
+  const checkFavoriteStatus = async (knowledgeId) => {
+    if (!knowledgeId) return;
+    
+    setFavoriteStatusLoading(true);
+    try {
+      console.log(`[KnowledgeDetail] 开始获取收藏状态，knowledgeId: ${knowledgeId}`);
+      const response = await engagementAPI.getFavoriteStatus(knowledgeId);
+      console.log(`[KnowledgeDetail] 状态接口响应:`, response);
+      
+      if (response.code === 200) {
+        const favoriteStatus = response.data?.isFavorited || false;
+        console.log(`[KnowledgeDetail] 解析后的状态:`, {
+          favoriteStatus,
+          rawData: response.data
+        });
+        
+        setIsFavorited(favoriteStatus);
+      } else {
+        console.error('获取收藏状态失败:', response.message);
+      }
+    } catch (error) {
+      console.error('检查收藏状态失败:', error);
+    } finally {
+      setFavoriteStatusLoading(false);
+    }
+  };
+
   // 处理收藏/取消收藏
   const handleFavorite = async () => {
     if (!id || favoriteLoading) return;
+    
+    // 检查用户是否已登录
+    if (!currentUserId) {
+      message.error('请先登录');
+      return;
+    }
     
     setFavoriteLoading(true);
     try {
       if (isFavorited) {
         // 取消收藏
-        const response = await knowledgeAPI.unfavoriteKnowledge(id);
+        console.log(`[KnowledgeDetail] 开始取消收藏，knowledgeId: ${id}, userId: ${currentUserId}`);
+        const response = await engagementAPI.removeFavorite(id, currentUserId);
+        console.log(`[KnowledgeDetail] 取消收藏接口响应:`, response);
+        
         if (response.code === 200) {
-          setIsFavorited(false);
           message.success('已取消收藏');
+          console.log(`[KnowledgeDetail] 取消收藏成功，等待重新获取状态...`);
+          
+          // 取消收藏后，延迟一段时间再获取状态，以防后端状态同步需要时间
+          setTimeout(async () => {
+            console.log(`[KnowledgeDetail] 延迟后重新获取状态...`);
+            await checkFavoriteStatus(id);
+          }, 500); // 延迟500ms
+          
         } else {
           message.error(response.message || '取消收藏失败');
         }
       } else {
         // 添加收藏
-        const response = await knowledgeAPI.favoriteKnowledge(id);
+        console.log(`[KnowledgeDetail] 开始添加收藏，knowledgeId: ${id}, userId: ${currentUserId}`);
+        const response = await engagementAPI.addFavorite(id, currentUserId);
+        console.log(`[KnowledgeDetail] 添加收藏接口响应:`, response);
+        
         if (response.code === 200) {
-          setIsFavorited(true);
           message.success('已添加到收藏');
+          console.log(`[KnowledgeDetail] 添加收藏成功，等待重新获取状态...`);
+          // 操作成功后重新获取状态，确保按钮显示正确
+          await checkFavoriteStatus(id);
         } else {
           message.error(response.message || '收藏失败');
         }
@@ -167,6 +218,13 @@ const KnowledgeDetail = () => {
       fetchKnowledgeDetail(id);
     }
   }, [id]);
+
+  // 当知识详情加载完成后，检查收藏状态
+  useEffect(() => {
+    if (knowledgeDetail?.id) {
+      checkFavoriteStatus(knowledgeDetail.id);
+    }
+  }, [knowledgeDetail?.id]);
 
   // 模拟文档数据（作为备用）
   const documentData = {
@@ -420,7 +478,7 @@ const KnowledgeDetail = () => {
                                 type="text" 
                                 icon={isFavorited ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
                                 onClick={handleFavorite}
-                                loading={favoriteLoading}
+                                loading={favoriteLoading || favoriteStatusLoading}
                                 size="large"
                                 style={{ 
                                   marginLeft: '16px', 
@@ -442,17 +500,7 @@ const KnowledgeDetail = () => {
                             ))}
                           </div>
                         </div>
-                        <div className="header-right">
-                          <Button 
-                            type="primary" 
-                            icon={<ArrowLeftOutlined />} 
-                            size="large"
-                            onClick={() => window.history.back()}
-                            style={{ fontSize: '16px' }}
-                          >
-                            返回
-                          </Button>
-                        </div>
+                       
                       </div>
 
                       <div className="document-content">
@@ -536,14 +584,16 @@ const KnowledgeDetail = () => {
                                 onPressEnter={handleSubmitFeedback}
                               />
                               <Button 
-                                type="primary" 
+                                type="text" 
                                 icon={<SendOutlined />} 
                                 onClick={handleSubmitFeedback}
                                 loading={feedbackSubmitting}
                                 disabled={!selectedFeedbackType || !feedbackContent.trim() || !currentUserId}
                               >
-                                提交反馈
+                               
                               </Button>
+
+                              
                               <FeedbackMailButton knowledgeDetail={tab.content} />
                             </div>
                           </div>

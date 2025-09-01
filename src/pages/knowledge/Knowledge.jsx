@@ -16,6 +16,7 @@ import {
   Space,
   Tooltip,
   Modal,
+  Select,
 } from "antd";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
@@ -48,6 +49,7 @@ import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
 import { useSearchHistoryStore, useKnowledgeStore, useAuthStore } from "../../stores";
+import { useFeedbackTypes } from "../../hooks/useFeedbackTypes";
  
 import "./Knowledge.scss";
 
@@ -67,6 +69,9 @@ const Knowledge = observer(() => {
   
   // 获取当前用户ID
   const currentUserId = authStore.user?.id || authStore.user?.userId;
+  
+  // 获取反馈类型
+  const { feedbackTypes, loading: feedbackTypesLoading } = useFeedbackTypes();
 
   
   const [searchCurrentPage, setSearchCurrentPage] = useState(1); // 搜索结果分页
@@ -112,6 +117,8 @@ const Knowledge = observer(() => {
   // 反馈相关状态
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
+  const [selectedFeedbackType, setSelectedFeedbackType] = useState("");
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackPosition, setFeedbackPosition] = useState({ x: 0, y: 0 });
   
   // Sources弹窗相关状态
@@ -374,8 +381,18 @@ const Knowledge = observer(() => {
 
   // 提交反馈弹窗中的反馈
   const handleSubmitFeedback = async () => {
+    if (!selectedFeedbackType) {
+      message.warning('请选择反馈类型');
+      return;
+    }
+
     if (!feedbackContent.trim()) {
       message.warning("请输入反馈内容");
+      return;
+    }
+
+    if (!currentUserId) {
+      message.error('请先登录');
       return;
     }
 
@@ -387,14 +404,15 @@ const Knowledge = observer(() => {
       const response = await feedbackAPI.submitFeedback(
         knowledgeId,
         feedbackContent.trim(), // content
-        "dislike", // feedbackType
+        selectedFeedbackType, // feedbackType
         currentUserId
       );
       
       if (response.code === 200) {
-        message.success("已提交反馈");
+        message.success("反馈提交成功");
         setFeedbackModalVisible(false);
         setFeedbackContent("");
+        setSelectedFeedbackType("");
       } else {
         message.error(response.message || "提交失败，请重试");
       }
@@ -408,6 +426,7 @@ const Knowledge = observer(() => {
   const handleCancelFeedback = () => {
     setFeedbackModalVisible(false);
     setFeedbackContent("");
+    setSelectedFeedbackType("");
   };
 
   // 获取分类知识列表
@@ -1417,15 +1436,25 @@ const Knowledge = observer(() => {
             <p style={{ marginBottom: 8, color: '#666' }}>
               请告诉我们您对这次回答不满意的地方，帮助我们改进：
             </p>
-            <Input.TextArea
-              value={feedbackContent}
-              onChange={(e) => setFeedbackContent(e.target.value)}
-              placeholder="请输入您的反馈意见..."
-              rows={4}
-              maxLength={500}
-              showCount
-              className="feedback-textarea"
-            />
+            <div style={{ marginBottom: 16 }}>
+              <Select
+                placeholder="选择反馈类型"
+                style={{ width: '100%', marginBottom: 12 }}
+                options={feedbackTypes}
+                loading={feedbackTypesLoading}
+                value={selectedFeedbackType}
+                onChange={setSelectedFeedbackType}
+              />
+              <Input.TextArea
+                value={feedbackContent}
+                onChange={(e) => setFeedbackContent(e.target.value)}
+                placeholder="请输入您的反馈意见..."
+                rows={4}
+                maxLength={500}
+                showCount
+                className="feedback-textarea"
+              />
+            </div>
           </div>
         </Modal>
       </Layout>

@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Table, Button, message, Tooltip, Space } from 'antd';
+import { Layout, Table, Button, message, Modal, Space } from 'antd';
 import {
   EyeOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
 import { knowledgeAPI } from '../../api/knowledge';
+import { engagementAPI } from '../../api/engagement';
+import { useAuthStore } from '../../stores';
 import './Favorites.scss';
 
 const { Content } = Layout;
 
 const Favorites = () => {
   const navigate = useNavigate();
+  const authStore = useAuthStore();
+  const currentUserId = authStore.user?.id || authStore.user?.userId;
   const [loading, setLoading] = useState(false);
   const [favoritesData, setFavoritesData] = useState([]);
   const [pagination, setPagination] = useState({
@@ -60,15 +64,37 @@ const Favorites = () => {
 
   // 处理删除收藏
   const handleDelete = async (record) => {
-    try {
-      // 调用取消收藏API
-      await knowledgeAPI.unfavoriteKnowledge(record.knowledgeId);
-      message.success('已删除收藏');
-      fetchFavorites(pagination.current, pagination.pageSize);
-    } catch (error) {
-      console.error('删除收藏失败:', error);
-      message.error('删除收藏失败，请重试');
+    if (!currentUserId) {
+      message.error('请先登录');
+      return;
     }
+
+    // 显示确认对话框
+    Modal.confirm({
+      title: '确认取消收藏',
+      content: `确定要取消收藏"${record.knowledgeName}"吗？`,
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          // 调用取消收藏API
+          console.log(`[Favorites] 开始取消收藏，knowledgeId: ${record.knowledgeId}, userId: ${currentUserId}`);
+          const response = await engagementAPI.removeFavorite(record.knowledgeId, currentUserId);
+          console.log(`[Favorites] 取消收藏接口响应:`, response);
+          
+          if (response.code === 200) {
+            message.success('已取消收藏');
+            // 重新获取收藏列表
+            fetchFavorites(pagination.current, pagination.pageSize);
+          } else {
+            message.error(response.message || '取消收藏失败');
+          }
+        } catch (error) {
+          console.error('取消收藏失败:', error);
+          message.error('取消收藏失败，请重试');
+        }
+      }
+    });
   };
 
   // 处理分页变化
@@ -97,15 +123,9 @@ const Favorites = () => {
       sorter: true
     },
     {
-      title: '所在栏目',
-      dataIndex: 'category',
-      key: 'category',
-      width: 150
-    },
-    {
       title: '知识标题',
-      dataIndex: 'title',
-      key: 'title',
+      dataIndex: 'knowledgeName',
+      key: 'knowledgeName',
       ellipsis: true,
       render: (text) => (
         <div style={{ 
@@ -120,40 +140,92 @@ const Favorites = () => {
       )
     },
     {
+      title: '知识描述',
+      dataIndex: 'knowledgeDescription',
+      key: 'knowledgeDescription',
+      ellipsis: true,
+      render: (text) => (
+        <div style={{ 
+          maxWidth: '300px', 
+          overflow: 'hidden', 
+          textOverflow: 'ellipsis', 
+          whiteSpace: 'nowrap'
+        }}>
+          {text || '-'}
+        </div>
+      )
+    },
+    {
+      title: '创建者',
+      dataIndex: 'createdBy',
+      key: 'createdBy',
+      width: 100
+    },
+    {
       title: '收藏日期',
-      dataIndex: 'favoriteDate',
-      key: 'favoriteDate',
-      width: 120
+      dataIndex: 'favoriteTime',
+      key: 'favoriteTime',
+      width: 150,
+      render: (text) => {
+        if (!text) return '-';
+        return new Date(text).toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
     },
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 140,
+      align: 'center',
       render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="查看">
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleView(record)}
-              style={{ color: '#1890ff' }}
-            >
-              查看
-            </Button>
-          </Tooltip>
-          <Tooltip title="删除">
-            <Button
-              type="text"
-              size="small"
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record)}
-              style={{ color: '#ff4d4f' }}
-            >
-              删除
-            </Button>
-          </Tooltip>
-        </Space>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleView(record)}
+            className="view-button"
+            style={{ 
+              color: '#1890ff',
+              padding: '4px 8px',
+              height: 'auto',
+              fontSize: '12px',
+              border: 'none',
+              background: 'transparent',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            查看
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record)}
+            className="delete-button"
+            style={{ 
+              color: '#ff4d4f',
+              padding: '4px 8px',
+              height: 'auto',
+              fontSize: '12px',
+              border: 'none',
+              background: 'transparent',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            删除
+          </Button>
+        </div>
       )
     }
   ];

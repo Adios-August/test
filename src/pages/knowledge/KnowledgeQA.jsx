@@ -7,9 +7,7 @@ import {
   Avatar,
   Space,
   List,
-  Collapse,
   Badge,
-  Tabs,
   message,
   Spin,
   Tooltip,
@@ -27,6 +25,7 @@ import {
   LikeOutlined,
   DislikeOutlined,
   FilePdfOutlined,
+  FileTextOutlined,
   ArrowLeftOutlined,
   RobotOutlined,
   UserOutlined,
@@ -35,19 +34,21 @@ import {
   HistoryOutlined,
   SettingOutlined,
   BulbOutlined,
+  GlobalOutlined,
+  ExportOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import StreamingMarkdownRenderer from "../../components/StreamingMarkdownRenderer";
-import PdfPreview from "../../components/PdfPreview";
+import SourceExpandedDetail from "../../components/SourceExpandedDetail";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
+import { knowledgeAPI } from "../../api/knowledge";
 import { useAuthStore } from "../../stores";
 import "./KnowledgeQA.scss";
 
 const { Sider, Content } = Layout;
 const { TextArea } = Input;
-const { Panel } = Collapse;
-const { TabPane } = Tabs;
 const { Title } = Typography;
 
 const KnowledgeQA = () => {
@@ -89,9 +90,71 @@ const KnowledgeQA = () => {
   const [currentMessageId, setCurrentMessageId] = useState(null);
   const [feedbackPosition, setFeedbackPosition] = useState({ x: 0, y: 0 });
 
+  // RelatedText展开状态管理
+  const [expandedRelatedText, setExpandedRelatedText] = useState({});
+  const [expandedRelatedTextData, setExpandedRelatedTextData] = useState({});
+  const [expandedRelatedTextLoading, setExpandedRelatedTextLoading] = useState({});
+
   // 自动滚动到最新消息
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // 切换RelatedText展开状态
+  const handleToggleRelatedTextExpansion = async (reference) => {
+    const knowledgeId = reference.knowledgeId;
+    const isCurrentlyExpanded = expandedRelatedText[knowledgeId];
+    
+    if (isCurrentlyExpanded) {
+      // 收起
+      setExpandedRelatedText(prev => ({ ...prev, [knowledgeId]: false }));
+      setExpandedRelatedTextData(prev => {
+        const newData = { ...prev };
+        delete newData[knowledgeId];
+        return newData;
+      });
+      setExpandedRelatedTextLoading(prev => {
+        const newLoading = { ...prev };
+        delete newLoading[knowledgeId];
+        return newLoading;
+      });
+    } else {
+      // 展开
+      setExpandedRelatedText(prev => ({ ...prev, [knowledgeId]: true }));
+      setExpandedRelatedTextLoading(prev => ({ ...prev, [knowledgeId]: true }));
+      
+      try {
+        const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+        if (response.code === 200) {
+          setExpandedRelatedTextData(prev => ({ ...prev, [knowledgeId]: response.data }));
+        } else {
+          message.error(response.message || '获取知识详情失败');
+        }
+      } catch (error) {
+        console.error('获取知识详情失败:', error);
+        message.error('获取知识详情失败，请稍后重试');
+      } finally {
+        setExpandedRelatedTextLoading(prev => ({ ...prev, [knowledgeId]: false }));
+      }
+    }
+  };
+
+  // 在当前页面打开知识详情
+  const handleOpenInCurrentPage = (reference) => {
+    if (reference.knowledgeId) {
+      navigate(`/knowledge-detail/${reference.knowledgeId}`);
+    } else {
+      message.error('知识ID不存在');
+    }
+  };
+
+  // 在新页面打开知识详情
+  const handleOpenInNewPage = (reference) => {
+    if (reference.knowledgeId) {
+      window.open(`/knowledge-detail/${reference.knowledgeId}`, '_blank');
+    } else {
+      message.error('知识ID不存在');
+    }
   };
 
   useEffect(() => {
@@ -126,38 +189,7 @@ const KnowledgeQA = () => {
     }
   }, [initialQuestion, currentUserId]);
 
-  // 参考资料数据
-  const referenceData = [
-    {
-      key: "reference-tab",
-      label: "Reference Text",
-      children: (
-        <div className="reference-content">
-          <Collapse defaultActiveKey={["panel-1", "panel-2", "panel-3"]} ghost>
-            <Panel header="产品培训合集_易方达增强回报" key="panel-1" className="reference-panel">
-              <p>包含信息如下: 【Page 26】产品近期表现不佳的原因? 近年来资本市场的变化错综复杂。</p>
-            </Panel>
-            <Panel header="【LUT】产品回顾及展望-易方达专场" key="panel-2" className="reference-panel">
-              <p>
-                时值年末,特邀易方达业务团队就今年热卖的存量产品为大家做一下表现回顾与归因分析,回答大家关心的问题,并分享2024市场观点。
-              </p>
-            </Panel>
-            <Panel header="财富来源回顾培训2025Jul.pdf" key="panel-3" className="reference-panel">
-              <div className="pdf-reference">
-                <FilePdfOutlined className="pdf-icon" />
-                <span>点击查看PDF文档</span>
-              </div>
-            </Panel>
-          </Collapse>
-        </div>
-      ),
-    },
-    {
-      key: "related-tab",
-      label: <span>Related Text</span>,
-      children: <div className="related-content">相关文本内容</div>,
-    },
-  ];
+
 
   // 流式AI请求处理
   const handleStreamAIRequest = async (userQuestion) => {
@@ -804,27 +836,116 @@ const KnowledgeQA = () => {
             </div>
           </div>
 
-          {/* 右侧参考资料 */}
-          <div className="reference-sider">
-            <div className="reference-header">
-              <Tabs
-                defaultActiveKey="preview-tab"
-                items={[
-                  {
-                    key: "preview-tab",
-                    label: "Related Text",
-                    children: previewFileUrl ? (
-                      <PdfPreview fileUrl={previewFileUrl} pageNum={previewPage} bboxes={previewBboxes} />
-                    ) : (
-                      <Empty description="等待引用加载" />
-                    ),
-                  },
-                  ...referenceData.filter((i) => i.key !== "related-tab"),
-                ]}
-                className="reference-tabs"
-              />
+          {/* 右侧RelatedText侧边栏 */}
+          {messages.length > 0 && messages.some(msg => msg.references && msg.references.length > 0) && (
+            <div className="related-text-sider">
+              <div className="related-text-header">
+                <h3>RelatedText</h3>
+              </div>
+              <div className="related-text-content">
+                {messages.map((message) => 
+                  message.references && message.references.length > 0 ? (
+                    message.references.map((reference, index) => (
+                      <div key={`${message.id}-${index}`}>
+                        <Card 
+                          className="related-text-card" 
+                          size="small"
+                          style={{ cursor: 'pointer', marginBottom: '12px' }}
+                          onClick={() => handleToggleRelatedTextExpansion(reference)}
+                        >
+                          <div className="related-text-knowledge">
+                            <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                            <div className="knowledge-info">
+                              <div className="knowledge-name">{reference.knowledgeName || reference.sourceFile || "引用文档"}</div>
+                            </div>
+                            <div className="related-text-actions">
+                              <Tooltip title="在当前页面打开">
+                                <GlobalOutlined 
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInCurrentPage(reference);
+                                  }}
+                                />
+                              </Tooltip>
+                              <Tooltip title="在新页面打开">
+                                <ExportOutlined 
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInNewPage(reference);
+                                  }}
+                                />
+                              </Tooltip>
+                            </div>
+                          </div>
+                        </Card>
+                        
+                        {/* 展开的知识详情 */}
+                        {expandedRelatedText[reference.knowledgeId] && (
+                          <Card 
+                            className="expanded-related-text-detail" 
+                            size="small"
+                            style={{ marginBottom: '12px' }}
+                          >
+                            {/* 展开详情的头部，包含收起按钮 */}
+                            <div className="expanded-detail-header" style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center'
+                            }}>
+                              <span style={{ fontSize: '14px', fontWeight: '500', color: '#333' }}>
+                                {reference.knowledgeName || reference.sourceFile || "引用文档"}
+                              </span>
+                              <Button 
+                                type="text" 
+                                size="small"
+                                icon={<CloseOutlined />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleRelatedTextExpansion(reference);
+                                }}
+                                style={{ 
+                                  color: '#999',
+                                  padding: '4px 8px',
+                                  height: 'auto'
+                                }}
+                              >
+                                收起
+                              </Button>
+                            </div>
+                            
+                            <div className="expanded-detail-content">
+                              {expandedRelatedTextLoading[reference.knowledgeId] ? (
+                                <div style={{ padding: '16px', textAlign: 'center' }}>
+                                  <Spin size="small" />
+                                  <p style={{ margin: '8px 0 0 0', color: '#999' }}>加载中...</p>
+                                </div>
+                              ) : expandedRelatedTextData[reference.knowledgeId] ? (
+                                <SourceExpandedDetail 
+                                  knowledgeDetail={expandedRelatedTextData[reference.knowledgeId]} 
+                                  loading={false} 
+                                />
+                              ) : (
+                                <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
+                                  加载失败，请重试
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        )}
+                      </div>
+                    ))
+                  ) : null
+                )}
+                {!messages.some(msg => msg.references && msg.references.length > 0) && (
+                  <div className="empty-related-text">
+                    <Empty description="暂无相关内容" />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
