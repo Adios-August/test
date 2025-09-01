@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
+import PdfPreview from '../../components/PdfPreview';
 import { knowledgeAPI } from '../../api/knowledge';
 import { useKnowledgeStore } from '../../stores';
 import './KnowledgeDetail.scss';
@@ -129,7 +130,6 @@ const KnowledgeDetail = () => {
     author: 'Felicity He',
     date: '2025-07-05 12:00',
     tags: ['QDII', 'QDUT'],
-    summary: '这是一个关于IWS产品方案的详细文档...',
     attachments: [
       { name: 'QDII_top_AUM_fund.PDF', type: 'pdf', icon: <FilePdfOutlined /> },
       { name: 'QDUT每日价格.xlsx', type: 'excel', icon: <FileExcelOutlined /> },
@@ -145,7 +145,7 @@ const KnowledgeDetail = () => {
     id: item.id,
     title: item.name || item.title || '无标题',
     date: item.createdTime || item.date || '未知日期',
-    description: item.description || item.summary || '暂无描述',
+    description: item.description || '暂无描述',
     type: "pdf",
   }));
   
@@ -197,16 +197,15 @@ const KnowledgeDetail = () => {
       key: newKey,
       label: searchItem.title,
       closable: true,
-      content: {
-        id: searchItem.id,
-        title: searchItem.title,
-        author: '加载中...',
-        date: searchItem.date,
-        tags: ['加载中'],
-        summary: '正在获取详细信息...',
-        attachments: [],
-        effectiveDate: '加载中...',
-      }
+              content: {
+          id: searchItem.id,
+          title: searchItem.title,
+          author: '加载中...',
+          date: searchItem.date,
+          tags: ['加载中'],
+          attachments: [],
+          effectiveDate: '加载中...',
+        }
     };
 
     // 使用函数式更新确保获取最新的tabs状态
@@ -371,6 +370,21 @@ const KnowledgeDetail = () => {
                             <Avatar size="small" icon={<UserOutlined />} />
                             <span className="author-name">{tab.content?.createdBy || tab.content?.author || '未知作者'}</span>
                             <span className="date">{tab.content?.createdTime || tab.content?.date || '未知日期'}</span>
+                            <Tooltip title={isFavorited ? "取消收藏" : "收藏"} placement="top">
+                              <Button 
+                                type="text" 
+                                icon={isFavorited ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
+                                onClick={handleFavorite}
+                                loading={favoriteLoading}
+                                size="large"
+                                style={{ 
+                                  marginLeft: '16px', 
+                                  fontSize: '16px',
+                                  color: isFavorited ? '#ff4d4f' : 'inherit',
+                                  transition: 'all 0.3s ease'
+                                }}
+                              />
+                            </Tooltip>
                           </div>
                           <div className="tags">
                             {(tab.content?.tags || []).map((tag, index) => (
@@ -384,18 +398,15 @@ const KnowledgeDetail = () => {
                           </div>
                         </div>
                         <div className="header-right">
-                          <Tooltip title={isFavorited ? "取消收藏" : "收藏"} placement="top">
-                            <Button 
-                              type="text" 
-                              icon={isFavorited ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
-                              onClick={handleFavorite}
-                              loading={favoriteLoading}
-                              style={{ 
-                                color: isFavorited ? '#ff4d4f' : 'inherit',
-                                transition: 'all 0.3s ease'
-                              }}
-                            />
-                          </Tooltip>
+                          <Button 
+                            type="primary" 
+                            icon={<ArrowLeftOutlined />} 
+                            size="large"
+                            onClick={() => window.history.back()}
+                            style={{ fontSize: '16px' }}
+                          >
+                            返回
+                          </Button>
                         </div>
                       </div>
 
@@ -413,13 +424,42 @@ const KnowledgeDetail = () => {
                           <div className="attachment-list">
                             {(tab.content?.attachments || []).map((attachment, index) => (
                               <div key={index} className="attachment-item">
-                                <span className="attachment-icon">
-                                  {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
-                                </span>
-                                <span className="attachment-name">{attachment.fileName || attachment.name}</span>
-                                <span className="attachment-size">{attachment.fileSize}</span>
-                                <span className="attachment-downloads">下载 {attachment.downloadCount || 0}</span>
-                                <Button type="text" size="small">Summary</Button>
+                                <div className="attachment-header">
+                                  <span className="attachment-icon">
+                                    {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
+                                  </span>
+                                  <span className="attachment-name">{attachment.fileName || attachment.name}</span>
+                                  <span className="attachment-size">{attachment.fileSize}</span>
+                                  <span className="attachment-downloads">下载 {attachment.downloadCount || 0}</span>
+                                  <Button type="text" size="small">下载</Button>
+                                </div>
+                                
+
+                                
+                                {/* PDF预览组件 - 直接嵌入到附件项中 */}
+                                {(attachment.fileType === 'pdf' || 
+                                  attachment.fileType === 'application/pdf' ||
+                                  (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
+                                  (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
+                                  <div className="pdf-preview-embedded">
+                                    <h4>PDF预览 - {attachment.fileName || attachment.name}</h4>
+                                    <PdfPreview 
+                                      fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
+                                      pageNum={1}
+                                      bboxes={[]}
+                                    />
+                                  </div>
+                                )}
+                                
+                                {/* 如果没有PDF预览，显示原因 */}
+                                {!(attachment.fileType === 'pdf' || 
+                                   attachment.fileType === 'application/pdf' ||
+                                   (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
+                                   (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
+                                  <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                                    非PDF文件，无法预览
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -440,9 +480,9 @@ const KnowledgeDetail = () => {
                               placeholder="选择反馈..."
                               style={{ width: 120 }}
                               options={[
-                                { value: 'bug', label: 'Bug报告' },
-                                { value: 'feature', label: '功能建议' },
-                                { value: 'other', label: '其他' }
+                                { value: 'out_of_date', label: 'Out of date' },
+                                { value: 'unclear', label: 'Unclear' },
+                                { value: 'not_relevant', label: 'Not relevant' }
                               ]}
                             />
                             <Input

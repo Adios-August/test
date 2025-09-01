@@ -1,4 +1,4 @@
-.knowledge-detail-content {
+.source-expanded-detail {
   width: 100%;
   height: 100%;
   background: white;
@@ -122,21 +122,6 @@
             .tag-text {
               font-weight: 500;
             }
-          }
-        }
-      }
-
-      .header-right {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-
-        .ant-btn {
-          border-radius: 6px;
-          transition: all 0.3s ease;
-          
-          &:hover {
-            transform: scale(1.05);
           }
         }
       }
@@ -372,7 +357,7 @@
 
 // 响应式设计
 @media (max-width: 768px) {
-  .knowledge-detail-content {
+  .source-expanded-detail {
     .document-detail {
       padding: 16px;
       

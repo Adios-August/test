@@ -35,7 +35,6 @@ import {
   FolderOpenOutlined,
   GlobalOutlined,
   ExportOutlined,
-  EditOutlined,
   HeartOutlined,
   HeartFilled,
 } from "@ant-design/icons";
@@ -43,6 +42,7 @@ import { observer } from "mobx-react-lite";
 import CommonSidebar from "../../components/CommonSidebar";
 import KnowledgeDetailModal from "../../components/KnowledgeDetailModal";
 import KnowledgeDetailContent from "../../components/KnowledgeDetailContent";
+import SourceExpandedDetail from "../../components/SourceExpandedDetail";
 import { knowledgeAPI } from "../../api/knowledge";
 import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
@@ -115,6 +115,11 @@ const Knowledge = observer(() => {
   const [sourcesModalVisible, setSourcesModalVisible] = useState(false);
   const [sourcesModalData, setSourcesModalData] = useState(null);
   const [sourcesModalLoading, setSourcesModalLoading] = useState(false);
+  
+  // Sources展开状态管理
+  const [expandedSources, setExpandedSources] = useState({});
+  const [expandedSourceData, setExpandedSourceData] = useState({});
+  const [expandedSourceLoading, setExpandedSourceLoading] = useState({});
   
   // 生成sessionId
   const generateSessionId = () => {
@@ -582,6 +587,8 @@ const Knowledge = observer(() => {
     }
   };
 
+
+
   // 当categoryId变化时获取分类知识列表
   useEffect(() => {
     if (categoryId) {
@@ -595,7 +602,7 @@ const Knowledge = observer(() => {
       }
       setCurrentCategoryId(categoryId);
       fetchCategoryKnowledge(categoryId, 1, 10);
-      // 隐藏AI和source模块
+      // 隐藏AI和sourceModules
       setShowAISourceModules(false);
     } else {
       // 如果没有categoryId，清空分类知识列表
@@ -619,10 +626,7 @@ const Knowledge = observer(() => {
     setShowAISourceModules(false);
   };
 
-    // 调试：监控搜索结果状态
-  useEffect(() => {
-    // 监控状态变化
-  }, [searchResults, searchValue, currentCategoryId, searchLoading, categoryId, isCategorySearchMode, categoryKnowledge, categoryLoading, showAISourceModules]);
+
 
   // 组件初始化时清空搜索结果
   useEffect(() => {
@@ -760,13 +764,48 @@ const Knowledge = observer(() => {
     window.open(url, '_blank');
   };
 
-  // 编辑知识
-  const handleEditKnowledge = (item, event) => {
-    event?.stopPropagation(); // 阻止卡片点击事件
-    navigate(`/edit-knowledge/${item.id}`);
+
+
+  // 切换Sources展开状态
+  const handleToggleSourceExpansion = async (reference) => {
+    const knowledgeId = reference.knowledgeId;
+    const isCurrentlyExpanded = expandedSources[knowledgeId];
+    
+    if (isCurrentlyExpanded) {
+      // 收起
+      setExpandedSources(prev => ({ ...prev, [knowledgeId]: false }));
+      setExpandedSourceData(prev => {
+        const newData = { ...prev };
+        delete newData[knowledgeId];
+        return newData;
+      });
+      setExpandedSourceLoading(prev => {
+        const newLoading = { ...prev };
+        delete newLoading[knowledgeId];
+        return newLoading;
+      });
+    } else {
+      // 展开
+      setExpandedSources(prev => ({ ...prev, [knowledgeId]: true }));
+      setExpandedSourceLoading(prev => ({ ...prev, [knowledgeId]: true }));
+      
+      try {
+        const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+        if (response.code === 200) {
+          setExpandedSourceData(prev => ({ ...prev, [knowledgeId]: response.data }));
+        } else {
+          message.error(response.message || '获取知识详情失败');
+        }
+      } catch (error) {
+        console.error('获取知识详情失败:', error);
+        message.error('获取知识详情失败，请稍后重试');
+      } finally {
+        setExpandedSourceLoading(prev => ({ ...prev, [knowledgeId]: false }));
+      }
+    }
   };
 
-  // 打开Sources弹窗
+  // 打开Sources弹窗（保留原有功能，以防其他地方需要）
   const handleOpenSourcesModal = async (reference) => {
     setSourcesModalVisible(true);
     setSourcesModalLoading(true);
@@ -1006,12 +1045,6 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                             
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="编辑知识">
-                                <EditOutlined 
-                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
-                                  onClick={(e) => handleEditKnowledge(item, e)}
-                                />
-                              </Tooltip>
                               <Tooltip title="在当前标签页中打开">
                                 <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
                               </Tooltip>
@@ -1076,12 +1109,6 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                               <DownOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="编辑知识">
-                                <EditOutlined 
-                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
-                                  onClick={(e) => handleEditKnowledge(item, e)}
-                                />
-                              </Tooltip>
                               
                               <Tooltip title={favoriteStates[item.id] ? "取消收藏" : "收藏"} placement="top">
                                 <Button
@@ -1171,12 +1198,6 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
                              
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="编辑知识">
-                                <EditOutlined 
-                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
-                                  onClick={(e) => handleEditKnowledge(item, e)}
-                                />
-                              </Tooltip>
                               <Tooltip title="在当前页面打开">
                                 <GlobalOutlined 
                                   style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
@@ -1251,54 +1272,95 @@ const Knowledge = observer(() => {
               </div>
             ) : references.length > 0 ? (
               references.map((reference, index) => (
-                <Card 
-                  key={reference.knowledgeId || index}
-                  className="source-card" 
-                  size="small"
-                  style={{ cursor: 'pointer', marginBottom: '12px' }}
-                  onClick={() => handleOpenSourcesModal(reference)}
-                >
-                  <div className="source-knowledge">
-                    <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
-                    <div className="knowledge-info">
-                      <div className="knowledge-name">{reference.knowledgeName}</div>
+                <div key={reference.knowledgeId || index}>
+                  <Card 
+                    className="source-card" 
+                    size="small"
+                    style={{ cursor: 'pointer', marginBottom: '12px' }}
+                    onClick={() => handleToggleSourceExpansion(reference)}
+                  >
+                    <div className="source-knowledge">
+                      <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                      <div className="knowledge-info">
+                        <div className="knowledge-name">{reference.knowledgeName}</div>
+                      </div>
+                      <div className="source-actions">
+                        <Tooltip title="在当前页面打开">
+                          <GlobalOutlined 
+                            style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenInCurrentPage(reference);
+                            }}
+                          />
+                        </Tooltip>
+                        <Tooltip title="在新页面打开">
+                          <ExportOutlined 
+                            style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenInNewPage(reference);
+                            }}
+                          />
+                        </Tooltip>
+                      </div>
                     </div>
-                    <div className="source-actions">
-                      <Tooltip title={favoriteStates[reference.knowledgeId] ? "取消收藏" : "收藏"} placement="top">
-                        <Button
-                          type="text"
+                  </Card>
+                  
+                  {/* 展开的知识详情 */}
+                  {expandedSources[reference.knowledgeId] && (
+                    <Card 
+                      className="expanded-source-detail" 
+                      size="small"
+                      style={{ marginBottom: '12px' }}
+                    >
+                      {/* 展开详情的头部，包含收起按钮 */}
+                      <div className="expanded-detail-header" style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center'
+                      }}>
+                        <span style={{ fontSize: '14px', fontWeight: '500', color: '#333' }}>
+                          {reference.knowledgeName}
+                        </span>
+                        <Button 
+                          type="text" 
                           size="small"
-                          icon={favoriteStates[reference.knowledgeId] ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
-                          onClick={(e) => handleFavorite(reference.knowledgeId, e)}
-                          loading={favoriteLoading[reference.knowledgeId]}
+                          icon={<CloseOutlined />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSourceExpansion(reference);
+                          }}
                           style={{ 
-                            color: favoriteStates[reference.knowledgeId] ? '#ff4d4f' : '#666',
-                            marginLeft: '4px',
-                            transition: 'all 0.3s ease'
+                            color: '#999',
+                            padding: '4px 8px',
+                            height: 'auto'
                           }}
-                        />
-                      </Tooltip>
-                      <Tooltip title="在当前页面打开">
-                        <GlobalOutlined 
-                          style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenInCurrentPage(reference);
-                          }}
-                        />
-                      </Tooltip>
-                      <Tooltip title="在新页面打开">
-                        <ExportOutlined 
-                          style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenInNewPage(reference);
-                          }}
-                        />
-                      </Tooltip>
-                    </div>
-                  </div>
-                </Card>
+                        >
+                          收起
+                        </Button>
+                      </div>
+                      
+                      <div className="expanded-detail-content">
+                        {expandedSourceLoading[reference.knowledgeId] ? (
+                          <div style={{ padding: '16px', textAlign: 'center' }}>
+                            <Spin size="small" />
+                            <p style={{ margin: '8px 0 0 0', color: '#999' }}>加载中...</p>
+                          </div>
+                        ) : expandedSourceData[reference.knowledgeId] ? (
+                          <SourceExpandedDetail 
+                            knowledgeDetail={expandedSourceData[reference.knowledgeId]} 
+                            loading={false} 
+                          />
+                        ) : (
+                          <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
+                            加载失败，请重试
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  )}
+                </div>
               ))
             ) : (
               <div className="no-sources">

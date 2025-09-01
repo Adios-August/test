@@ -2,16 +2,16 @@ import React from 'react';
 import { Button, Avatar, Select, Input } from 'antd';
 import {
   HeartOutlined, FilePdfOutlined, FileExcelOutlined, TagOutlined,
-  SendOutlined, MailOutlined, UserOutlined, ArrowLeftOutlined,
+  SendOutlined, MailOutlined, UserOutlined,
 } from '@ant-design/icons';
 
 import PdfPreview from './PdfPreview';
-import './KnowledgeDetailContent.scss';
+import './SourceExpandedDetail.scss';
 
-const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
+const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
   if (loading) {
     return (
-      <div className="knowledge-detail-content">
+      <div className="source-expanded-detail">
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <p>加载中...</p>
@@ -22,7 +22,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
 
   if (!knowledgeDetail) {
     return (
-      <div className="knowledge-detail-content">
+      <div className="source-expanded-detail">
         <div className="empty-state">
           <h3>暂无知识详情</h3>
           <p>请稍后重试</p>
@@ -32,7 +32,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
   }
 
   return (
-    <div className="knowledge-detail-content">
+    <div className="source-expanded-detail">
       <div className="document-detail">
         <div className="document-header">
           <div className="header-left">
@@ -58,17 +58,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
               ))}
             </div>
           </div>
-          <div className="header-right">
-            <Button 
-              type="primary" 
-              icon={<ArrowLeftOutlined />} 
-              size="large"
-              onClick={() => window.history.back()}
-              style={{ fontSize: '16px' }}
-            >
-              返回
-            </Button>
-          </div>
+          {/* Sources展开详情不需要返回按钮 */}
         </div>
 
         <div className="document-content">
@@ -94,8 +84,6 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
                     <span className="attachment-downloads">下载 {attachment.downloadCount || 0}</span>
                     <Button type="text" size="small">下载</Button>
                   </div>
-                  
-
                   
                   {/* PDF预览组件 - 直接嵌入到附件项中 */}
                   {(attachment.fileType === 'pdf' || 
@@ -160,4 +148,4 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
   );
 };
 
-export default KnowledgeDetailContent; 
+export default SourceExpandedDetail; 
