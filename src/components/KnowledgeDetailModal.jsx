@@ -13,19 +13,7 @@ const KnowledgeDetailModal = ({
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
 
-  // 获取收藏状态
-  const fetchFavoriteStatus = async (knowledgeId) => {
-    if (!knowledgeId) return;
-    
-    try {
-      const response = await knowledgeAPI.getFavoriteStatus(knowledgeId);
-      if (response.code === 200) {
-        setIsFavorited(response.data?.isFavorited || false);
-      }
-    } catch (error) {
-      console.error('获取收藏状态失败:', error);
-    }
-  };
+
 
   // 处理收藏/取消收藏
   const handleFavorite = async () => {
@@ -60,12 +48,7 @@ const KnowledgeDetailModal = ({
     }
   };
 
-  // 当知识详情变化时获取收藏状态
-  useEffect(() => {
-    if (visible && knowledge?.id) {
-      fetchFavoriteStatus(knowledge.id);
-    }
-  }, [visible, knowledge?.id]);
+
 
   if (!knowledge) return null;
 

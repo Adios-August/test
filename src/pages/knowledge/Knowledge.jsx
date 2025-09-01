@@ -47,7 +47,7 @@ import { knowledgeAPI } from "../../api/knowledge";
 import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
-import { useSearchHistoryStore, useKnowledgeStore } from "../../stores";
+import { useSearchHistoryStore, useKnowledgeStore, useAuthStore } from "../../stores";
  
 import "./Knowledge.scss";
 
@@ -62,8 +62,11 @@ const Knowledge = observer(() => {
   const [searchParams] = useSearchParams();
   const searchHistoryStore = useSearchHistoryStore();
   const knowledgeStore = useKnowledgeStore();
+  const authStore = useAuthStore();
   const categoryId = searchParams.get('parent');
   
+  // 获取当前用户ID
+  const currentUserId = authStore.user?.id || authStore.user?.userId;
 
   
   const [searchCurrentPage, setSearchCurrentPage] = useState(1); // 搜索结果分页
@@ -136,7 +139,7 @@ const Knowledge = observer(() => {
       // 准备请求数据
       const requestData = {
         question: question,
-        userId: "user123", // 这里应该从用户状态获取
+        userId: currentUserId, // 从用户状态获取
         sessionId: generateSessionId(),
         knowledgeIds: [], // 搜索时不限制特定知识ID
         stream: true
@@ -347,16 +350,16 @@ const Knowledge = observer(() => {
 
     // 点赞直接提交
     try {
-      const feedbackData = {
-        messageId: `ai_answer_${Date.now()}`, // 生成唯一ID
-        type: type,
-        userId: "user123", // 这里应该从用户状态获取
-        sessionId: `knowledge_page_${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        content: aiAnswer.answer // 保存回答内容用于反馈
-      };
-
-      const response = await feedbackAPI.submitFeedback(feedbackData);
+      // 注意：这里需要knowledgeId，但AI回答可能没有关联的知识ID
+      // 暂时使用一个默认值或者跳过这个操作
+      const knowledgeId = aiAnswer.knowledgeId || 1; // 需要从AI回答中获取关联的知识ID
+      
+      const response = await feedbackAPI.submitFeedback(
+        knowledgeId,
+        aiAnswer.answer, // content
+        type === "like" ? "like" : "dislike", // feedbackType
+        currentUserId
+      );
       
       if (response.code === 200) {
         message.success(`已${type === "like" ? "点赞" : "点踩"}该回答`);
@@ -377,17 +380,16 @@ const Knowledge = observer(() => {
     }
 
     try {
-      const feedbackData = {
-        messageId: `ai_answer_${Date.now()}`,
-        type: "dislike",
-        userId: "user123", // 这里应该从用户状态获取
-        sessionId: `knowledge_page_${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        content: aiAnswer.answer, // 保存回答内容用于反馈
-        feedback: feedbackContent.trim() // 添加用户反馈内容
-      };
-
-      const response = await feedbackAPI.submitFeedback(feedbackData);
+      // 注意：这里需要knowledgeId，但AI回答可能没有关联的知识ID
+      // 暂时使用一个默认值或者跳过这个操作
+      const knowledgeId = aiAnswer?.knowledgeId || 1; // 需要从AI回答中获取关联的知识ID
+      
+      const response = await feedbackAPI.submitFeedback(
+        knowledgeId,
+        feedbackContent.trim(), // content
+        "dislike", // feedbackType
+        currentUserId
+      );
       
       if (response.code === 200) {
         message.success("已提交反馈");
@@ -658,22 +660,7 @@ const Knowledge = observer(() => {
     setShowAISourceModules(!showAISourceModules);
   };
 
-  // 获取收藏状态
-  const fetchFavoriteStatus = async (knowledgeId) => {
-    if (!knowledgeId) return;
-    
-    try {
-      const response = await knowledgeAPI.getFavoriteStatus(knowledgeId);
-      if (response.code === 200) {
-        setFavoriteStates(prev => ({
-          ...prev,
-          [knowledgeId]: response.data?.isFavorited || false
-        }));
-      }
-    } catch (error) {
-      console.error('获取收藏状态失败:', error);
-    }
-  };
+
 
   // 处理收藏/取消收藏
   const handleFavorite = async (knowledgeId, event) => {
@@ -754,14 +741,24 @@ const Knowledge = observer(() => {
   const handleOpenInCurrentPage = (item) => {
     // 使用新的知识详情页面路由
     const categoryParam = categoryId ? `?category=${categoryId}` : '';
-    navigate(`/knowledge-detail/${item.id}${categoryParam}`);
+    const knowledgeId = item.id || item.knowledgeId;
+    if (knowledgeId) {
+      navigate(`/knowledge-detail/${knowledgeId}${categoryParam}`);
+    } else {
+      message.error('知识ID不存在');
+    }
   };
 
   // 在新页面打开知识详情
   const handleOpenInNewPage = (item) => {
     const categoryParam = categoryId ? `?category=${categoryId}` : '';
-    const url = `/knowledge-detail/${item.id}${categoryParam}`;
-    window.open(url, '_blank');
+    const knowledgeId = item.id || item.knowledgeId;
+    if (knowledgeId) {
+      const url = `/knowledge-detail/${knowledgeId}${categoryParam}`;
+      window.open(url, '_blank');
+    } else {
+      message.error('知识ID不存在');
+    }
   };
 
 

@@ -41,6 +41,7 @@ import StreamingMarkdownRenderer from "../../components/StreamingMarkdownRendere
 import PdfPreview from "../../components/PdfPreview";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
+import { useAuthStore } from "../../stores";
 import "./KnowledgeQA.scss";
 
 const { Sider, Content } = Layout;
@@ -52,6 +53,10 @@ const { Title } = Typography;
 const KnowledgeQA = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const authStore = useAuthStore();
+  
+  // 获取当前用户ID
+  const currentUserId = authStore.user?.id || authStore.user?.userId;
 
   // 从路由状态获取传递的问题
   const initialQuestion = location.state?.question || "易方达增强回报基金选择理由";
@@ -98,7 +103,7 @@ const KnowledgeQA = () => {
     // 初始化加载历史会话
     (async () => {
       try {
-        const res = await chatAPI.getSessions("user123");
+        const res = await chatAPI.getSessions(currentUserId);
         if (res?.code === 200 && Array.isArray(res.data)) {
           const list = res.data.map((s, idx) => ({
             id: s.sessionId || idx + 1,
@@ -119,7 +124,7 @@ const KnowledgeQA = () => {
 
       return () => clearTimeout(timer);
     }
-  }, [initialQuestion]);
+  }, [initialQuestion, currentUserId]);
 
   // 参考资料数据
   const referenceData = [
@@ -198,7 +203,7 @@ const KnowledgeQA = () => {
       // 准备请求数据
       const requestData = {
         question: userQuestion,
-        userId: "user123", // 这里应该从用户状态获取
+        userId: currentUserId, // 从用户状态获取
         sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         knowledgeIds: [], // 这里可以从store获取知识ID列表
         stream: true,
@@ -513,15 +518,16 @@ const KnowledgeQA = () => {
 
     // 点赞直接提交
     try {
-      const feedbackData = {
-        messageId: messageId,
-        type: type,
-        userId: "user123", // 这里应该从用户状态获取
-        sessionId: `session_${currentConversation}`,
-        timestamp: new Date().toISOString(),
-      };
-
-      const response = await feedbackAPI.submitFeedback(feedbackData);
+      // 注意：这里需要knowledgeId，但AI回答可能没有关联的知识ID
+      // 暂时使用一个默认值或者跳过这个操作
+      const knowledgeId = 1; // 需要从AI回答中获取关联的知识ID
+      
+      const response = await feedbackAPI.submitFeedback(
+        knowledgeId,
+        "", // content - 点赞时可能不需要内容
+        type === "like" ? "like" : "dislike", // feedbackType
+        currentUserId
+      );
 
       if (response.code === 200) {
         message.success(`已${type === "like" ? "点赞" : "点踩"}该回答`);
@@ -542,16 +548,16 @@ const KnowledgeQA = () => {
     }
 
     try {
-      const feedbackData = {
-        messageId: currentMessageId,
-        type: "dislike",
-        userId: "user123", // 这里应该从用户状态获取
-        sessionId: `session_${currentConversation}`,
-        timestamp: new Date().toISOString(),
-        content: feedbackContent.trim(), // 添加反馈内容
-      };
-
-      const response = await feedbackAPI.submitFeedback(feedbackData);
+      // 注意：这里需要knowledgeId，但AI回答可能没有关联的知识ID
+      // 暂时使用一个默认值或者跳过这个操作
+      const knowledgeId = 1; // 需要从AI回答中获取关联的知识ID
+      
+      const response = await feedbackAPI.submitFeedback(
+        knowledgeId,
+        feedbackContent.trim(), // content
+        "dislike", // feedbackType
+        currentUserId
+      );
 
       if (response.code === 200) {
         message.success("已提交反馈");

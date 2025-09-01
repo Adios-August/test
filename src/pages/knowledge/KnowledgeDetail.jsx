@@ -3,13 +3,16 @@ import { Layout, Tabs, Button, Avatar, Space, List, Card, Input, message, Spin, 
 import {
   HeartOutlined, HeartFilled, HistoryOutlined, TranslationOutlined, FilePdfOutlined, FileExcelOutlined,
   CloseOutlined, ArrowLeftOutlined, LeftOutlined, RightOutlined, SearchOutlined, TagOutlined,
-  SendOutlined, MailOutlined, ArrowRightOutlined, UserOutlined,
+  SendOutlined, ArrowRightOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
 import PdfPreview from '../../components/PdfPreview';
+import FeedbackMailButton from '../../components/FeedbackMailButton';
 import { knowledgeAPI } from '../../api/knowledge';
-import { useKnowledgeStore } from '../../stores';
+import { feedbackAPI } from '../../api/feedback';
+import { useKnowledgeStore, useAuthStore } from '../../stores';
+import { useFeedbackTypes } from '../../hooks/useFeedbackTypes';
 import './KnowledgeDetail.scss';
 
 const { Content } = Layout;
@@ -33,8 +36,18 @@ const KnowledgeDetail = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   
-  // 获取knowledgeStore
+  // 获取knowledgeStore和authStore
   const knowledgeStore = useKnowledgeStore();
+  const authStore = useAuthStore();
+  const currentUserId = authStore.user?.id || authStore.user?.userId;
+  
+  // 获取反馈类型
+  const { feedbackTypes, loading: feedbackTypesLoading } = useFeedbackTypes();
+
+  // Feedback状态
+  const [selectedFeedbackType, setSelectedFeedbackType] = useState('');
+  const [feedbackContent, setFeedbackContent] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
   // 获取知识详情
   const fetchKnowledgeDetail = async (knowledgeId) => {
@@ -65,20 +78,6 @@ const KnowledgeDetail = () => {
       message.error('获取知识详情失败，请稍后重试');
     } finally {
       setLoading(false);
-    }
-  };
-
-  // 获取收藏状态
-  const fetchFavoriteStatus = async (knowledgeId) => {
-    if (!knowledgeId) return;
-    
-    try {
-      const response = await knowledgeAPI.getFavoriteStatus(knowledgeId);
-      if (response.code === 200) {
-        setIsFavorited(response.data?.isFavorited || false);
-      }
-    } catch (error) {
-      console.error('获取收藏状态失败:', error);
     }
   };
 
@@ -115,11 +114,57 @@ const KnowledgeDetail = () => {
     }
   };
 
-  // 组件挂载时获取知识详情和收藏状态
+  // 处理feedback提交
+  const handleSubmitFeedback = async () => {
+    if (!knowledgeDetail?.id) {
+      message.error('知识详情不存在');
+      return;
+    }
+
+    if (!selectedFeedbackType) {
+      message.warning('请选择反馈类型');
+      return;
+    }
+
+    if (!feedbackContent.trim()) {
+      message.warning('请输入反馈内容');
+      return;
+    }
+
+    if (!currentUserId) {
+      message.error('请先登录');
+      return;
+    }
+
+    setFeedbackSubmitting(true);
+    try {
+      const response = await feedbackAPI.submitFeedback(
+        knowledgeDetail.id,
+        feedbackContent.trim(),
+        selectedFeedbackType,
+        currentUserId
+      );
+
+      if (response.code === 200) {
+        message.success('反馈提交成功');
+        // 清空表单
+        setSelectedFeedbackType('');
+        setFeedbackContent('');
+      } else {
+        message.error(response.message || '提交失败，请重试');
+      }
+    } catch (error) {
+      console.error('提交反馈失败:', error);
+      message.error('提交失败，请重试');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
+  // 组件挂载时获取知识详情
   useEffect(() => {
     if (id) {
       fetchKnowledgeDetail(id);
-      fetchFavoriteStatus(id);
     }
   }, [id]);
 
@@ -470,27 +515,37 @@ const KnowledgeDetail = () => {
                             <span>生效时间: {tab.content?.effectiveStartTime || tab.content?.effectiveDate || '未知'}</span>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="feedback-section">
-                        <div className="feedback-header">
-                          <h3>Feedback</h3>
-                          <div className="feedback-controls">
-                            <Select
-                              placeholder="选择反馈..."
-                              style={{ width: 120 }}
-                              options={[
-                                { value: 'out_of_date', label: 'Out of date' },
-                                { value: 'unclear', label: 'Unclear' },
-                                { value: 'not_relevant', label: 'Not relevant' }
-                              ]}
-                            />
-                            <Input
-                              placeholder="请输入反馈内容"
-                              style={{ width: 300 }}
-                            />
-                            <Button type="text" icon={<SendOutlined />} />
-                            <Button type="text" icon={<MailOutlined />} />
+                        <div className="feedback-section">
+                          <div className="feedback-header">
+                            <h3>Feedback</h3>
+                            <div className="feedback-controls">
+                              <Select
+                                placeholder="选择反馈..."
+                                style={{ width: 120 }}
+                                options={feedbackTypes}
+                                loading={feedbackTypesLoading}
+                                value={selectedFeedbackType}
+                                onChange={setSelectedFeedbackType}
+                              />
+                              <Input
+                                placeholder="请输入反馈内容"
+                                style={{ width: 300 }}
+                                value={feedbackContent}
+                                onChange={(e) => setFeedbackContent(e.target.value)}
+                                onPressEnter={handleSubmitFeedback}
+                              />
+                              <Button 
+                                type="primary" 
+                                icon={<SendOutlined />} 
+                                onClick={handleSubmitFeedback}
+                                loading={feedbackSubmitting}
+                                disabled={!selectedFeedbackType || !feedbackContent.trim() || !currentUserId}
+                              >
+                                提交反馈
+                              </Button>
+                              <FeedbackMailButton knowledgeDetail={tab.content} />
+                            </div>
                           </div>
                         </div>
                       </div>

@@ -1,14 +1,82 @@
-import React from 'react';
-import { Button, Avatar, Select, Input } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Button, Avatar, Select, Input, message, Tooltip } from 'antd';
 import {
-  HeartOutlined, FilePdfOutlined, FileExcelOutlined, TagOutlined,
-  SendOutlined, MailOutlined, UserOutlined, ArrowLeftOutlined,
+  FilePdfOutlined, FileExcelOutlined, TagOutlined,
+  SendOutlined, UserOutlined, ArrowLeftOutlined,
 } from '@ant-design/icons';
+import { knowledgeAPI } from '../api/knowledge';
+import { useFeedbackTypes } from '../hooks/useFeedbackTypes';
+import { feedbackAPI } from '../api/feedback';
+import FeedbackMailButton from './FeedbackMailButton';
+import FavoriteButton from './FavoriteButton';
+import { useAuthStore } from '../stores';
 
 import PdfPreview from './PdfPreview';
 import './KnowledgeDetailContent.scss';
 
 const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
+  const { feedbackTypes, loading: feedbackTypesLoading } = useFeedbackTypes();
+  const authStore = useAuthStore();
+  const currentUserId = authStore.user?.id || authStore.user?.userId;
+  
+  // Feedback状态
+  const [selectedFeedbackType, setSelectedFeedbackType] = useState('');
+  const [feedbackContent, setFeedbackContent] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+
+  // 处理收藏状态变化
+  const handleFavoriteStatusChange = (isFavorited) => {
+    // 可以在这里处理收藏状态变化的回调
+    console.log('收藏状态变化:', isFavorited);
+  };
+
+  // 处理feedback提交
+  const handleSubmitFeedback = async () => {
+    if (!knowledgeDetail?.id) {
+      message.error('知识详情不存在');
+      return;
+    }
+
+    if (!selectedFeedbackType) {
+      message.warning('请选择反馈类型');
+      return;
+    }
+
+    if (!feedbackContent.trim()) {
+      message.warning('请输入反馈内容');
+      return;
+    }
+
+    if (!currentUserId) {
+      message.error('请先登录');
+      return;
+    }
+
+    setFeedbackSubmitting(true);
+    try {
+      const response = await feedbackAPI.submitFeedback(
+        knowledgeDetail.id,
+        feedbackContent.trim(),
+        selectedFeedbackType,
+        currentUserId
+      );
+
+      if (response.code === 200) {
+        message.success('反馈提交成功');
+        // 清空表单
+        setSelectedFeedbackType('');
+        setFeedbackContent('');
+      } else {
+        message.error(response.message || '提交失败，请重试');
+      }
+    } catch (error) {
+      console.error('提交反馈失败:', error);
+      message.error('提交失败，请重试');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="knowledge-detail-content">
@@ -40,10 +108,9 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
               <Avatar size="small" icon={<UserOutlined />} />
               <span className="author-name">{knowledgeDetail.createdBy || knowledgeDetail.author || '未知作者'}</span>
               <span className="date">{knowledgeDetail.createdTime || knowledgeDetail.date || '未知日期'}</span>
-              <Button 
-                type="text" 
-                icon={<HeartOutlined />} 
-                size="large"
+              <FavoriteButton 
+                knowledgeId={knowledgeDetail.id}
+                onStatusChange={handleFavoriteStatusChange}
                 style={{ marginLeft: '16px', fontSize: '16px' }}
               />
             </div>
@@ -95,15 +162,13 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
                     <Button type="text" size="small">下载</Button>
                   </div>
                   
-
-                  
                   {/* PDF预览组件 - 直接嵌入到附件项中 */}
                   {(attachment.fileType === 'pdf' || 
                     attachment.fileType === 'application/pdf' ||
                     (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
                     (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
                     <div className="pdf-preview-embedded">
-                      <h4>PDF预览 - {attachment.fileName || attachment.name}</h4>
+                      
                       <PdfPreview 
                         fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
                         pageNum={1}
@@ -140,18 +205,26 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
               <Select
                 placeholder="选择反馈..."
                 style={{ width: 120 }}
-                options={[
-                  { value: 'out_of_date', label: 'Out of date' },
-                  { value: 'unclear', label: 'Unclear' },
-                  { value: 'not_relevant', label: 'Not relevant' }
-                ]}
+                options={feedbackTypes}
+                loading={feedbackTypesLoading}
+                value={selectedFeedbackType}
+                onChange={setSelectedFeedbackType}
               />
               <Input
                 placeholder="请输入反馈内容"
                 style={{ width: 300 }}
+                value={feedbackContent}
+                onChange={(e) => setFeedbackContent(e.target.value)}
+                onPressEnter={handleSubmitFeedback}
               />
-              <Button type="text" icon={<SendOutlined />} />
-              <Button type="text" icon={<MailOutlined />} />
+              <Button 
+                type="text" 
+                icon={<SendOutlined />} 
+                onClick={handleSubmitFeedback}
+                loading={feedbackSubmitting}
+                disabled={!selectedFeedbackType || !feedbackContent.trim()}
+              />
+              <FeedbackMailButton knowledgeDetail={knowledgeDetail} />
             </div>
           </div>
         </div>

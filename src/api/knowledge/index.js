@@ -67,17 +67,12 @@ export const knowledgeAPI = {
 
   // 取消收藏知识
   unfavoriteKnowledge: (knowledgeId) => {
-    return http.delete(`/api/engagement/favorite/${knowledgeId}`);
-  },
-
-  // 获取收藏状态
-  getFavoriteStatus: (knowledgeId) => {
-    return http.get(`/api/engagement/favorite/${knowledgeId}`);
+    return http.delete(`/engagement/favorite/${knowledgeId}`);
   },
 
   // 获取收藏列表
   getFavorites: (params) => {
-    return http.get("/api/engagement/favorites", params);
+    return http.get("/engagement/favorites", params);
   },
 };
 

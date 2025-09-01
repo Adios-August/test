@@ -6,6 +6,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  max-width: 100%;
 
   .loading-container {
     display: flex;
@@ -57,34 +58,39 @@
   .document-detail {
     background: white;
     border-radius: 12px;
-    padding: 24px;
+    padding: 16px;
+    padding-bottom: 0;
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     position: relative;
+    max-width: 100%;
 
-    .document-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid #f0f0f0;
+          .document-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f0f0f0;
 
       .header-left {
         .author-info {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
           margin-bottom: 8px;
+          flex-wrap: wrap;
 
           .author-name {
             font-weight: 500;
             color: #333;
+            font-size: 13px;
           }
 
           .date {
             color: #666;
-            font-size: 14px;
+            font-size: 12px;
           }
 
           .ant-btn {
@@ -99,28 +105,29 @@
 
         .tags {
           display: flex;
-          gap: 8px;
+          gap: 6px;
           flex-wrap: wrap;
           
           .custom-tag {
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 12px;
+            gap: 3px;
+            font-size: 11px;
             color: #666;
             
             .tag-icon {
-              font-size: 12px;
+              font-size: 11px;
               display: flex;
               align-items: center;
               
               .anticon {
-                font-size: 12px;
+                font-size: 11px;
               }
             }
             
             .tag-text {
               font-weight: 500;
+              font-size: 11px;
             }
           }
         }
@@ -128,22 +135,22 @@
     }
 
     .document-content {
-      margin-bottom: 100px; /* 为Feedback部分留出空间 */
 
       .content-section {
-        margin-bottom: 20px;
+        margin-bottom: 16px;
 
         h3 {
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 600;
           color: #333;
-          margin-bottom: 12px;
+          margin-bottom: 10px;
         }
 
         p {
           color: #666;
-          line-height: 1.6;
-          margin-bottom: 12px;
+          line-height: 1.5;
+          margin-bottom: 10px;
+          font-size: 13px;
         }
 
         .attachment-list {
@@ -156,12 +163,15 @@
             border-radius: 6px;
             margin-bottom: 12px;
             background: #fafafa;
+            max-width: 100%;
+            overflow: hidden;
 
             .attachment-header {
               display: flex;
               align-items: center;
-              gap: 8px;
+              gap: 6px;
               width: 100%;
+              flex-wrap: wrap;
 
               .attachment-icon {
                 color: var(--ant-primary-color);
@@ -169,18 +179,21 @@
 
               .attachment-name {
                 flex: 1;
-                font-size: 14px;
+                font-size: 13px;
                 color: #333;
+                min-width: 0;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
               }
 
               .attachment-size {
                 color: #666;
-                font-size: 12px;
+                font-size: 11px;
               }
 
               .attachment-downloads {
                 color: #666;
-                font-size: 12px;
+                font-size: 11px;
               }
             }
 
@@ -190,6 +203,8 @@
               border-top: 1px solid #e8e8e8;
               padding-top: 12px;
               width: 100%;
+              max-width: 100%;
+              overflow: hidden;
 
               // 自定义PDF预览组件样式
               .pdf-preview {
@@ -197,6 +212,8 @@
                 border-radius: 6px;
                 overflow: hidden;
                 background: white;
+                max-width: 100%;
+                width: 100%;
 
                 button {
                   background: #f5f5f5;
@@ -292,62 +309,138 @@
   
   span {
     color: #666;
-    font-size: 14px;
+    font-size: 12px;
   }
 }
 
-// 反馈部分样式
-.feedback-section {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: white;
-  border-top: 1px solid #f0f0f0;
-  padding: 16px 24px;
-  z-index: 10;
-
-  .feedback-header {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    h3 {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 600;
-      color: #333;
-    }
-
-    .feedback-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: nowrap;
-
-      .ant-select {
-        flex-shrink: 0;
-        &:hover .ant-select-selector {
-          border-color: var(--ant-primary-color);
-        }
-      }
-
-      .ant-input {
-        flex: 1;
-        min-width: 200px;
-      }
-
-      .ant-btn {
-        color: #666;
-        flex-shrink: 0;
+// 响应式设计
+@media (max-width: 1000px) {
+  .source-expanded-detail {
+    .document-detail {
+      padding: 12px;
+      
+      .document-header {
+        margin-bottom: 12px;
+        padding-bottom: 8px;
         
-        &:hover {
-          color: var(--ant-primary-color);
+        .header-left {
+          .author-info {
+            gap: 4px;
+            
+            .author-name {
+              font-size: 12px;
+            }
+            
+            .date {
+              font-size: 11px;
+            }
+          }
+          
+          .tags {
+            gap: 4px;
+            
+            .custom-tag {
+              font-size: 10px;
+              
+              .tag-icon {
+                font-size: 10px;
+                
+                .anticon {
+                  font-size: 10px;
+                }
+              }
+              
+              .tag-text {
+                font-size: 10px;
+              }
+            }
+          }
+        }
+      }
+      
+      .document-content {
+        .content-section {
+          margin-bottom: 12px;
+          
+          h3 {
+            font-size: 13px;
+            margin-bottom: 8px;
+          }
+          
+          p {
+            font-size: 12px;
+            margin-bottom: 8px;
+          }
         }
       }
     }
   }
 }
+
+@media (max-width: 768px) {
+  .source-expanded-detail {
+    .document-detail {
+      padding: 10px;
+      
+      .document-header {
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+        
+        .header-left {
+          .author-info {
+            gap: 3px;
+            
+            .author-name {
+              font-size: 11px;
+            }
+            
+            .date {
+              font-size: 10px;
+            }
+          }
+          
+          .tags {
+            gap: 3px;
+            
+            .custom-tag {
+              font-size: 9px;
+              
+              .tag-icon {
+                font-size: 9px;
+                
+                .anticon {
+                  font-size: 9px;
+                }
+              }
+              
+              .tag-text {
+                font-size: 9px;
+              }
+            }
+          }
+        }
+      }
+      
+      .document-content {
+        .content-section {
+          margin-bottom: 10px;
+          
+          h3 {
+            font-size: 12px;
+            margin-bottom: 6px;
+          }
+          
+          p {
+            font-size: 11px;
+            margin-bottom: 6px;
+          }
+        }
+      }
+    }
+  }
+}
+
+
 
 // 加载动画
 @keyframes spin {
@@ -360,14 +453,6 @@
   .source-expanded-detail {
     .document-detail {
       padding: 16px;
-      
-      .document-content {
-        margin-bottom: 80px;
-      }
-    }
-    
-    .feedback-section {
-      padding: 12px 16px;
     }
   }
 } 

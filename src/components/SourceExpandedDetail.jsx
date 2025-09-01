@@ -1,14 +1,22 @@
-import React from 'react';
-import { Button, Avatar, Select, Input } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Button, Avatar, message, Tooltip } from 'antd';
 import {
-  HeartOutlined, FilePdfOutlined, FileExcelOutlined, TagOutlined,
-  SendOutlined, MailOutlined, UserOutlined,
+  FilePdfOutlined, FileExcelOutlined, TagOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
+import { knowledgeAPI } from '../api/knowledge';
+import FavoriteButton from './FavoriteButton';
 
 import PdfPreview from './PdfPreview';
 import './SourceExpandedDetail.scss';
 
 const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
+  // 处理收藏状态变化
+  const handleFavoriteStatusChange = (isFavorited) => {
+    // 可以在这里处理收藏状态变化的回调
+    console.log('收藏状态变化:', isFavorited);
+  };
+
   if (loading) {
     return (
       <div className="source-expanded-detail">
@@ -40,10 +48,9 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
               <Avatar size="small" icon={<UserOutlined />} />
               <span className="author-name">{knowledgeDetail.createdBy || knowledgeDetail.author || '未知作者'}</span>
               <span className="date">{knowledgeDetail.createdTime || knowledgeDetail.date || '未知日期'}</span>
-              <Button 
-                type="text" 
-                icon={<HeartOutlined />} 
-                size="large"
+              <FavoriteButton 
+                knowledgeId={knowledgeDetail.id}
+                onStatusChange={handleFavoriteStatusChange}
                 style={{ marginLeft: '16px', fontSize: '16px' }}
               />
             </div>
@@ -117,29 +124,6 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
           <div className="content-section">
             <div className="effective-date">
               <span>生效时间: {knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate || '未知'}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="feedback-section">
-          <div className="feedback-header">
-            <h3>Feedback</h3>
-            <div className="feedback-controls">
-              <Select
-                placeholder="选择反馈..."
-                style={{ width: 120 }}
-                options={[
-                  { value: 'out_of_date', label: 'Out of date' },
-                  { value: 'unclear', label: 'Unclear' },
-                  { value: 'not_relevant', label: 'Not relevant' }
-                ]}
-              />
-              <Input
-                placeholder="请输入反馈内容"
-                style={{ width: 300 }}
-              />
-              <Button type="text" icon={<SendOutlined />} />
-              <Button type="text" icon={<MailOutlined />} />
             </div>
           </div>
         </div>
