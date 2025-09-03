@@ -325,13 +325,9 @@ const Knowledge = observer(() => {
 
     // 延迟跳转，让用户看到loading效果
     setTimeout(() => {
-      // 跳转到问答页面，并传递问题内容
-      navigate("/knowledge-qa", {
-        state: {
-          question: questionInput.trim(),
-          fromPage: "knowledge"
-        }
-      });
+      // 跳转到问答页面，使用URL参数而不是state
+      const encodedQuestion = encodeURIComponent(questionInput.trim());
+      navigate(`/knowledge-qa/${encodedQuestion}/knowledge`, { replace: true });
     }, 500); // 显示500ms的loading效果
   };
 
