@@ -116,7 +116,7 @@ const KnowledgeQA = () => {
 
   // 切换RelatedText展开状态
   const handleToggleRelatedTextExpansion = async (reference) => {
-    const knowledgeId = reference.knowledgeId;
+    const knowledgeId = reference.knowledge_id || reference.knowledgeId;
     const isCurrentlyExpanded = expandedRelatedText[knowledgeId];
     
     if (isCurrentlyExpanded) {
@@ -155,8 +155,9 @@ const KnowledgeQA = () => {
 
   // 在当前页面打开知识详情
   const handleOpenInCurrentPage = (reference) => {
-    if (reference.knowledgeId) {
-      navigate(`/knowledge-detail/${reference.knowledgeId}`);
+    const knowledgeId = reference.knowledge_id || reference.knowledgeId;
+    if (knowledgeId) {
+      navigate(`/knowledge-detail/${knowledgeId}`);
     } else {
       message.error('知识ID不存在');
     }
@@ -164,8 +165,9 @@ const KnowledgeQA = () => {
 
   // 在新页面打开知识详情
   const handleOpenInNewPage = (reference) => {
-    if (reference.knowledgeId) {
-      window.open(`/knowledge-detail/${reference.knowledgeId}`, '_blank');
+    const knowledgeId = reference.knowledge_id || reference.knowledgeId;
+    if (knowledgeId) {
+      window.open(`/knowledge-detail/${knowledgeId}`, '_blank');
     } else {
       message.error('知识ID不存在');
     }
@@ -1571,7 +1573,7 @@ const KnowledgeQA = () => {
                       </Card>
                       
                       {/* 展开的知识详情 */}
-                      {expandedRelatedText[reference.knowledgeId] && (
+                      {expandedRelatedText[reference.knowledge_id || reference.knowledgeId] && (
                         <Card 
                           className="expanded-related-text-detail" 
                           size="small"
@@ -1605,14 +1607,14 @@ const KnowledgeQA = () => {
                           </div>
                           
                           <div className="expanded-detail-content">
-                            {expandedRelatedTextLoading[reference.knowledgeId] ? (
+                            {expandedRelatedTextLoading[reference.knowledge_id || reference.knowledgeId] ? (
                               <div style={{ padding: '16px', textAlign: 'center' }}>
                                 <Spin size="small" />
                                 <p style={{ margin: '8px 0 0 0', color: '#999' }}>加载中...</p>
                               </div>
-                            ) : expandedRelatedTextData[reference.knowledgeId] ? (
+                            ) : expandedRelatedTextData[reference.knowledge_id || reference.knowledgeId] ? (
                               <SourceExpandedDetail 
-                                knowledgeDetail={expandedRelatedTextData[reference.knowledgeId]} 
+                                knowledgeDetail={expandedRelatedTextData[reference.knowledge_id || reference.knowledgeId]} 
                                 loading={false} 
                                 />
                             ) : (
