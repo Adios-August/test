@@ -17,38 +17,17 @@ class AuthStore {
       properties: ["token", "user", "isAuthenticated"],
       storage: window.localStorage,
     });
-
-    // 调试信息：显示初始状态
-    console.log("AuthStore - 构造函数执行");
-
-    // 延迟检查持久化状态（等待makePersistable完成）
-    setTimeout(() => {
-      console.log("AuthStore - 持久化状态检查:", {
-        token: this.token,
-        user: this.user,
-        isAuthenticated: this.isAuthenticated,
-        localStorage: {
-          token: localStorage.getItem("authStore_token"),
-          user: localStorage.getItem("authStore_user"),
-          isAuthenticated: localStorage.getItem("authStore_isAuthenticated"),
-        },
-      });
-    }, 100);
   }
 
   // 设置token
   setToken(token) {
-    console.log("AuthStore - setToken调用:", { oldToken: this.token, newToken: token });
     this.token = token;
     this.isAuthenticated = !!token;
-    console.log("AuthStore - setToken完成:", { token: this.token, isAuthenticated: this.isAuthenticated });
   }
 
   // 设置用户信息
   setUser(user) {
-    console.log("AuthStore - setUser调用:", { oldUser: this.user, newUser: user });
     this.user = user;
-    console.log("AuthStore - setUser完成:", { user: this.user });
   }
 
   // 登录

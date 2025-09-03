@@ -77,10 +77,8 @@ const Favorites = () => {
       cancelText: '取消',
       onOk: async () => {
         try {
-          // 调用取消收藏API
-          console.log(`[Favorites] 开始取消收藏，knowledgeId: ${record.knowledgeId}, userId: ${currentUserId}`);
-          const response = await engagementAPI.removeFavorite(record.knowledgeId, currentUserId);
-          console.log(`[Favorites] 取消收藏接口响应:`, response);
+          // 调用取消收藏API 
+          const response = await engagementAPI.removeFavorite(record.knowledgeId, currentUserId); 
           
           if (response.code === 200) {
             message.success('已取消收藏');

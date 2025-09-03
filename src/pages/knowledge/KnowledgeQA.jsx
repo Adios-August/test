@@ -183,9 +183,7 @@ const KnowledgeQA = () => {
       hasProcessedParams.current = true;
       
       const question = decodeURIComponent(params.question);
-      const fromPage = params.fromPage;
-      
-      console.log('✅ 检测到URL参数，开始处理:', { question, fromPage });
+      const fromPage = params.fromPage; 
       
       // 清空URL参数
       navigate('/knowledge-qa', { replace: true });
@@ -207,8 +205,7 @@ const KnowledgeQA = () => {
           id: s.sessionId,
           title: s.sessionName || '会话',
           isActive: false
-        }));
-        console.log('📥 获取到历史会话:', historicalSessions.length, '个');
+        })); 
         
         // 去重处理 - 基于ID和标题去重
         const uniqueHistoricalSessions = [];
@@ -220,13 +217,10 @@ const KnowledgeQA = () => {
             uniqueHistoricalSessions.push(session);
             seenIds.add(session.id);
             seenTitles.add(session.title);
-          } else {
-            console.log('⚠️ 跳过重复会话:', session.title, session.id);
-          }
+          }  
         }
         
-        historicalSessions = uniqueHistoricalSessions;
-        console.log('🔍 去重后的历史会话:', historicalSessions.length, '个');
+        historicalSessions = uniqueHistoricalSessions; 
       }
       
       // 2. 新增会话
@@ -234,13 +228,9 @@ const KnowledgeQA = () => {
         id: `temp_${Date.now()}`,
         title: question.length > 20 ? question.substring(0, 20) + "..." : question,
         isActive: true
-      };
-      console.log('✅ 创建新会话:', newSession.title);
-      
+      }; 
       // 3. 将新会话和历史会话合并，新会话在前面
-      const allSessions = [newSession, ...historicalSessions];
-      console.log('📊 最终会话列表:', allSessions.length, '个会话');
-      console.log('📋 会话列表:', allSessions.map(s => ({ title: s.title, isActive: s.isActive })));
+      const allSessions = [newSession, ...historicalSessions]; 
       
       setConversations(allSessions);
       setCurrentConversation(newSession.id);
@@ -281,8 +271,7 @@ const KnowledgeQA = () => {
             seenTitles.add(session.title);
           }
         }
-        
-        console.log('📊 去重后的历史会话:', uniqueSessions.length, '个会话');
+         
         setConversations(uniqueSessions);
         
         // 2. 用第一条直接查询详情
@@ -297,8 +286,7 @@ const KnowledgeQA = () => {
           setConversations(sessionsWithActive);
           setCurrentConversation(firstSession.id);
           
-          // 自动加载第一条会话的消息历史
-          console.log('🔄 自动加载第一条会话消息:', firstSession.id);
+          // 自动加载第一条会话的消息历史 
           await handleLoadConversationHistory(firstSession.id);
         }
       }
@@ -455,8 +443,7 @@ const KnowledgeQA = () => {
                 // 更新会话列表中的临时会话ID为真实的sessionId
                 setConversations(prev => {
                   return prev.map(conv => {
-                    if (conv.isActive && conv.id && typeof conv.id === 'string' && conv.id.startsWith('temp_')) {
-                      console.log('🔄 更新临时会话ID:', conv.id, '->', parsed.sessionId);
+                    if (conv.isActive && conv.id && typeof conv.id === 'string' && conv.id.startsWith('temp_')) { 
                       return { ...conv, id: parsed.sessionId };
                     }
                     return conv;
@@ -729,17 +716,14 @@ const KnowledgeQA = () => {
     
     // 如果没有传入customSessionId，但有当前会话，使用当前会话的ID
     if (!sessionIdToUse && currentConversation) {
-      sessionIdToUse = currentConversation;
-      console.log('🔍 使用当前会话ID:', sessionIdToUse);
+      sessionIdToUse = currentConversation; 
     }
     
     // 如果还是没有，使用ref中保存的sessionId
     if (!sessionIdToUse && sessionIdRef.current) {
-      sessionIdToUse = sessionIdRef.current;
-      console.log('🔍 使用ref中的sessionId:', sessionIdToUse);
+      sessionIdToUse = sessionIdRef.current; 
     }
-    
-    console.log('🚀 发送消息，使用sessionId:', sessionIdToUse);
+     
     
     await handleStreamAIRequest(question, sessionIdToUse);
   };
@@ -1506,24 +1490,12 @@ const KnowledgeQA = () => {
               );
             }
             
-            // 调试日志
-            console.log('🔍 RelatedText显示检查:', {
-              currentConversation,
-              messagesCount: messages.length,
-              targetMessage: targetMessage ? {
-                id: targetMessage.id,
-                type: targetMessage.type,
-                referencesCount: targetMessage.references?.length
-              } : null
-            });
+           
+          
             
             // 如果没有找到目标消息，则不显示侧边栏
             if (!targetMessage || !targetMessage.references || targetMessage.references.length === 0) {
-              console.log('⚠️ RelatedText不显示:', {
-                hasTargetMessage: !!targetMessage,
-                hasReferences: !!targetMessage?.references,
-                referencesLength: targetMessage?.references?.length
-              });
+              
               return null;
             }
             

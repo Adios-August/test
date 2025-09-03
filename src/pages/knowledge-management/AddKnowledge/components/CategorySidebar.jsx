@@ -30,8 +30,7 @@ const CategorySidebar = ({
       onCategoryChange?.(parentIdNum);
       onLeafNodeCheck?.(isLeafNode(parentIdNum));
       onFolderNodeCheck?.(isFolderNode(parentIdNum));
-      
-      console.log('从URL参数自动选中分类:', { parentId: parentIdNum, nodeType });
+       
     }
   }, [searchParams, selectedCategory, categoryTree, onCategoryChange, onLeafNodeCheck, onFolderNodeCheck, isLeafNode, isFolderNode]);
 

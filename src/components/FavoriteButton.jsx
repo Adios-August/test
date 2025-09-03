@@ -62,9 +62,9 @@ const FavoriteButton = ({
     
     setStatusLoading(true);
     try {
-      console.log(`[FavoriteButton] 开始获取收藏状态，knowledgeId: ${knowledgeId}`);
+     
       const response = await engagementAPI.getFavoriteStatus(knowledgeId);
-      console.log(`[FavoriteButton] 状态接口响应:`, response);
+      
       
       if (response.code === 200) {
         // 根据实际API响应结构获取数据
@@ -72,11 +72,7 @@ const FavoriteButton = ({
         // 注意：API响应中没有favoriteCount字段，这里设置为1或0
         const count = response.data?.isFavorited ? 1 : 0;
         
-        console.log(`[FavoriteButton] 解析后的状态:`, {
-          favoriteStatus,
-          count,
-          rawData: response.data
-        });
+     
         
         setIsFavorited(favoriteStatus);
         setFavoriteCount(count);
@@ -108,17 +104,16 @@ const FavoriteButton = ({
     try {
       if (isFavorited) {
         // 取消收藏
-        console.log(`[FavoriteButton] 开始取消收藏，knowledgeId: ${knowledgeId}, userId: ${currentUserId}`);
+        
         const response = await engagementAPI.removeFavorite(knowledgeId, currentUserId);
-        console.log(`[FavoriteButton] 取消收藏接口响应:`, response);
+      
         
         if (response.code === 200) {
           message.success('已取消收藏');
-          console.log(`[FavoriteButton] 取消收藏成功，等待重新获取状态...`);
+         
           
           // 取消收藏后，延迟一段时间再获取状态，以防后端状态同步需要时间
-          setTimeout(async () => {
-            console.log(`[FavoriteButton] 延迟后重新获取状态...`);
+          setTimeout(async () => { 
             await fetchFavoriteStatus();
           }, 500); // 延迟500ms
           
@@ -126,14 +121,11 @@ const FavoriteButton = ({
           message.error(response.message || '取消收藏失败');
         }
       } else {
-        // 添加收藏
-        console.log(`[FavoriteButton] 开始添加收藏，knowledgeId: ${knowledgeId}, userId: ${currentUserId}`);
-        const response = await engagementAPI.addFavorite(knowledgeId, currentUserId);
-        console.log(`[FavoriteButton] 添加收藏接口响应:`, response);
+        // 添加收藏 
+        const response = await engagementAPI.addFavorite(knowledgeId, currentUserId); 
         
         if (response.code === 200) {
-          message.success('已添加到收藏');
-          console.log(`[FavoriteButton] 添加收藏成功，等待重新获取状态...`);
+          message.success('已添加到收藏'); 
           // 操作成功后重新获取状态，确保按钮显示正确
           await fetchFavoriteStatus();
         } else {

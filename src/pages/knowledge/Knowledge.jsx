@@ -198,8 +198,7 @@ const Knowledge = observer(() => {
   };
 
   // 处理流式AI响应
-  const handleStreamResponse = async (requestData) => {
-    console.log('开始流式请求:', requestData);
+  const handleStreamResponse = async (requestData) => { 
     const response = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: {
@@ -209,8 +208,7 @@ const Knowledge = observer(() => {
       body: JSON.stringify(requestData)
     });
 
-    if (response.ok) {
-      console.log('流式响应开始');
+    if (response.ok) { 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let answer = '';
@@ -235,8 +233,7 @@ const Knowledge = observer(() => {
 
           if (line.startsWith('event: ')) {
             currentEvent = line.slice(7);
-            currentData = ''; // 重置数据
-            console.log('收到事件:', currentEvent);
+            currentData = ''; // 重置数据 
           } else if (line.startsWith('data: ')) {
             currentData = line.slice(6);
 
@@ -245,12 +242,10 @@ const Knowledge = observer(() => {
               const parsed = JSON.parse(currentData);
 
               // 根据事件类型处理数据
-              if (currentEvent === 'start') {
-                console.log('RAG对话开始:', parsed.message);
+              if (currentEvent === 'start') { 
               } else if (currentEvent === 'message') {
                 if (parsed.content) {
-                  answer += parsed.content;
-                  console.log('收到AI回答内容:', parsed.content);
+                  answer += parsed.content; 
                   setAiAnswer({
                     answer: answer,
                     references: references,
@@ -279,11 +274,9 @@ const Knowledge = observer(() => {
                   charStart: ref.char_start,
                   charEnd: ref.char_end
                 }));
-                references = formattedReferences;
-                console.log('收到引用:', formattedReferences.length, '个');
+                references = formattedReferences; 
                 setReferences(formattedReferences);
-              } else if (currentEvent === 'end') {
-                console.log('RAG对话完成:', parsed.message);
+              } else if (currentEvent === 'end') { 
                 if (parsed.sessionId) {
                   window.__ragSessionId = parsed.sessionId;
                 }
@@ -295,11 +288,7 @@ const Knowledge = observer(() => {
                 return true;
               }
             } catch (e) {
-              // 如果是JSON解析错误，可能是数据不完整，继续等待
-              // 只有在数据看起来完整时才记录错误
-              if (currentData.length > 10 && !currentData.includes('"')) {
-                console.log('解析SSE数据失败，跳过此数据块:', e.message);
-              }
+               
             }
           }
         }
@@ -589,8 +578,7 @@ const Knowledge = observer(() => {
               attachments: ref.attachments,
               sourceFile: ref.sourceFile || ref.attachments?.[0] || '未知文件'
             }));
-            setReferences(formattedReferences);
-            console.log('从搜索API设置引用:', formattedReferences.length, '个');
+            setReferences(formattedReferences); 
             // 设置引用数据后立即清除Sources loading状态
             setSourcesLoading(false);
           }
@@ -602,8 +590,7 @@ const Knowledge = observer(() => {
           setAiLoading(false);
           setSourcesLoading(false);
         }
-
-        console.log('搜索API响应:', response.data);
+ 
 
       } else {
         message.error(response.message || '获取知识列表失败');
@@ -622,8 +609,7 @@ const Knowledge = observer(() => {
   }, []); // 移除所有依赖项，避免无限循环
 
   // 处理搜索
-  const handleSearch = (value) => {
-    console.log('🔍 handleSearch 被调用:', { value, timestamp: Date.now() });
+  const handleSearch = (value) => { 
 
     setSearchValue(value);
     // 清空之前的搜索结果
@@ -636,13 +622,11 @@ const Knowledge = observer(() => {
       setCurrentCategoryId(1);
       setIsCategorySearchMode(true); // 进入搜索模式
       fetchSearchResults(value.trim(), 1, 10);
-      // 搜索时显示AI和source模块
-      console.log('🔓 设置AI模块显示为true');
+      // 搜索时显示AI和source模块 
       setShowAISourceModules(true);
       shouldKeepAIModule.current = true; // 设置为true，表示需要保持AI模块显示
     } else {
-      // 如果搜索框为空，隐藏AI和source模块
-      console.log('🔒 设置AI模块显示为false');
+      // 如果搜索框为空，隐藏AI和source模块 
       setShowAISourceModules(false);
       setIsCategorySearchMode(false);
       setSearchResults([]);
@@ -683,21 +667,14 @@ const Knowledge = observer(() => {
 
   // 组件初始化时清空搜索结果
   useEffect(() => {
-    console.log('🔄 组件初始化 useEffect 执行:', { 
-      hasSearchKeyword: !!location.state?.searchKeyword,
-      searchKeyword: location.state?.searchKeyword,
-      shouldKeepAI: shouldKeepAIModule.current
-    });
+    
     setSearchResults([]);
     setSearchValue('');
     setCurrentCategoryId(null);
-    // 只有在没有从首页跳转且不需要保持AI模块时才隐藏AI和source模块
-    if (!location.state?.searchKeyword && !shouldKeepAIModule.current) {
-      console.log('🔒 隐藏AI模块（没有搜索关键词且不需要保持）');
+    
+    if (!location.state?.searchKeyword && !shouldKeepAIModule.current) { 
       setShowAISourceModules(false);
-    } else {
-      console.log('🔓 保持AI模块显示（有搜索关键词或需要保持）');
-    }
+    }  
   }, [location.state?.searchKeyword]);
 
   // 处理侧边栏分类点击（不依赖URL参数变化）
@@ -717,15 +694,10 @@ const Knowledge = observer(() => {
 
   // 处理从首页传递的搜索关键词
   useEffect(() => {
-    console.log('🔄 从首页跳转 useEffect 执行:', { 
-      hasSearchKeyword: !!location.state?.searchKeyword,
-      searchKeyword: location.state?.searchKeyword,
-      hasSearched: hasSearchedFromHome.current
-    });
+    
     
     if (location.state?.searchKeyword && !hasSearchedFromHome.current) {
-      const keyword = location.state.searchKeyword;
-      console.log('🔍 开始处理首页搜索:', keyword);
+      const keyword = location.state.searchKeyword; 
       hasSearchedFromHome.current = true;
       setSearchValue(keyword);
       // 自动触发搜索（handleSearch现在会自动设置showAISourceModules为true）

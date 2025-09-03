@@ -118,17 +118,12 @@ const KnowledgeDetail = () => {
     if (!knowledgeId) return;
     
     setFavoriteStatusLoading(true);
-    try {
-      console.log(`[KnowledgeDetail] 开始获取收藏状态，knowledgeId: ${knowledgeId}`);
-      const response = await engagementAPI.getFavoriteStatus(knowledgeId);
-      console.log(`[KnowledgeDetail] 状态接口响应:`, response);
+    try { 
+      const response = await engagementAPI.getFavoriteStatus(knowledgeId); 
       
       if (response.code === 200) {
         const favoriteStatus = response.data?.isFavorited || false;
-        console.log(`[KnowledgeDetail] 解析后的状态:`, {
-          favoriteStatus,
-          rawData: response.data
-        });
+       
         
         setIsFavorited(favoriteStatus);
       } else {
@@ -154,18 +149,14 @@ const KnowledgeDetail = () => {
     setFavoriteLoading(true);
     try {
       if (isFavorited) {
-        // 取消收藏
-        console.log(`[KnowledgeDetail] 开始取消收藏，knowledgeId: ${id}, userId: ${currentUserId}`);
-        const response = await engagementAPI.removeFavorite(id, currentUserId);
-        console.log(`[KnowledgeDetail] 取消收藏接口响应:`, response);
+        // 取消收藏 
+        const response = await engagementAPI.removeFavorite(id, currentUserId); 
         
         if (response.code === 200) {
-          message.success('已取消收藏');
-          console.log(`[KnowledgeDetail] 取消收藏成功，等待重新获取状态...`);
+          message.success('已取消收藏'); 
           
           // 取消收藏后，延迟一段时间再获取状态，以防后端状态同步需要时间
-          setTimeout(async () => {
-            console.log(`[KnowledgeDetail] 延迟后重新获取状态...`);
+          setTimeout(async () => { 
             await checkFavoriteStatus(id);
           }, 500); // 延迟500ms
           
@@ -173,14 +164,11 @@ const KnowledgeDetail = () => {
           message.error(response.message || '取消收藏失败');
         }
       } else {
-        // 添加收藏
-        console.log(`[KnowledgeDetail] 开始添加收藏，knowledgeId: ${id}, userId: ${currentUserId}`);
-        const response = await engagementAPI.addFavorite(id, currentUserId);
-        console.log(`[KnowledgeDetail] 添加收藏接口响应:`, response);
+        // 添加收藏 
+        const response = await engagementAPI.addFavorite(id, currentUserId); 
         
         if (response.code === 200) {
-          message.success('已添加到收藏');
-          console.log(`[KnowledgeDetail] 添加收藏成功，等待重新获取状态...`);
+          message.success('已添加到收藏'); 
           // 操作成功后重新获取状态，确保按钮显示正确
           await checkFavoriteStatus(id);
         } else {
@@ -281,9 +269,7 @@ const KnowledgeDetail = () => {
     description: item.description || '暂无描述',
     type: "pdf",
   }));
-  
-  console.log('searchResults:', searchResults);
-  console.log('knowledgeStore.knowledgeList:', knowledgeStore.knowledgeList);
+ 
 
   const handleBack = () => {
     const categoryParam = categoryId ? `?category=${categoryId}` : '';
@@ -313,8 +299,7 @@ const KnowledgeDetail = () => {
     setSearchCollapsed(!searchCollapsed);
   };
 
-  const addTabFromSearch = async (searchItem) => {
-    console.log('点击搜索结果项:', searchItem);
+  const addTabFromSearch = async (searchItem) => { 
     
     // 检查是否已经存在相同的标签页
     const existingTab = tabs.find(tab => tab.key === `search-${searchItem.id}`);
@@ -342,8 +327,7 @@ const KnowledgeDetail = () => {
     };
 
     // 使用函数式更新确保获取最新的tabs状态
-    setTabs(prevTabs => {
-      console.log('添加临时标签页, 当前tabs数量:', prevTabs.length);
+    setTabs(prevTabs => { 
       if (prevTabs.length === 1 && prevTabs[0].key.startsWith('knowledge-')) {
         // 替换知识详情标签页
         return [tempTab];
@@ -354,16 +338,12 @@ const KnowledgeDetail = () => {
     });
     setActiveTabKey(newKey);
 
-    try {
-      console.log('开始调用API获取知识详情, ID:', searchItem.id);
+    try { 
       // 调用API获取知识详情
-      const response = await knowledgeAPI.getKnowledgeDetail(searchItem.id);
-      console.log('API响应:', response);
-      
+      const response = await knowledgeAPI.getKnowledgeDetail(searchItem.id); 
       if (response.code === 200) {
         // 使用函数式更新确保获取最新的tabs状态
-        setTabs(prevTabs => {
-          console.log('更新标签页内容, 当前tabs数量:', prevTabs.length);
+        setTabs(prevTabs => { 
           return prevTabs.map(tab => {
             if (tab.key === newKey) {
               return {

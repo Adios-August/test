@@ -13,8 +13,7 @@ import './SourceExpandedDetail.scss';
 const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
   // 处理收藏状态变化
   const handleFavoriteStatusChange = (isFavorited) => {
-    // 可以在这里处理收藏状态变化的回调
-    console.log('收藏状态变化:', isFavorited);
+    // 可以在这里处理收藏状态变化的回调 
   };
 
   if (loading) {
