@@ -47,28 +47,47 @@ export const useKnowledgeForm = (mode = 'add') => {
         
         // Parse effective time dates
         const effectiveTime = [
-          data.effective_from ? dayjs(data.effective_from) : null,
-          data.effective_to ? dayjs(data.effective_to) : null
+          data.effectiveStartTime ? dayjs(data.effectiveStartTime) : null,
+          data.effectiveEndTime ? dayjs(data.effectiveEndTime) : null
         ];
         
         // Check if table data exists and has columns
         const hasTableData = data.tableData && data.tableData.columns && data.tableData.columns.length > 0;
         
+        // Process attachments to ensure they have required fields
+        const processedAttachments = (data.attachments || []).map((attachment, index) => {
+          let downloadUrl = attachment.filePath || attachment.url || attachment.fileUrl;
+          
+          // Convert relative paths to full URLs
+          if (downloadUrl && downloadUrl.startsWith('/api/')) {
+            downloadUrl = `${window.location.origin}${downloadUrl}`;
+          }
+          
+          return {
+            id: attachment.id || attachment.uid || index,
+            uid: attachment.uid || attachment.id || index,
+            name: attachment.fileName || attachment.name || `attachment_${index + 1}`,
+            size: attachment.fileSize || attachment.size || 0,
+            url: downloadUrl,
+            isLocal: false // Mark as server-side attachment
+          };
+        });
+        
         // Set form data
         setFormData({
-          title: data.title || '',
-          category: data.category_id || null,
-          privateToRoles: data.audience_roles || ['ALL'],
+          title: data.name || data.title || '',
+          category: data.parentId || data.category_id || null,
+          privateToRoles: data.workspaces || data.audience_roles || ['ALL'],
           tags: data.tags || [],
           effectiveTime: effectiveTime,
-          attachments: data.attachments || [],
+          attachments: processedAttachments,
           tableData: data.tableData || createEmptyTable(),
           disclaimer: true, // Auto-check for edit mode
           enableTable: hasTableData // 如果有表格数据则启用表格
         });
         
         // Set content
-        setContentHtml(data.content_html || '');
+        setContentHtml(data.description || data.content_html || '');
       } else {
         message.error(response.message || '获取知识详情失败');
         navigate('/knowledge-admin/category-management');
@@ -202,20 +221,7 @@ export const useKnowledgeForm = (mode = 'add') => {
   
         message.success('知识更新成功');
   
-        // 3. (Optional) Cleanup any attachments that were removed.
-        // This is a background task; its failure shouldn't block the user.
-        const originalAttachments = initialFormData?.attachments || [];
-        const finalAttachmentIds = allFinalAttachments.map(a => a.id).filter(Boolean);
-        const deletedAttachments = originalAttachments.filter(att => 
-          att.id && !finalAttachmentIds.includes(att.id)
-        );
-        
-        await Promise.allSettled(
-          deletedAttachments.map(att => 
-            knowledgeAPI.deleteKnowledgeAttachment(id, att.id)
-              .catch(err => console.error(`Failed to cleanup attachment ${att.name}:`, err))
-          )
-        );
+        // Note: Attachment cleanup removed since we're not tracking original attachments
   
         navigate('/knowledge-admin/category-management');
   
