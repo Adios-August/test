@@ -72,7 +72,7 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
           <div className="content-section">
             <div 
               dangerouslySetInnerHTML={{ 
-                __html: knowledgeDetail.description || '暂无内容' 
+                __html: knowledgeDetail.description || '暂无内容'
               }} 
             />
           </div>

@@ -6,8 +6,24 @@ import rehypeRaw from 'rehype-raw';
 import 'highlight.js/styles/github.css';
 
 const StreamingMarkdownRenderer = ({ content, isStreaming = false }) => {
-  // 添加调试信息
+  // 安全检查：确保content是字符串类型
+  if (typeof content !== 'string') {
+    console.error('StreamingMarkdownRenderer: content必须是字符串类型，收到:', typeof content, content);
+    return (
+      <div className="markdown-renderer error">
+        <p style={{ color: 'red' }}>内容格式错误，无法渲染</p>
+      </div>
+    );
+  }
 
+  // 如果content为空或null，显示空内容
+  if (!content || content.trim() === '') {
+    return (
+      <div className="markdown-renderer empty">
+        <span />
+      </div>
+    );
+  }
   
   return (
     <div className="markdown-renderer">

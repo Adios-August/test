@@ -23,7 +23,9 @@ import {
   CopyOutlined,
   ReloadOutlined,
   LikeOutlined,
+  LikeFilled,
   DislikeOutlined,
+  DislikeFilled,
   FilePdfOutlined,
   FileTextOutlined,
   ArrowLeftOutlined,
@@ -44,6 +46,7 @@ import SourceExpandedDetail from "../../components/SourceExpandedDetail";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
 import { knowledgeAPI } from "../../api/knowledge";
+import { engagementAPI } from "../../api/engagement";
 import { useAuthStore } from "../../stores";
 import "./KnowledgeQA.scss";
 
@@ -52,6 +55,8 @@ const { TextArea } = Input;
 const { Title } = Typography;
 
 const KnowledgeQA = () => {
+  console.log('🔄 KnowledgeQA 组件重新渲染');
+  
   const navigate = useNavigate();
   const location = useLocation();
   const authStore = useAuthStore();
@@ -59,23 +64,37 @@ const KnowledgeQA = () => {
   // 获取当前用户ID
   const currentUserId = authStore.user?.id || authStore.user?.userId;
 
+  // 调试信息：显示用户状态
+  console.log('KnowledgeQA - 用户状态:', {
+    authStore: authStore,
+    user: authStore.user,
+    currentUserId: currentUserId,
+    hasUser: !!authStore.user,
+    userId: authStore.user?.id,
+    userIdAlt: authStore.user?.userId
+  });
+
   // 从路由状态获取传递的问题
-  const initialQuestion = location.state?.question || "易方达增强回报基金选择理由";
+  const initialQuestion = location.state?.question || null;
 
   const [inputValue, setInputValue] = useState("");
-  const [conversations, setConversations] = useState([
-    {
-      id: 1,
-      title: initialQuestion.length > 20 ? initialQuestion.substring(0, 20) + "..." : initialQuestion,
-      isActive: true,
-    },
-  ]);
-  const [currentConversation, setCurrentConversation] = useState(1);
+  const [conversations, setConversations] = useState([]); // 初始为空数组，等待API加载
+  const [currentConversation, setCurrentConversation] = useState(null); // 初始为null
+  
+  // 调试：监控conversations状态变化
+  useEffect(() => {
+    console.log('📝 conversations状态变化:', {
+      length: conversations.length,
+      conversations: conversations,
+      currentConversation: currentConversation
+    });
+  }, [conversations, currentConversation]);
 
   const [messages, setMessages] = useState([]);
 
   // AI请求相关状态
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false); // 会话加载状态
   const [abortController, setAbortController] = useState(null);
   const [previewFileUrl, setPreviewFileUrl] = useState("");
   const [previewPage, setPreviewPage] = useState(1);
@@ -99,6 +118,45 @@ const KnowledgeQA = () => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  // 监听用户状态变化
+  useEffect(() => {
+    console.log('KnowledgeQA - currentUserId变化:', currentUserId);
+    console.log('KnowledgeQA - authStore状态:', {
+      token: authStore.token,
+      user: authStore.user,
+      isAuthenticated: authStore.isAuthenticated
+    });
+  }, [currentUserId, authStore.token, authStore.user, authStore.isAuthenticated]);
+
+  // 监听输入值变化
+  useEffect(() => {
+    console.log('KnowledgeQA - inputValue变化:', {
+      inputValue: inputValue,
+      inputValueLength: inputValue.length,
+      inputValueTrimmed: inputValue.trim(),
+      inputValueTrimmedLength: inputValue.trim().length
+    });
+  }, [inputValue]);
+
+  // 组件挂载时检查用户状态
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      try {
+        const isAuthValid = await authStore.checkAuth();
+        console.log('KnowledgeQA - 用户认证检查结果:', isAuthValid);
+        console.log('KnowledgeQA - 当前用户状态:', {
+          token: authStore.token,
+          user: authStore.user,
+          isAuthenticated: authStore.isAuthenticated
+        });
+      } catch (error) {
+        console.error('KnowledgeQA - 用户认证检查失败:', error);
+      }
+    };
+    
+    checkUserStatus();
+  }, [authStore]);
 
   // 切换RelatedText展开状态
   const handleToggleRelatedTextExpansion = async (reference) => {
@@ -161,25 +219,129 @@ const KnowledgeQA = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 页面加载时自动调用AI接口回答传递的问题
+    // 页面加载时自动调用AI接口回答传递的问题
   useEffect(() => {
+    console.log('useEffect - 页面初始化开始:', {
+      currentUserId: currentUserId,
+      initialQuestion: initialQuestion,
+      conversationsLength: conversations.length,
+      currentConversation: currentConversation
+    });
+
+    // 安全检查：确保用户已登录
+    if (!currentUserId) {
+      console.log('useEffect: 用户未登录，跳过初始化操作');
+      return;
+    }
+
     // 初始化加载历史会话
     (async () => {
       try {
+        console.log('开始加载历史会话...');
         const res = await chatAPI.getSessions(currentUserId);
+        console.log('历史会话API响应:', res);
+        console.log('API响应类型:', typeof res);
+        console.log('API响应数据结构:', {
+          hasCode: 'code' in res,
+          hasData: 'data' in res,
+          codeType: typeof res?.code,
+          dataType: typeof res?.data,
+          isDataArray: Array.isArray(res?.data),
+          dataLength: res?.data?.length
+        });
+        
         if (res?.code === 200 && Array.isArray(res.data)) {
-          const list = res.data.map((s, idx) => ({
-            id: s.sessionId || idx + 1,
-            title: s.sessionName || s.sessionId || `会话${idx + 1}`,
+          console.log('原始会话数据:', res.data);
+          
+          // 过滤掉无效的原始数据
+          const validSessions = res.data.filter(s => {
+            // 检查是否有有效的sessionId
+            if (!s.sessionId || typeof s.sessionId !== 'string') {
+              console.warn('过滤掉无效的原始会话数据 - 无sessionId:', s);
+              return false;
+            }
+            
+            // 过滤掉临时生成的sessionId
+            if (s.sessionId.startsWith('session_') && s.sessionId.includes('_')) {
+              const parts = s.sessionId.split('_');
+              if (parts.length >= 3 && !isNaN(parseInt(parts[1]))) {
+                console.warn('过滤掉临时生成的原始会话数据:', s);
+                return false;
+              }
+            }
+            
+            return true;
+          });
+          
+          console.log('过滤后的有效会话数据:', validSessions);
+          
+          const list = validSessions.map((s, idx) => ({
+            id: s.sessionId,
+            title: s.sessionName || `会话${idx + 1}`, // 不使用sessionId作为标题
             isActive: idx === 0,
           }));
-          setConversations(list.length ? list : conversations);
-          if (list.length) setCurrentConversation(list[0].id);
+          console.log('处理后的会话列表:', list);
+          
+          // 只有在有数据时才设置会话列表，避免重复添加默认会话
+          if (list.length > 0) {
+            // 检查是否有重复的会话ID和无效的会话数据
+            const uniqueIds = new Set();
+            const filteredList = list.filter(session => {
+              // 检查会话ID是否有效
+              if (!session.id || typeof session.id !== 'string' && typeof session.id !== 'number') {
+                console.warn('发现无效的会话ID:', session.id);
+                return false;
+              }
+              
+              // 过滤掉临时生成的会话ID（以session_开头且包含时间戳的）
+              if (typeof session.id === 'string' && session.id.startsWith('session_') && session.id.includes('_')) {
+                const parts = session.id.split('_');
+                if (parts.length >= 3 && !isNaN(parseInt(parts[1]))) {
+                  console.warn('过滤掉临时生成的会话ID:', session.id);
+                  return false;
+                }
+              }
+              
+              // 检查会话ID是否重复
+              if (uniqueIds.has(session.id)) {
+                console.warn('发现重复的会话ID:', session.id);
+                return false;
+              }
+              
+              // 检查会话标题是否有效
+              if (!session.title || typeof session.title !== 'string') {
+                console.warn('发现无效的会话标题:', session.title);
+                return false;
+              }
+              
+              uniqueIds.add(session.id);
+              return true;
+            });
+            
+            if (filteredList.length !== list.length) {
+              console.warn('过滤掉无效/重复会话后的数量:', filteredList.length, '原始数量:', list.length);
+            }
+            
+            if (filteredList.length > 0) {
+              setConversations(filteredList);
+              setCurrentConversation(filteredList[0].id);
+              console.log('成功加载历史会话:', filteredList.length, '个会话，当前会话ID:', filteredList[0].id);
+            } else {
+              console.log('过滤后没有有效的会话数据');
+            }
+          } else {
+            console.log('没有历史会话数据');
+          }
+        } else {
+          console.log('API响应格式不正确:', res);
         }
-      } catch {}
+      } catch (error) {
+        console.error('加载历史会话失败:', error);
+        // 加载失败时不设置会话列表，保持初始状态
+      }
     })();
 
-    if (initialQuestion && initialQuestion !== "易方达增强回报基金选择理由") {
+    if (initialQuestion) {
       // 延迟一下，确保页面完全加载
       const timer = setTimeout(() => {
         handleStreamAIRequest(initialQuestion);
@@ -192,7 +354,37 @@ const KnowledgeQA = () => {
 
 
   // 流式AI请求处理
-  const handleStreamAIRequest = async (userQuestion) => {
+  const handleStreamAIRequest = async (userQuestion, customSessionId = null) => {
+    // 调试信息
+    console.log('handleStreamAIRequest - 调用信息:', {
+      userQuestion: userQuestion,
+      userQuestionType: typeof userQuestion,
+      userQuestionLength: userQuestion.length,
+      userQuestionTrimmed: userQuestion.trim(),
+      userQuestionTrimmedLength: userQuestion.trim().length,
+      currentUserId: currentUserId
+    });
+
+    // 安全检查：确保用户已登录（优先检查）
+    if (!currentUserId) {
+      console.error('handleStreamAIRequest: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再发送消息');
+      return;
+    }
+
+    // 安全检查：确保userQuestion是字符串类型且不为空
+    if (!userQuestion || typeof userQuestion !== 'string') {
+      console.error('handleStreamAIRequest: userQuestion类型错误:', typeof userQuestion, userQuestion);
+      message.error('问题内容类型错误，请重新输入');
+      return;
+    }
+    
+    if (!userQuestion.trim()) {
+      console.error('handleStreamAIRequest: userQuestion为空:', userQuestion);
+      message.error('问题内容为空，请重新输入');
+      return;
+    }
+
     if (isLoading) return;
 
     setIsLoading(true);
@@ -201,23 +393,79 @@ const KnowledgeQA = () => {
     const newUserMessage = {
       id: Date.now() + Math.random(),
       type: "user",
-      content: userQuestion,
+      content: userQuestion.trim(), // 确保content是trim后的字符串
       timestamp: new Date(),
     };
 
-    // 添加空的AI回复消息
-    const newAIMessage = {
-      id: Date.now() + Math.random() + 1,
-      type: "ai",
-      content: "",
-      timestamp: new Date(),
-      references: [],
-    };
+    // 生成sessionId（如果没有传入customSessionId）
+    const generatedSessionId = customSessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // 检查是否有正在重新生成的消息，如果有则替换它
+    const existingRegeneratingMessage = messages.find(m => m.isRegenerating);
+    
+    if (existingRegeneratingMessage) {
+      // 替换正在重新生成的消息
+      setMessages((prev) => {
+        const newMessages = prev.map(m => 
+          m.isRegenerating 
+            ? {
+                ...m,
+                content: "", // 确保content是空字符串
+                references: [],
+                sessionId: generatedSessionId,
+                messageId: "",
+                isLiked: false,
+                isDisliked: false,
+                isRegenerating: false
+              }
+            : m
+        );
+        console.log('替换重新生成消息后的状态:', newMessages);
+        return newMessages;
+      });
+    } else {
+      // 添加新的AI回复消息
+      const newAIMessage = {
+        id: Date.now() + Math.random() + 1,
+        type: "ai",
+        content: "", // 确保content是空字符串
+        timestamp: new Date(),
+        references: [],
+        sessionId: generatedSessionId, // 确保总是有sessionId
+        messageId: "", // 将在流式响应中设置
+        isLiked: false, // 点赞状态
+        isDisliked: false, // 点踩状态
+        isRegenerating: false, // 重新生成状态
+      };
 
-    setMessages((prev) => [...prev, newUserMessage, newAIMessage]);
+      // 安全检查：确保新消息对象有效
+      if (typeof newUserMessage.content !== 'string' || typeof newAIMessage.content !== 'string') {
+        console.error('新消息content类型错误:', {
+          userMessage: typeof newUserMessage.content,
+          aiMessage: typeof newAIMessage.content
+        });
+        message.error('创建消息失败，请重试');
+        setIsLoading(false);
+        return;
+      }
+
+      setMessages((prev) => {
+        const newMessages = [...prev, newUserMessage, newAIMessage];
+        console.log('创建新消息后的状态:', newMessages);
+        console.log('新AI消息的sessionId:', newAIMessage.sessionId);
+        return newMessages;
+      });
+    }
 
     // 更新当前会话的标题
+    console.log('handleStreamAIRequest - 会话状态检查:', {
+      currentConversation: currentConversation,
+      conversationsLength: conversations.length,
+      conversations: conversations
+    });
+    
     if (currentConversation) {
+      console.log('更新现有会话标题:', currentConversation);
       setConversations((prev) =>
         prev.map((conv) =>
           conv.id === currentConversation
@@ -225,6 +473,24 @@ const KnowledgeQA = () => {
             : conv
         )
       );
+    } else {
+      // 如果没有当前会话，检查是否有历史会话
+      if (conversations.length > 0) {
+        // 如果有历史会话，选择第一个会话
+        console.log('选择第一个历史会话作为当前会话:', conversations[0].id);
+        setCurrentConversation(conversations[0].id);
+      } else {
+        // 只有在没有历史会话且没有当前会话时，才创建新会话
+        console.log('创建新会话，因为没有历史会话');
+        const newConversation = {
+          id: Date.now() + Math.random(),
+          title: userQuestion.length > 20 ? userQuestion.substring(0, 20) + "..." : userQuestion,
+          isActive: true,
+        };
+        console.log('新创建的会话对象:', newConversation);
+        setConversations([newConversation]);
+        setCurrentConversation(newConversation.id);
+      }
     }
 
     // 创建AbortController用于取消请求
@@ -236,7 +502,7 @@ const KnowledgeQA = () => {
       const requestData = {
         question: userQuestion,
         userId: currentUserId, // 从用户状态获取
-        sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        sessionId: customSessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         knowledgeIds: [], // 这里可以从store获取知识ID列表
         stream: true,
       };
@@ -318,21 +584,58 @@ const KnowledgeQA = () => {
               if (parsed.sessionId) {
                 sessionIdRef.current = parsed.sessionId;
                 window.__ragSessionId = parsed.sessionId;
-              }
-            } else if (eventName === "message") {
-              const { content } = parsed;
-              if (typeof content === "string" && content.length) {
-                answer += content;
+                // 更新AI消息的sessionId
                 setMessages((prev) => {
                   const newMessages = [...prev];
+                  // 安全检查：确保有消息且能找到AI消息
+                  if (newMessages.length === 0) {
+                    console.warn('SSE start事件：消息数组为空，无法更新sessionId');
+                    return prev;
+                  }
                   const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
                   if (aiIndex !== -1) {
                     const realIndex = newMessages.length - 1 - aiIndex;
                     const aiMsg = newMessages[realIndex];
-                    newMessages[realIndex] = { ...aiMsg, content: answer, references: references };
+                    newMessages[realIndex] = { ...aiMsg, sessionId: parsed.sessionId };
+                  } else {
+                    console.warn('SSE start事件：未找到AI消息，无法更新sessionId');
                   }
                   return newMessages;
                 });
+              }
+            } else if (eventName === "message") {
+              const { content } = parsed;
+              // 安全检查：确保content是字符串类型
+              if (typeof content === "string" && content.length) {
+                answer += content;
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  // 安全检查：确保有消息且能找到AI消息
+                  if (newMessages.length === 0) {
+                    console.warn('SSE message事件：消息数组为空，无法更新内容');
+                    return prev;
+                  }
+                  const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
+                  if (aiIndex !== -1) {
+                    const realIndex = newMessages.length - 1 - aiIndex;
+                    const aiMsg = newMessages[realIndex];
+                    newMessages[realIndex] = { 
+                      ...aiMsg, 
+                      content: answer, 
+                      references: references,
+                      // 保持原有的sessionId和messageId
+                      sessionId: aiMsg.sessionId || "",
+                      messageId: aiMsg.messageId || "",
+                      isLiked: aiMsg.isLiked || false,
+                      isDisliked: aiMsg.isDisliked || false
+                    };
+                  } else {
+                    console.warn('SSE message事件：未找到AI消息，无法更新内容');
+                  }
+                  return newMessages;
+                });
+              } else {
+                console.warn('SSE message事件收到非字符串content:', typeof content, content);
               }
             } else if (eventName === "references") {
               // 仅AI命中的块，后端包含 download_url
@@ -368,33 +671,96 @@ const KnowledgeQA = () => {
               }
               setMessages((prev) => {
                 const newMessages = [...prev];
+                // 安全检查：确保有消息且能找到AI消息
+                if (newMessages.length === 0) {
+                  console.warn('SSE references事件：消息数组为空，无法更新引用');
+                  return prev;
+                }
                 const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
                 if (aiIndex !== -1) {
                   const realIndex = newMessages.length - 1 - aiIndex;
                   const aiMsg = newMessages[realIndex];
-                  newMessages[realIndex] = { ...aiMsg, references: references };
+                  newMessages[realIndex] = { 
+                    ...aiMsg, 
+                    references: references,
+                    // 保持原有的sessionId和messageId
+                    sessionId: aiMsg.sessionId || "",
+                    messageId: aiMsg.messageId || "",
+                    isLiked: aiMsg.isLiked || false,
+                    isDisliked: aiMsg.isDisliked || false
+                  };
+                } else {
+                  console.warn('SSE references事件：未找到AI消息，无法更新引用');
                 }
                 return newMessages;
               });
             } else if (eventName === "end") {
               // 兜底同步一次内容与引用并关闭loading
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
-                if (aiIndex !== -1) {
-                  const realIndex = newMessages.length - 1 - aiIndex;
-                  const aiMsg = newMessages[realIndex];
-                  newMessages[realIndex] = { ...aiMsg, content: answer, references: references };
-                }
-                return newMessages;
-              });
+              // 安全检查：确保answer是字符串类型
+              if (typeof answer === 'string') {
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  // 安全检查：确保有消息且能找到AI消息
+                  if (newMessages.length === 0) {
+                    console.warn('SSE end事件：消息数组为空，无法更新内容');
+                    return prev;
+                  }
+                  const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
+                  if (aiIndex !== -1) {
+                    const realIndex = newMessages.length - 1 - aiIndex;
+                    const aiMsg = newMessages[realIndex];
+                    newMessages[realIndex] = { ...aiMsg, content: answer, references: references };
+                  } else {
+                    console.warn('SSE end事件：未找到AI消息，无法更新内容');
+                  }
+                  return newMessages;
+                });
+              } else {
+                console.error('SSE end事件中answer不是字符串类型:', typeof answer, answer);
+              }
               if (parsed.sessionId) {
                 sessionIdRef.current = parsed.sessionId;
                 window.__ragSessionId = parsed.sessionId;
+                // 更新AI消息的sessionId
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  // 安全检查：确保有消息且能找到AI消息
+                  if (newMessages.length === 0) {
+                    console.warn('SSE end事件：消息数组为空，无法更新sessionId');
+                    return prev;
+                  }
+                  const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
+                  if (aiIndex !== -1) {
+                    const realIndex = newMessages.length - 1 - aiIndex;
+                    const aiMsg = newMessages[realIndex];
+                    newMessages[realIndex] = { ...aiMsg, sessionId: parsed.sessionId };
+                  } else {
+                    console.warn('SSE end事件：未找到AI消息，无法更新sessionId');
+                  }
+                  return newMessages;
+                });
               }
               if (parsed.messageId) {
                 messageIdRef.current = parsed.messageId;
                 window.__ragAnswerMessageId = parsed.messageId;
+                // 更新AI消息的messageId
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  // 安全检查：确保有消息且能找到AI消息
+                  if (newMessages.length === 0) {
+                    console.warn('SSE end事件：消息数组为空，无法更新messageId');
+                    return prev;
+                  }
+                  const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
+                  if (aiIndex !== -1) {
+                    const realIndex = newMessages.length - 1 - aiIndex;
+                    const aiMsg = newMessages[realIndex];
+                    newMessages[realIndex] = { ...aiMsg, messageId: parsed.messageId };
+                  } else {
+                    console.warn('SSE end事件：未找到AI消息，无法更新messageId');
+                  }
+                  return newMessages;
+                });
               }
               setIsLoading(false);
               return;
@@ -424,8 +790,13 @@ const KnowledgeQA = () => {
         // 如果请求失败，移除空的AI回复消息
         setMessages((prev) => {
           const newMessages = [...prev];
+          // 安全检查：确保有消息
+          if (newMessages.length === 0) {
+            console.warn('错误处理：消息数组为空，无法移除空消息');
+            return prev;
+          }
           const lastMessage = newMessages[newMessages.length - 1];
-          if (lastMessage.type === "ai" && lastMessage.content === "") {
+          if (lastMessage && lastMessage.type === "ai" && lastMessage.content === "") {
             newMessages.pop();
           }
           return newMessages;
@@ -437,23 +808,70 @@ const KnowledgeQA = () => {
     }
   };
 
-  const handleSend = () => {
-    if (!inputValue.trim()) {
-      message.warning("请输入问题");
+  const handleSend = async (customQuestion = null, customSessionId = null) => {
+    const question = customQuestion || inputValue.trim();
+    
+    // 调试信息
+    console.log('handleSend - 调用信息:', {
+      question: question,
+      customQuestion: customQuestion,
+      inputValue: inputValue,
+      inputValueLength: inputValue.length,
+      questionLength: question.length,
+      questionTrimmed: question.trim(),
+      questionTrimmedLength: question.trim().length,
+      currentUserId: currentUserId,
+      authStore: authStore,
+      user: authStore.user
+    });
+    
+    // 安全检查：确保用户已登录（优先检查）
+    if (!currentUserId) {
+      console.error('handleSend: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再发送消息');
       return;
     }
-
+    
+    // 安全检查：确保问题内容是有效的字符串
+    if (!question || typeof question !== 'string') {
+      console.error('handleSend: 问题内容类型错误:', typeof question, question);
+      message.warning("问题内容类型错误");
+      return;
+    }
+    
+    if (!question.trim()) {
+      console.error('handleSend: 问题内容为空:', question);
+      message.warning("请输入有效的问题");
+      return;
+    }
+    
     if (isLoading) {
       message.warning("AI正在思考中，请稍候...");
       return;
     }
-
-    const question = inputValue.trim();
-    setInputValue("");
-    handleStreamAIRequest(question);
+    
+    if (!customQuestion) {
+      setInputValue("");
+    }
+    
+    await handleStreamAIRequest(question, customSessionId);
   };
 
   const handleNewConversation = () => {
+    // 调试信息
+    console.log('handleNewConversation - 调用信息:', {
+      currentUserId: currentUserId,
+      authStore: authStore,
+      user: authStore.user
+    });
+
+    // 安全检查：确保用户已登录
+    if (!currentUserId) {
+      console.error('handleNewConversation: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再新建会话');
+      return;
+    }
+
     const newId = Date.now() + Math.random();
     const newConversation = {
       id: newId,
@@ -461,16 +879,43 @@ const KnowledgeQA = () => {
       isActive: true,
     };
 
-    setConversations((prev) => {
-      const updatedConversations = prev.map((conv) => ({ ...conv, isActive: false }));
-      return [...updatedConversations, newConversation];
-    });
-    setCurrentConversation(newId);
-    setMessages([]);
-    setInputValue(""); // 清空输入框
+    // 安全检查：确保状态正确重置
+    try {
+      setConversations((prev) => {
+        const updatedConversations = prev.map((conv) => ({ ...conv, isActive: false }));
+        return [newConversation, ...updatedConversations];
+      });
+      setCurrentConversation(newId);
+      setMessages([]); // 清空消息数组
+      setInputValue(""); // 清空输入框
+      
+      // 重置其他相关状态
+      setCurrentMessageId(null);
+      setFeedbackModalVisible(false);
+      setFeedbackContent("");
+      setPreviewFileUrl(null);
+      setPreviewPage(1);
+      setPreviewBboxes([]);
+      setIsLoadingConversation(false); // 重置会话加载状态
+      
+      console.log('新建会话成功:', newId);
+    } catch (error) {
+      console.error('新建会话失败:', error);
+      message.error('新建会话失败，请重试');
+    }
   };
 
   const handleConversationSelect = (conversationId) => {
+    // 安全检查：确保用户已登录
+    if (!currentUserId) {
+      console.error('handleConversationSelect: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再选择会话');
+      return;
+    }
+
+    // 设置loading状态
+    setIsLoadingConversation(true);
+
     setConversations(
       conversations.map((conv) => ({
         ...conv,
@@ -478,24 +923,44 @@ const KnowledgeQA = () => {
       }))
     );
     setCurrentConversation(conversationId);
+    
     // 加载该会话的历史消息（展示最近若干条）
     (async () => {
       try {
         const res = await chatAPI.getHistory(conversationId, { limit: 20 });
         if (res?.code === 200 && Array.isArray(res.data)) {
-          const msgs = res.data.map((m) => ({
-            id: m.id || `${Date.now()}_${Math.random()}`,
-            type: m.role === "user" ? "user" : "ai",
-            content: m.content || "",
-            references: m.references || [],
-            timestamp: new Date(m.timestamp || Date.now()),
-          }));
+          const msgs = res.data.map((m) => {
+            // 安全检查：确保消息内容有效
+            const content = m.content || "";
+            if (typeof content !== 'string') {
+              console.warn('历史消息content不是字符串类型:', typeof content, content);
+              return {
+                id: m.id || `${Date.now()}_${Math.random()}`,
+                type: m.role === "user" ? "user" : "ai",
+                content: "", // 设置为空字符串而不是无效内容
+                references: m.references || [],
+                timestamp: new Date(m.timestamp || Date.now()),
+              };
+            }
+            return {
+              id: m.id || `${Date.now()}_${Math.random()}`,
+              type: m.role === "user" ? "user" : "ai",
+              content: content,
+              references: m.references || [],
+              timestamp: new Date(m.timestamp || Date.now()),
+            };
+          });
           setMessages(msgs);
         } else {
           setMessages([]);
         }
-      } catch {
+      } catch (error) {
+        console.error('加载会话历史失败:', error);
         setMessages([]);
+        message.error('加载会话历史失败，请重试');
+      } finally {
+        // 无论成功还是失败，都要关闭loading状态
+        setIsLoadingConversation(false);
       }
     })();
   };
@@ -505,11 +970,59 @@ const KnowledgeQA = () => {
   };
 
   const handleCopyMessage = (content) => {
+    // 安全检查：确保用户已登录
+    if (!currentUserId) {
+      console.error('handleCopyMessage: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再复制消息');
+      return;
+    }
+
+    // 安全检查：确保content是字符串类型
+    if (typeof content !== 'string') {
+      console.error('handleCopyMessage: content不是字符串类型:', typeof content, content);
+      message.error('复制失败：内容格式错误');
+      return;
+    }
+    
     navigator.clipboard.writeText(content);
     message.success("已复制到剪贴板");
   };
 
   const handleFeedback = async (messageId, type, event) => {
+    // 安全检查：确保event参数是有效的事件对象
+    if (event && typeof event !== 'object') {
+      console.error('handleFeedback: event参数类型错误:', typeof event, event);
+      return;
+    }
+
+    // 安全检查：确保用户已登录
+    if (!currentUserId) {
+      console.error('handleFeedback: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再进行反馈');
+      return;
+    }
+
+    // 安全检查：确保消息数组不为空
+    if (messages.length === 0) {
+      message.error('消息数组为空，无法处理反馈');
+      return;
+    }
+
+    // 找到对应的消息
+    const targetMessage = messages.find(m => m.id === messageId);
+    console.log('处理反馈，消息:', targetMessage); // 调试信息
+    
+    if (!targetMessage) {
+      message.error('找不到对应的消息');
+      return;
+    }
+    
+    if (!targetMessage.sessionId || !targetMessage.messageId) {
+      message.error('消息信息不完整，无法操作');
+      console.error('消息缺少必要信息:', targetMessage);
+      return;
+    }
+
     if (type === "dislike") {
       // 点踩时需要打开反馈弹窗
       setCurrentMessageId(messageId);
@@ -550,25 +1063,26 @@ const KnowledgeQA = () => {
 
     // 点赞直接提交
     try {
-      // 注意：这里需要knowledgeId，但AI回答可能没有关联的知识ID
-      // 暂时使用一个默认值或者跳过这个操作
-      const knowledgeId = 1; // 需要从AI回答中获取关联的知识ID
-      
-      const response = await feedbackAPI.submitFeedback(
-        knowledgeId,
-        "", // content - 点赞时可能不需要内容
-        type === "like" ? "like" : "dislike", // feedbackType
+      const response = await engagementAPI.likeAnswer(
+        targetMessage.sessionId,
+        targetMessage.messageId,
         currentUserId
       );
 
       if (response.code === 200) {
-        message.success(`已${type === "like" ? "点赞" : "点踩"}该回答`);
+        message.success('已点赞该回答');
+        // 立即更新UI状态，让点赞图标变亮（不影响点踩状态）
+        setMessages(prev => prev.map(m => 
+          m.id === messageId 
+            ? { ...m, isLiked: true }
+            : m
+        ));
       } else {
-        message.error(response.message || "操作失败，请重试");
+        message.error(response.message || '点赞失败');
       }
     } catch (error) {
-      console.error("提交反馈失败:", error);
-      message.error("操作失败，请重试");
+      console.error('点赞失败:', error);
+      message.error('操作失败，请重试');
     }
   };
 
@@ -579,37 +1093,155 @@ const KnowledgeQA = () => {
       return;
     }
 
+    if (!currentMessageId) {
+      message.error('消息ID不存在');
+      return;
+    }
+
+    // 安全检查：确保用户已登录
+    if (!currentUserId) {
+      console.error('handleSubmitFeedback: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再提交反馈');
+      return;
+    }
+
+    // 安全检查：确保消息数组不为空
+    if (messages.length === 0) {
+      message.error('消息数组为空，无法提交反馈');
+      return;
+    }
+
+    // 找到对应的消息
+    const targetMessage = messages.find(m => m.id === currentMessageId);
+    if (!targetMessage || !targetMessage.sessionId || !targetMessage.messageId) {
+      message.error('消息信息不完整，无法操作');
+      return;
+    }
+
     try {
-      // 注意：这里需要knowledgeId，但AI回答可能没有关联的知识ID
-      // 暂时使用一个默认值或者跳过这个操作
-      const knowledgeId = 1; // 需要从AI回答中获取关联的知识ID
-      
-      const response = await feedbackAPI.submitFeedback(
-        knowledgeId,
-        feedbackContent.trim(), // content
-        "dislike", // feedbackType
+      // 点击确定：带着消息提交点踩
+      const response = await engagementAPI.dislikeAnswer(
+        targetMessage.sessionId,
+        targetMessage.messageId,
+        feedbackContent.trim(), // 带着反馈内容
         currentUserId
       );
 
       if (response.code === 200) {
-        message.success("已提交反馈");
+        message.success("点踩提交成功");
         setFeedbackModalVisible(false);
         setFeedbackContent("");
         setCurrentMessageId(null);
+        // 立即更新UI状态，让点踩图标变亮
+        setMessages(prev => prev.map(m => 
+          m.id === currentMessageId 
+            ? { ...m, isDisliked: true, isLiked: false }
+            : m
+        ));
       } else {
         message.error(response.message || "提交失败，请重试");
       }
     } catch (error) {
-      console.error("提交反馈失败:", error);
+      console.error('点踩失败:', error);
       message.error("提交失败，请重试");
     }
   };
 
+  // 重新生成AI回答
+  const handleRegenerateAnswer = async (messageId) => {
+    // 安全检查：确保用户已登录
+    if (!currentUserId) {
+      console.error('handleRegenerateAnswer: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再重新生成回答');
+      return;
+    }
+
+    // 安全检查：确保消息数组不为空
+    if (messages.length === 0) {
+      message.error('消息数组为空，无法重新生成');
+      return;
+    }
+
+    // 获取用户问题（找到用户消息）
+    const userMessageIndex = messages.findIndex(m => m.id === messageId) - 1;
+    if (userMessageIndex < 0 || messages[userMessageIndex].type !== 'user') {
+      message.error('找不到对应的用户问题');
+      return;
+    }
+    
+    const userQuestion = messages[userMessageIndex].content;
+    
+    // 安全检查：确保用户问题是有效的字符串
+    if (typeof userQuestion !== 'string' || !userQuestion.trim()) {
+      message.error('用户问题内容无效，无法重新生成');
+      return;
+    }
+
+    // 标记旧的AI回答为重新生成中，而不是立即删除
+    setMessages(prev => prev.map(m => 
+      m.id === messageId 
+        ? { ...m, content: "", isRegenerating: true }
+        : m
+    ));
+
+    // 重新生成AI回答（直接重新发送问题，不需要sessionId）
+    await handleSend(userQuestion);
+  };
+
   // 取消反馈弹窗
-  const handleCancelFeedback = () => {
-    setFeedbackModalVisible(false);
-    setFeedbackContent("");
-    setCurrentMessageId(null);
+  const handleCancelFeedback = async () => {
+    if (!currentMessageId) {
+      message.error('消息ID不存在');
+      return;
+    }
+
+    // 安全检查：确保用户已登录
+    if (!currentUserId) {
+      console.error('handleCancelFeedback: 用户未登录，currentUserId:', currentUserId);
+      message.error('请先登录后再取消反馈');
+      return;
+    }
+
+    // 安全检查：确保消息数组不为空
+    if (messages.length === 0) {
+      message.error('消息数组为空，无法取消反馈');
+      return;
+    }
+
+    // 找到对应的消息
+    const targetMessage = messages.find(m => m.id === currentMessageId);
+    if (!targetMessage || !targetMessage.sessionId || !targetMessage.messageId) {
+      message.error('消息信息不完整，无法操作');
+      return;
+    }
+
+    try {
+      // 点击取消：直接提交点踩（不带消息）
+      const response = await engagementAPI.dislikeAnswer(
+        targetMessage.sessionId,
+        targetMessage.messageId,
+        "", // 空内容
+        currentUserId
+      );
+      
+      if (response.code === 200) {
+        message.success("点踩提交成功");
+        setFeedbackModalVisible(false);
+        setFeedbackContent("");
+        setCurrentMessageId(null);
+        // 立即更新UI状态，让点踩图标变亮（不影响点赞状态）
+        setMessages(prev => prev.map(m => 
+          m.id === currentMessageId 
+            ? { ...m, isDisliked: true }
+            : m
+        ));
+      } else {
+        message.error(response.message || "提交失败，请重试");
+      }
+    } catch (error) {
+      console.error('点踩失败:', error);
+      message.error("提交失败，请重试");
+    }
   };
 
   // 取消AI请求
@@ -624,6 +1256,8 @@ const KnowledgeQA = () => {
 
   return (
     <div className="knowledge-qa">
+
+      
       <div className="qa-layout">
         <div className="qa-main-layout">
           {/* 左侧会话列表 */}
@@ -635,8 +1269,31 @@ const KnowledgeQA = () => {
             </div>
 
             <div className="conversation-content">
+              {/* 用户登录状态提示 */}
+              {!currentUserId && (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '12px', 
+                  backgroundColor: '#f6ffed', 
+                  border: '1px solid #b7eb8f', 
+                  borderRadius: '6px',
+                  marginBottom: '16px',
+                  fontSize: '12px'
+                }}>
+                  <BulbOutlined style={{ color: '#52c41a', marginRight: '6px' }} />
+                  <span style={{ color: '#389e0d' }}>
+                    请先登录后再使用会话功能
+                  </span>
+                </div>
+              )}
+              
               <div className="search-section">
-                <Input placeholder="搜索会话问题..." prefix={<SearchOutlined />} className="conversation-search" />
+                <Input 
+                  placeholder={currentUserId ? "搜索会话问题..." : "请先登录后再搜索"} 
+                  prefix={<SearchOutlined />} 
+                  className="conversation-search" 
+                  disabled={!currentUserId}
+                />
               </div>
 
               <div className="new-conversation-section">
@@ -646,24 +1303,41 @@ const KnowledgeQA = () => {
                   onClick={handleNewConversation}
                   className="new-conversation-btn"
                   block
+                  disabled={!currentUserId}
+                  title={!currentUserId ? "请先登录后再新建会话" : "新建会话问题"}
                 >
-                  新建会话问题
+                  {!currentUserId ? "请先登录" : "新建会话问题"}
                 </Button>
               </div>
 
               <div className="conversation-list">
-                <List
-                  dataSource={conversations}
-                  renderItem={(item) => (
-                    <List.Item
-                      key={item.id}
-                      className={`conversation-item ${item.isActive ? "active" : ""}`}
-                      onClick={() => handleConversationSelect(item.id)}
-                    >
-                      <div className="conversation-title">{item.title}</div>
-                    </List.Item>
-                  )}
-                />
+                {conversations.length > 0 ? (
+                  <List
+                    dataSource={conversations}
+                    renderItem={(item) => (
+                      <List.Item
+                        key={item.id}
+                        className={`conversation-item ${item.isActive ? "active" : ""} ${!currentUserId ? "disabled" : ""}`}
+                        onClick={() => currentUserId && handleConversationSelect(item.id)}
+                        style={{ 
+                          cursor: currentUserId ? "pointer" : "not-allowed",
+                          opacity: currentUserId ? 1 : 0.6
+                        }}
+                      >
+                        <div className="conversation-title">{item.title}</div>
+                      </List.Item>
+                    )}
+                  />
+                ) : currentUserId ? (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '20px', 
+                    color: '#999',
+                    fontSize: '14px'
+                  }}>
+                    暂无会话记录
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -671,7 +1345,24 @@ const KnowledgeQA = () => {
           {/* 中间问答界面 */}
           <div className="qa-content">
             <div className="messages-container">
-              {messages.map((message) => (
+              {/* 会话加载loading状态 */}
+              {isLoadingConversation && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  padding: '40px 20px',
+                  flexDirection: 'column'
+                }}>
+                  <Spin size="large" />
+                  <div style={{ marginTop: '16px', color: '#666' }}>
+                    正在加载会话历史...
+                  </div>
+                </div>
+              )}
+              
+              {/* 消息列表 */}
+              {!isLoadingConversation && messages.map((message) => (
                 <div key={message.id} className={`message ${message.type === "user" ? "user" : "ai"}`}>
                   <div className="message-avatar">
                     {message.type === "user" ? (
@@ -683,7 +1374,7 @@ const KnowledgeQA = () => {
                   <div className="message-content">
                     <div className="message-bubble">
                       <div className="message-text">
-                        {message.content ? (
+                        {message.content && typeof message.content === 'string' ? (
                           <StreamingMarkdownRenderer
                             content={message.content}
                             isStreaming={isLoading && message.id === messages[messages.length - 1]?.id}
@@ -712,6 +1403,11 @@ const KnowledgeQA = () => {
                           <div className="thinking-indicator">
                             <Spin size="small" />
                             <span>AI正在思考中...</span>
+                          </div>
+                        ) : message.isRegenerating ? (
+                          <div className="thinking-indicator">
+                            <Spin size="small" />
+                            <span>正在重新生成...</span>
                           </div>
                         ) : (
                           <span />
@@ -771,13 +1467,18 @@ const KnowledgeQA = () => {
                             />
                           </Tooltip>
                           <Tooltip title="重新生成">
-                            <Button type="text" size="small" icon={<ReloadOutlined />} />
+                            <Button 
+                              type="text" 
+                              size="small" 
+                              icon={<ReloadOutlined />}
+                              onClick={() => handleRegenerateAnswer(message.id)}
+                            />
                           </Tooltip>
                           <Tooltip title="点赞回答">
                             <Button
                               type="text"
                               size="small"
-                              icon={<LikeOutlined />}
+                              icon={message.isLiked ? <LikeFilled style={{ color: 'var(--ant-color-primary)' }} /> : <LikeOutlined />}
                               onClick={() => handleFeedback(message.id, "like")}
                             />
                           </Tooltip>
@@ -785,7 +1486,7 @@ const KnowledgeQA = () => {
                             <Button
                               type="text"
                               size="small"
-                              icon={<DislikeOutlined />}
+                              icon={message.isDisliked ? <DislikeFilled style={{ color: 'var(--ant-color-primary)' }} /> : <DislikeOutlined />}
                               onClick={(e) => handleFeedback(message.id, "dislike", e)}
                             />
                           </Tooltip>
@@ -799,14 +1500,51 @@ const KnowledgeQA = () => {
             </div>
 
             <div className="input-section">
+              {/* 用户登录状态提示 */}
+              {!currentUserId && (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '16px', 
+                  backgroundColor: '#fff7e6', 
+                  border: '1px solid #ffd591', 
+                  borderRadius: '6px',
+                  marginBottom: '16px'
+                }}>
+                  <BulbOutlined style={{ color: '#fa8c16', marginRight: '8px' }} />
+                  <span style={{ color: '#d46b08' }}>
+                    请先登录后再发送消息
+                  </span>
+                </div>
+              )}
+              
+              {/* 停止按钮 */}
+              {isLoading && (
+                <div className="stop-section" style={{ marginBottom: '12px', textAlign: 'center' }}>
+                  <Button type="default" icon={<StopOutlined />} onClick={handleCancelRequest} className="stop-button">
+                    停止回答
+                  </Button>
+                </div>
+              )}
+
               <div className="input-container">
                 <TextArea
                   value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="请在这里继续输入问题"
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    console.log('TextArea onChange:', {
+                      oldValue: inputValue,
+                      newValue: newValue,
+                      oldValueLength: inputValue.length,
+                      newValueLength: newValue.length,
+                      oldValueTrimmed: inputValue.trim(),
+                      newValueTrimmed: newValue.trim()
+                    });
+                    setInputValue(newValue);
+                  }}
+                  placeholder={currentUserId ? "请在这里继续输入问题" : "请先登录后再输入问题"}
                   rows={2}
                   className="question-input"
-                  disabled={isLoading}
+                  disabled={isLoading || !currentUserId}
                   onPressEnter={(e) => {
                     if (!e.shiftKey) {
                       e.preventDefault();
@@ -817,135 +1555,140 @@ const KnowledgeQA = () => {
                 <Button
                   type="primary"
                   icon={isLoading ? <LoadingOutlined /> : <SendOutlined />}
-                  onClick={handleSend}
+                  onClick={() => {
+                    console.log('发送按钮点击:', {
+                      inputValue: inputValue,
+                      inputValueLength: inputValue.length,
+                      inputValueTrimmed: inputValue.trim(),
+                      inputValueTrimmedLength: inputValue.trim().length,
+                      currentUserId: currentUserId,
+                      isLoading: isLoading
+                    });
+                    handleSend();
+                  }}
                   className="send-button"
-                  disabled={isLoading || !inputValue.trim()}
+                  disabled={isLoading || !inputValue.trim() || !currentUserId}
                 >
                   {isLoading ? "思考中..." : "发送"}
                 </Button>
               </div>
-
-              {/* 停止按钮 */}
-              {isLoading && (
-                <div className="stop-section">
-                  <Button type="default" icon={<StopOutlined />} onClick={handleCancelRequest} className="stop-button">
-                    停止回答
-                  </Button>
-                </div>
-              )}
             </div>
           </div>
 
           {/* 右侧RelatedText侧边栏 */}
-          {messages.length > 0 && messages.some(msg => msg.references && msg.references.length > 0) && (
-            <div className="related-text-sider">
-              <div className="related-text-header">
-                <h3>RelatedText</h3>
-              </div>
-              <div className="related-text-content">
-                {messages.map((message) => 
-                  message.references && message.references.length > 0 ? (
-                    message.references.map((reference, index) => (
-                      <div key={`${message.id}-${index}`}>
-                        <Card 
-                          className="related-text-card" 
-                          size="small"
-                          style={{ cursor: 'pointer', marginBottom: '12px' }}
-                          onClick={() => handleToggleRelatedTextExpansion(reference)}
-                        >
-                          <div className="related-text-knowledge">
-                            <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
-                            <div className="knowledge-info">
-                              <div className="knowledge-name">{reference.knowledgeName || reference.sourceFile || "引用文档"}</div>
-                            </div>
-                            <div className="related-text-actions">
-                              <Tooltip title="在当前页面打开">
-                                <GlobalOutlined 
-                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenInCurrentPage(reference);
-                                  }}
-                                />
-                              </Tooltip>
-                              <Tooltip title="在新页面打开">
-                                <ExportOutlined 
-                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenInNewPage(reference);
-                                  }}
-                                />
-                              </Tooltip>
-                            </div>
+          {(() => {
+            // 获取最新的AI回答消息
+            const latestAIMessage = messages
+              .filter(msg => msg.type === 'ai' && msg.references && msg.references.length > 0)
+              .pop();
+            
+            // 如果没有最新的AI回答或有引用，则不显示侧边栏
+            if (!latestAIMessage || !latestAIMessage.references || latestAIMessage.references.length === 0) {
+              return null;
+            }
+            
+            return (
+              <div className="related-text-sider">
+                <div className="related-text-header">
+                  <h3>RelatedText</h3>
+                  
+                </div>
+                <div className="related-text-content">
+                  {latestAIMessage.references.map((reference, index) => (
+                    <div key={`${latestAIMessage.id}-${index}`}>
+                      <Card 
+                        className="related-text-card" 
+                        size="small"
+                        style={{ cursor: 'pointer', marginBottom: '12px' }}
+                        onClick={() => handleToggleRelatedTextExpansion(reference)}
+                      >
+                        <div className="related-text-knowledge">
+                          <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                          <div className="knowledge-info">
+                            <div className="knowledge-name">{reference.knowledgeName || reference.sourceFile || "引用文档"}</div>
                           </div>
-                        </Card>
-                        
-                        {/* 展开的知识详情 */}
-                        {expandedRelatedText[reference.knowledgeId] && (
-                          <Card 
-                            className="expanded-related-text-detail" 
-                            size="small"
-                            style={{ marginBottom: '12px' }}
-                          >
-                            {/* 展开详情的头部，包含收起按钮 */}
-                            <div className="expanded-detail-header" style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between', 
-                              alignItems: 'center'
-                            }}>
-                              <span style={{ fontSize: '14px', fontWeight: '500', color: '#333' }}>
-                                {reference.knowledgeName || reference.sourceFile || "引用文档"}
-                              </span>
-                              <Button 
-                                type="text" 
-                                size="small"
-                                icon={<CloseOutlined />}
+                          <div className="related-text-actions">
+                            <Tooltip title="在当前页面打开">
+                              <GlobalOutlined 
+                                style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleToggleRelatedTextExpansion(reference);
+                                  handleOpenInCurrentPage(reference);
                                 }}
-                                style={{ 
-                                  color: '#999',
-                                  padding: '4px 8px',
-                                  height: 'auto'
+                              />
+                            </Tooltip>
+                            <Tooltip title="在新页面打开">
+                              <ExportOutlined 
+                                style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenInNewPage(reference);
                                 }}
-                              >
-                                收起
-                              </Button>
-                            </div>
-                            
-                            <div className="expanded-detail-content">
-                              {expandedRelatedTextLoading[reference.knowledgeId] ? (
-                                <div style={{ padding: '16px', textAlign: 'center' }}>
-                                  <Spin size="small" />
-                                  <p style={{ margin: '8px 0 0 0', color: '#999' }}>加载中...</p>
-                                </div>
-                              ) : expandedRelatedTextData[reference.knowledgeId] ? (
-                                <SourceExpandedDetail 
-                                  knowledgeDetail={expandedRelatedTextData[reference.knowledgeId]} 
-                                  loading={false} 
+                              />
+                            </Tooltip>
+                          </div>
+                        </div>
+                      </Card>
+                      
+                      {/* 展开的知识详情 */}
+                      {expandedRelatedText[reference.knowledgeId] && (
+                        <Card 
+                          className="expanded-related-text-detail" 
+                          size="small"
+                          style={{ marginBottom: '12px' }}
+                        >
+                          {/* 展开详情的头部，包含收起按钮 */}
+                          <div className="expanded-detail-header" style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center'
+                          }}>
+                            <span style={{ fontSize: '14px', fontWeight: '500', color: '#333' }}>
+                              {reference.knowledgeName || reference.sourceFile || "引用文档"}
+                            </span>
+                            <Button 
+                              type="text" 
+                              size="small"
+                              icon={<CloseOutlined />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleRelatedTextExpansion(reference);
+                              }}
+                              style={{ 
+                                color: '#999',
+                                padding: '4px 8px',
+                                height: 'auto'
+                              }}
+                            >
+                              收起
+                            </Button>
+                          </div>
+                          
+                          <div className="expanded-detail-content">
+                            {expandedRelatedTextLoading[reference.knowledgeId] ? (
+                              <div style={{ padding: '16px', textAlign: 'center' }}>
+                                <Spin size="small" />
+                                <p style={{ margin: '8px 0 0 0', color: '#999' }}>加载中...</p>
+                              </div>
+                            ) : expandedRelatedTextData[reference.knowledgeId] ? (
+                              <SourceExpandedDetail 
+                                knowledgeDetail={expandedRelatedTextData[reference.knowledgeId]} 
+                                loading={false} 
                                 />
-                              ) : (
-                                <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
-                                  加载失败，请重试
-                                </div>
-                              )}
-                            </div>
-                          </Card>
-                        )}
-                      </div>
-                    ))
-                  ) : null
-                )}
-                {!messages.some(msg => msg.references && msg.references.length > 0) && (
-                  <div className="empty-related-text">
-                    <Empty description="暂无相关内容" />
-                  </div>
-                )}
+                            ) : (
+                              <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
+                                加载失败，请重试
+                              </div>
+                            )}
+                          </div>
+                        </Card>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 

@@ -16,6 +16,36 @@ import { useKnowledgeStore, useAuthStore } from '../../stores';
 import { useFeedbackTypes } from '../../hooks/useFeedbackTypes';
 import './KnowledgeDetail.scss';
 
+// HTML标签清理函数
+const stripHtmlTags = (htmlString) => {
+  if (!htmlString || typeof htmlString !== 'string') {
+    return htmlString || '';
+  }
+  
+  // 如果内容不包含HTML标签，直接返回
+  if (!htmlString.includes('<')) {
+    return htmlString;
+  }
+  
+  try {
+    // 创建临时DOM元素来解析HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlString;
+    
+    // 获取纯文本内容
+    const textContent = tempDiv.textContent || tempDiv.innerText || htmlString;
+    
+    // 清理临时元素
+    tempDiv.remove();
+    
+    return textContent;
+  } catch (error) {
+    console.warn('HTML标签清理失败:', error);
+    // 如果解析失败，使用正则表达式移除标签
+    return htmlString.replace(/<[^>]*>/g, '');
+  }
+};
+
 const { Content } = Layout;
 const { TabPane } = Tabs;
 
@@ -421,7 +451,20 @@ const KnowledgeDetail = () => {
                       <div className="result-title">{item.title}</div>
                       <div className="result-date">{item.date}</div>
                     </div>
-                    <div className="result-description">{item.description}</div>
+                    <div className="result-description" 
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: '1.4',
+                        maxHeight: '2.8em',
+                        fontSize: '16px'
+                      }}
+                    >
+                      {stripHtmlTags(item.description)}
+                    </div>
                   </div>
                 ))
               ) : (
@@ -507,7 +550,7 @@ const KnowledgeDetail = () => {
                         <div className="content-section">
                           <div 
                             dangerouslySetInnerHTML={{ 
-                              __html: tab.content?.description || '暂无内容' 
+                              __html: tab.content?.description || '暂无内容'
                             }} 
                           />
                         </div>

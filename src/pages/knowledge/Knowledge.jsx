@@ -28,7 +28,9 @@ import {
   FilePdfOutlined,
   RobotOutlined,
   LikeOutlined,
+  LikeFilled,
   DislikeOutlined,
+  DislikeFilled,
   DownOutlined,
   SendOutlined,
   CalendarOutlined,
@@ -49,16 +51,46 @@ import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
 import { useSearchHistoryStore, useKnowledgeStore, useAuthStore } from "../../stores";
-import { useFeedbackTypes } from "../../hooks/useFeedbackTypes";
- 
+
 import "./Knowledge.scss";
+
+// HTML标签清理函数
+const stripHtmlTags = (htmlString) => {
+  if (!htmlString || typeof htmlString !== 'string') {
+    return htmlString || '';
+  }
+  
+  // 如果内容不包含HTML标签，直接返回
+  if (!htmlString.includes('<')) {
+    return htmlString;
+  }
+  
+  try {
+    // 创建临时DOM元素来解析HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlString;
+    
+    // 获取纯文本内容
+    const textContent = tempDiv.textContent || tempDiv.innerText || htmlString;
+    
+    // 清理临时元素
+    tempDiv.remove();
+    
+    return textContent;
+  } catch (error) {
+    console.warn('HTML标签清理失败:', error);
+    // 如果解析失败，使用正则表达式移除标签
+    return htmlString.replace(/<[^>]*>/g, '');
+  }
+};
+
 
 const { Sider, Content } = Layout;
 const { Search } = Input;
 
 const Knowledge = observer(() => {
 
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -66,14 +98,13 @@ const Knowledge = observer(() => {
   const knowledgeStore = useKnowledgeStore();
   const authStore = useAuthStore();
   const categoryId = searchParams.get('parent');
-  
+
   // 获取当前用户ID
   const currentUserId = authStore.user?.id || authStore.user?.userId;
-  
-  // 获取反馈类型
-  const { feedbackTypes, loading: feedbackTypesLoading } = useFeedbackTypes();
 
-  
+
+
+
   const [searchCurrentPage, setSearchCurrentPage] = useState(1); // 搜索结果分页
   const [questionInput, setQuestionInput] = useState(""); // 问题输入框
   const [searchValue, setSearchValue] = useState(""); // 搜索输入值
@@ -109,28 +140,28 @@ const Knowledge = observer(() => {
   const [knowledgeDetailVisible, setKnowledgeDetailVisible] = useState(false);
   const [currentKnowledge, setCurrentKnowledge] = useState(null);
   const [knowledgeDetailLoading, setKnowledgeDetailLoading] = useState(false);
-  
+
   // 收藏相关状态
   const [favoriteStates, setFavoriteStates] = useState({});
   const [favoriteLoading, setFavoriteLoading] = useState({});
-  
+
   // 反馈相关状态
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
-  const [selectedFeedbackType, setSelectedFeedbackType] = useState("");
+
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackPosition, setFeedbackPosition] = useState({ x: 0, y: 0 });
-  
+
   // Sources弹窗相关状态
   const [sourcesModalVisible, setSourcesModalVisible] = useState(false);
   const [sourcesModalData, setSourcesModalData] = useState(null);
   const [sourcesModalLoading, setSourcesModalLoading] = useState(false);
-  
+
   // Sources展开状态管理
   const [expandedSources, setExpandedSources] = useState({});
   const [expandedSourceData, setExpandedSourceData] = useState({});
   const [expandedSourceLoading, setExpandedSourceLoading] = useState({});
-  
+
   // 生成sessionId
   const generateSessionId = () => {
     return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -141,7 +172,7 @@ const Knowledge = observer(() => {
     setAiLoading(true);
     setAiAnswer(null);
     setReferences([]); // 清空之前的引用数据
-    
+
     try {
       // 准备请求数据
       const requestData = {
@@ -151,7 +182,7 @@ const Knowledge = observer(() => {
         knowledgeIds: [], // 搜索时不限制特定知识ID
         stream: true
       };
-      
+
       await handleStreamResponse(requestData);
     } catch (error) {
       console.error('获取AI回答失败:', error);
@@ -172,7 +203,7 @@ const Knowledge = observer(() => {
       },
       body: JSON.stringify(requestData)
     });
-    
+
     if (response.ok) {
       console.log('流式响应开始');
       const reader = response.body.getReader();
@@ -183,31 +214,31 @@ const Knowledge = observer(() => {
       let currentEvent = '';
       let currentData = '';
       let aiMessageId = '';
-      
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        
+
         // 保留最后一行，因为它可能不完整
         buffer = lines.pop() || '';
-        
+
         for (const line of lines) {
           if (line.trim() === '') continue;
-          
+
           if (line.startsWith('event: ')) {
             currentEvent = line.slice(7);
             currentData = ''; // 重置数据
             console.log('收到事件:', currentEvent);
           } else if (line.startsWith('data: ')) {
             currentData = line.slice(6);
-            
+
             // 尝试解析JSON，如果失败则等待更多数据
             try {
               const parsed = JSON.parse(currentData);
-              
+
               // 根据事件类型处理数据
               if (currentEvent === 'start') {
                 console.log('RAG对话开始:', parsed.message);
@@ -218,7 +249,9 @@ const Knowledge = observer(() => {
                   setAiAnswer({
                     answer: answer,
                     references: references,
-                    recommendedQuestions: []
+                    recommendedQuestions: [],
+                    isLiked: false,
+                    isDisliked: false
                   });
                   // 清除loading状态，显示内容
                   setAiLoading(false);
@@ -266,7 +299,7 @@ const Knowledge = observer(() => {
           }
         }
       }
-      
+
       return true;
     } else {
       console.error('流式响应失败:', response.status);
@@ -281,18 +314,18 @@ const Knowledge = observer(() => {
       message.warning("请输入问题");
       return;
     }
-    
+
     // 显示loading效果
     setAiLoading(true);
-    
+
     // 延迟跳转，让用户看到loading效果
     setTimeout(() => {
       // 跳转到问答页面，并传递问题内容
-      navigate("/knowledge-qa", { 
-        state: { 
+      navigate("/knowledge-qa", {
+        state: {
           question: questionInput.trim(),
           fromPage: "knowledge"
-        } 
+        }
       });
     }, 500); // 显示500ms的loading效果
   };
@@ -301,15 +334,15 @@ const Knowledge = observer(() => {
   const handleRecommendedQuestionClick = (question) => {
     // 显示loading效果
     setAiLoading(true);
-    
+
     // 延迟跳转，让用户看到loading效果
     setTimeout(() => {
       // 跳转到问答页面，并传递问题内容
-      navigate("/knowledge-qa", { 
-        state: { 
+      navigate("/knowledge-qa", {
+        state: {
           question: question,
           fromPage: "knowledge"
-        } 
+        }
       });
     }, 500); // 显示500ms的loading效果
   };
@@ -317,10 +350,10 @@ const Knowledge = observer(() => {
   // 处理AI回答的反馈（点赞/点踩）
   const handleAIFeedback = async (type, event) => {
     if (!aiAnswer) return;
-    
+
     if (type === "dislike") {
       // 点踩时需要打开反馈弹窗
-      
+
       // 获取点踩按钮的位置
       const button = event?.target?.closest('.ant-btn');
       if (button) {
@@ -329,110 +362,127 @@ const Knowledge = observer(() => {
         const modalHeight = 300;
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
-        
+
         // 计算弹窗位置，确保不超出屏幕边界
         let x = rect.left;
         let y = rect.bottom + 10;
-        
+
         // 如果弹窗会超出右边界，则向左调整
         if (x + modalWidth > windowWidth) {
           x = windowWidth - modalWidth - 20;
         }
-        
+
         // 如果弹窗会超出下边界，则向上调整
         if (y + modalHeight > windowHeight) {
           y = rect.top - modalHeight - 10;
         }
-        
+
         // 确保不超出左边界和上边界
         x = Math.max(20, x);
         y = Math.max(20, y);
-        
+
         setFeedbackPosition({ x, y });
       }
-      
+
       setFeedbackModalVisible(true);
       return;
     }
 
     // 点赞直接提交
     try {
-      // 注意：这里需要knowledgeId，但AI回答可能没有关联的知识ID
-      // 暂时使用一个默认值或者跳过这个操作
-      const knowledgeId = aiAnswer.knowledgeId || 1; // 需要从AI回答中获取关联的知识ID
-      
-      const response = await feedbackAPI.submitFeedback(
-        knowledgeId,
-        aiAnswer.answer, // content
-        type === "like" ? "like" : "dislike", // feedbackType
+      const response = await engagementAPI.likeAnswer(
+        aiAnswer.sessionId,
+        aiAnswer.messageId,
         currentUserId
       );
-      
+
       if (response.code === 200) {
-        message.success(`已${type === "like" ? "点赞" : "点踩"}该回答`);
+        message.success('已点赞该回答');
+        // 立即更新UI状态，让点赞图标变亮
+        setAiAnswer(prev => ({
+          ...prev,
+          isLiked: true
+        }));
       } else {
-        message.error(response.message || "操作失败，请重试");
+        message.error(response.message || '点赞失败');
       }
     } catch (error) {
-      console.error("提交反馈失败:", error);
-      message.error("操作失败，请重试");
+      console.error('点赞失败:', error);
+      message.error('操作失败，请重试');
     }
   };
 
   // 提交反馈弹窗中的反馈
   const handleSubmitFeedback = async () => {
-    if (!selectedFeedbackType) {
-      message.warning('请选择反馈类型');
-      return;
-    }
-
-    if (!feedbackContent.trim()) {
-      message.warning("请输入反馈内容");
-      return;
-    }
-
     if (!currentUserId) {
       message.error('请先登录');
       return;
     }
 
     try {
-      // 注意：这里需要knowledgeId，但AI回答可能没有关联的知识ID
-      // 暂时使用一个默认值或者跳过这个操作
-      const knowledgeId = aiAnswer?.knowledgeId || 1; // 需要从AI回答中获取关联的知识ID
-      
-      const response = await feedbackAPI.submitFeedback(
-        knowledgeId,
-        feedbackContent.trim(), // content
-        selectedFeedbackType, // feedbackType
+      // 点击确定：带着消息提交点踩
+      const response = await engagementAPI.dislikeAnswer(
+        aiAnswer.sessionId,
+        aiAnswer.messageId,
+        feedbackContent.trim(), // 带着反馈内容
         currentUserId
       );
-      
+
       if (response.code === 200) {
-        message.success("反馈提交成功");
+        message.success("点踩提交成功");
         setFeedbackModalVisible(false);
         setFeedbackContent("");
-        setSelectedFeedbackType("");
+        // 立即更新UI状态，让点踩图标变亮
+        setAiAnswer(prev => ({
+          ...prev,
+          isDisliked: true
+        }));
       } else {
         message.error(response.message || "提交失败，请重试");
       }
     } catch (error) {
-      console.error("提交反馈失败:", error);
+      console.error('点踩失败:', error);
       message.error("提交失败，请重试");
     }
   };
 
   // 取消反馈弹窗
-  const handleCancelFeedback = () => {
-    setFeedbackModalVisible(false);
-    setFeedbackContent("");
-    setSelectedFeedbackType("");
+  const handleCancelFeedback = async () => {
+    if (!currentUserId) {
+      message.error('请先登录');
+      return;
+    }
+
+    try {
+      // 点击取消：直接提交点踩（不带消息）
+      const response = await engagementAPI.dislikeAnswer(
+        aiAnswer.sessionId,
+        aiAnswer.messageId,
+        "", // 空内容
+        currentUserId
+      );
+
+      if (response.code === 200) {
+        message.success("点踩提交成功");
+        setFeedbackModalVisible(false);
+        setFeedbackContent("");
+        // 立即更新UI状态，让点踩图标变亮
+        setAiAnswer(prev => ({
+          ...prev,
+          isDisliked: true
+        }));
+      } else {
+        message.error(response.message || "提交失败，请重试");
+      }
+    } catch (error) {
+      console.error('点踩失败:', error);
+      message.error("提交失败，请重试");
+    }
   };
 
   // 获取分类知识列表
   const fetchCategoryKnowledge = useCallback(async (categoryId, page = 1, size = 10) => {
     if (!categoryId) return;
-    
 
     setCategoryLoading(true);
     try {
@@ -440,15 +490,13 @@ const Knowledge = observer(() => {
         page,
         size
       });
-      
 
-      
       if (response.code === 200) {
         const knowledgeList = response.data.records || [];
-        
+
         // 将知识列表存储到store中
         knowledgeStore.setKnowledgeList(knowledgeList);
-        
+
         // 根据实际API返回的数据结构进行调整
         setCategoryKnowledge(knowledgeList);
         setCategoryPagination(prev => ({
@@ -478,7 +526,7 @@ const Knowledge = observer(() => {
   // 获取搜索结果
   const fetchSearchResults = useCallback(async (query, page = 1, size = 10) => {
     if (!query || !query.trim()) return;
-    
+
 
     setSearchLoading(true);
     // 搜索时也显示AI模块和Sources模块的loading效果
@@ -487,12 +535,12 @@ const Knowledge = observer(() => {
     try {
       const response = await knowledgeAPI.searchKnowledgeByQuery({
         query: query.trim(),
-        page: page , 
+        page: page,
         size: size
       });
-      
 
-      
+
+
       if (response.code === 200) {
 
         // 处理搜索结果，如果name为空则使用description的前50个字符作为标题
@@ -501,10 +549,10 @@ const Knowledge = observer(() => {
           name: item.name || item.description?.substring(0, 50) + '...' || '无标题',
           displayName: item.name || item.description?.substring(0, 50) + '...' || '无标题'
         }));
-        
+
         // 将搜索结果存储到store中
         knowledgeStore.setKnowledgeList(processedResults);
-        
+
         setSearchResults(processedResults);
         setSearchPagination(prev => ({
           ...prev,
@@ -512,11 +560,11 @@ const Knowledge = observer(() => {
           total: response.data.total || 0,
           pageSize: size
         }));
-        
+
         // 处理RAG结果（AI回答和引用）
         if (response.data.ragResults && response.data.ragResults.length > 0) {
           const ragResult = response.data.ragResults[0];
-          
+
           // 设置AI回答
           if (ragResult.answer) {
             setAiAnswer({
@@ -524,12 +572,14 @@ const Knowledge = observer(() => {
               references: ragResult.references || [],
               recommendedQuestions: ragResult.recommendedQuestions || [],
               sessionId: ragResult.sessionId,
-              messageId: ragResult.messageId
+              messageId: ragResult.messageId,
+              isLiked: false,
+              isDisliked: false
             });
             // 设置AI回答后立即清除loading状态
             setAiLoading(false);
           }
-          
+
           // 设置引用数据
           if (ragResult.references && Array.isArray(ragResult.references)) {
             // 转换数据格式以匹配Sources模块期望的格式
@@ -555,7 +605,7 @@ const Knowledge = observer(() => {
           setAiLoading(false);
           setSourcesLoading(false);
         }
-        
+
         console.log('搜索API响应:', response.data);
 
       } else {
@@ -580,11 +630,11 @@ const Knowledge = observer(() => {
     setSearchValue(value);
     // 清空之前的搜索结果
     setSearchResults([]);
-    
+
     if (value.trim()) {
       // 添加搜索历史
       searchHistoryStore.addSearchHistory(value.trim());
-      
+
       setCurrentCategoryId(1);
       setIsCategorySearchMode(true); // 进入搜索模式
       fetchSearchResults(value.trim(), 1, 10);
@@ -622,7 +672,7 @@ const Knowledge = observer(() => {
         setSearchValue(''); // 清空搜索框
       }
       setCurrentCategoryId(categoryId);
-      fetchCategoryKnowledge(categoryId, 1, 10);
+      fetchCategoryKnowledge(categoryId, 1, 10); // 从第一页开始加载
       // 隐藏AI和sourceModules
       setShowAISourceModules(false);
     } else {
@@ -642,7 +692,7 @@ const Knowledge = observer(() => {
     setCurrentCategoryId(category.id);
     // 不更新搜索框内容，保持用户输入的内容
     // 使用分类知识接口获取该分类下的知识
-    fetchCategoryKnowledge(category.id, 1, 10);
+    fetchCategoryKnowledge(category.id, 1, 10); // 从第一页开始加载
     // 隐藏AI和source模块
     setShowAISourceModules(false);
   };
@@ -670,8 +720,26 @@ const Knowledge = observer(() => {
     }
   }, [location.state]);
 
-  const handleResultClick = (item) => {
-    navigate(`/knowledge/${item.id}`);
+  // 处理知识卡片点击
+  const handleResultClick = async (item) => {
+    try {
+      // 获取完整的知识详情
+      const response = await knowledgeAPI.getKnowledgeDetail(item.id);
+      if (response.code === 200) {
+        setCurrentKnowledge(response.data);
+        
+        // 滚动到详情区域
+        const detailSection = document.querySelector('.knowledge-detail-section');
+        if (detailSection) {
+          detailSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } else {
+        message.error(response.message || '获取知识详情失败');
+      }
+    } catch (error) {
+      console.error('获取知识详情失败:', error);
+      message.error('获取知识详情失败，请稍后重试');
+    }
   };
 
   // 切换AI和source模块显示状态
@@ -685,11 +753,11 @@ const Knowledge = observer(() => {
   const handleFavorite = async (knowledgeId, event) => {
     event?.stopPropagation();
     if (!knowledgeId || favoriteLoading[knowledgeId]) return;
-    
+
     setFavoriteLoading(prev => ({ ...prev, [knowledgeId]: true }));
     try {
       const isCurrentlyFavorited = favoriteStates[knowledgeId];
-      
+
       if (isCurrentlyFavorited) {
         // 取消收藏
         const response = await knowledgeAPI.unfavoriteKnowledge(knowledgeId);
@@ -720,11 +788,11 @@ const Knowledge = observer(() => {
   // 获取知识详情
   const fetchKnowledgeDetail = async (knowledgeId) => {
     if (!knowledgeId) return;
-    
+
     setKnowledgeDetailLoading(true);
     try {
       const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
-      
+
       if (response.code === 200) {
         setCurrentKnowledge(response.data);
       } else {
@@ -742,7 +810,7 @@ const Knowledge = observer(() => {
   const handleSourceKnowledgeClick = (reference) => {
     setCurrentKnowledge(reference); // 先显示基本信息
     setKnowledgeDetailVisible(true);
-    
+
     // 如果有knowledgeId，则获取详细信息
     if (reference.knowledgeId) {
       fetchKnowledgeDetail(reference.knowledgeId);
@@ -758,7 +826,7 @@ const Knowledge = observer(() => {
 
   // 在当前页面打开知识详情
   const handleOpenInCurrentPage = (item) => {
-    // 使用新的知识详情页面路由
+    // 使用正确的知识详情页面路由
     const categoryParam = categoryId ? `?category=${categoryId}` : '';
     const knowledgeId = item.id || item.knowledgeId;
     if (knowledgeId) {
@@ -786,7 +854,7 @@ const Knowledge = observer(() => {
   const handleToggleSourceExpansion = async (reference) => {
     const knowledgeId = reference.knowledgeId;
     const isCurrentlyExpanded = expandedSources[knowledgeId];
-    
+
     if (isCurrentlyExpanded) {
       // 收起
       setExpandedSources(prev => ({ ...prev, [knowledgeId]: false }));
@@ -804,7 +872,7 @@ const Knowledge = observer(() => {
       // 展开
       setExpandedSources(prev => ({ ...prev, [knowledgeId]: true }));
       setExpandedSourceLoading(prev => ({ ...prev, [knowledgeId]: true }));
-      
+
       try {
         const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
         if (response.code === 200) {
@@ -826,7 +894,7 @@ const Knowledge = observer(() => {
     setSourcesModalVisible(true);
     setSourcesModalLoading(true);
     setSourcesModalData(null);
-    
+
     try {
       const response = await knowledgeAPI.getKnowledgeDetail(reference.knowledgeId);
       if (response.code === 200) {
@@ -889,9 +957,9 @@ const Knowledge = observer(() => {
       </div>
 
       <Layout className="knowledge-main-layout">
-        <CommonSidebar 
-          height="calc(100vh - 196px)" 
-          marginTop="16px" 
+        <CommonSidebar
+          height="calc(100vh - 196px)"
+          marginTop="16px"
           enableNavigation={false}
           filterCategoryId={categoryId}
           onCategoryClick={handleCategoryClick}
@@ -900,128 +968,128 @@ const Knowledge = observer(() => {
           {/* AI助手聊天区域 - 只在显示AI模块时显示 */}
           {showAISourceModules && (
             <div className="chat-section">
-            {aiLoading ? (
-              <div className="chat-message">
-                <div className="message-header">
-                  <Avatar icon={<RobotOutlined />} className="ai-avatar" />
-                </div>
-                <div className="message-content">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Spin size="small" />
-                    <p style={{ margin: 0 }}>AI正在思考中，请稍候...</p>
+              {aiLoading ? (
+                <div className="chat-message">
+                  <div className="message-header">
+                    <Avatar icon={<RobotOutlined />} className="ai-avatar" />
+                  </div>
+                  <div className="message-content">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Spin size="small" />
+                      <p style={{ margin: 0 }}>AI正在思考中，请稍候...</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : aiAnswer ? (
-              <div className="chat-message">
-                <div className="message-header">
-                  <Avatar icon={<RobotOutlined />} className="ai-avatar" />
-                </div>
-                <div className="message-content">
-                  <p>{aiAnswer.answer}</p>
-                  <div className="message-actions">
-                    {aiAnswer.references && aiAnswer.references.length > 0 && (
-                      <Button type="link" size="small" icon={<FilePdfOutlined />}>
-                        {aiAnswer.references[0].sourceFile}
-                      </Button>
-                    )}
-                    <Tooltip title="点赞回答">
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<LikeOutlined />}
-                        onClick={() => handleAIFeedback("like")}
-                      />
-                    </Tooltip>
-                    <Tooltip title="点踩回答（需要填写反馈）">
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<DislikeOutlined />}
-                        onClick={(e) => handleAIFeedback("dislike", e)}
-                      />
-                    </Tooltip>
+              ) : aiAnswer ? (
+                <div className="chat-message">
+                  <div className="message-header">
+                    <Avatar icon={<RobotOutlined />} className="ai-avatar" />
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="chat-message">
-                <div className="message-header">
-                  <Avatar icon={<RobotOutlined />} className="ai-avatar" />
-                </div>
-                <div className="message-content">
-                  <p>请输入您的问题，我将为您提供专业的回答。</p>
-                </div>
-              </div>
-            )}
-
-            {/* 继续解答区域 */}
-            <div className="continue-section">
-              <h4>继续为你解答</h4>
-              {aiAnswer && aiAnswer.recommendedQuestions && aiAnswer.recommendedQuestions.length > 0 ? (
-                <div className="suggested-questions">
-                  {aiAnswer.recommendedQuestions.map((question, index) => (
-                    <Button 
-                      key={index} 
-                      type="default" 
-                      size="small"
-                      onClick={() => handleRecommendedQuestionClick(question)}
-                      disabled={aiLoading}
-                    >
-                      {question}
-                    </Button>
-                  ))}
+                  <div className="message-content">
+                    <p>{aiAnswer.answer}</p>
+                    <div className="message-actions">
+                      {aiAnswer.references && aiAnswer.references.length > 0 && (
+                        <Button type="link" size="small" icon={<FilePdfOutlined />}>
+                          {aiAnswer.references[0].sourceFile}
+                        </Button>
+                      )}
+                      <Tooltip title="点赞回答">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={aiAnswer?.isLiked ? <LikeFilled style={{ color: 'var(--ant-color-primary)' }} /> : <LikeOutlined />}
+                          onClick={() => handleAIFeedback("like")}
+                        />
+                      </Tooltip>
+                      <Tooltip title="点踩回答（需要填写反馈）">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={aiAnswer?.isDisliked ? <DislikeFilled style={{ color: 'var(--ant-color-primary)' }} /> : <DislikeOutlined />}
+                          onClick={(e) => handleAIFeedback("dislike", e)}
+                        />
+                      </Tooltip>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div className="suggested-questions">
-                  <Button 
-                    type="default" 
-                    size="small"
-                    onClick={() => handleRecommendedQuestionClick("请告诉我更多相关信息")}
-                    disabled={aiLoading}
-                  >
-                    请告诉我更多相关信息
-                  </Button>
-                  <Button 
-                    type="default" 
-                    size="small"
-                    onClick={() => handleRecommendedQuestionClick("还有其他问题吗？")}
-                    disabled={aiLoading}
-                  >
-                    还有其他问题吗？
-                  </Button>
+                <div className="chat-message">
+                  <div className="message-header">
+                    <Avatar icon={<RobotOutlined />} className="ai-avatar" />
+                  </div>
+                  <div className="message-content">
+                    <p>请输入您的问题，我将为您提供专业的回答。</p>
+                  </div>
                 </div>
               )}
-              <div className="input-section">
-                <div className="textarea-container">
-                  <Input.TextArea 
-                    value={questionInput}
-                    onChange={(e) => setQuestionInput(e.target.value)}
-                    placeholder="请在这里继续输入问题" 
-                    rows={2} 
-                    style={{ marginBottom: 0 }}
-                    disabled={aiLoading}
-                    onPressEnter={(e) => {
-                      if (!e.shiftKey) {
-                        e.preventDefault();
-                        handleQuestionSubmit();
-                      }
-                    }}
-                  />
-                  <Button 
-                    type="primary" 
-                    icon={aiLoading ? <Spin size="small" /> : <SendOutlined />}
-                    className="send-button"
-                    onClick={handleQuestionSubmit}
-                    loading={aiLoading}
-                    disabled={aiLoading}
-                  >
-                    {aiLoading ? '发送中...' : '发送'}
-                  </Button>
+
+              {/* 继续解答区域 */}
+              <div className="continue-section">
+                <h4>继续为你解答</h4>
+                {aiAnswer && aiAnswer.recommendedQuestions && aiAnswer.recommendedQuestions.length > 0 ? (
+                  <div className="suggested-questions">
+                    {aiAnswer.recommendedQuestions.map((question, index) => (
+                      <Button
+                        key={index}
+                        type="default"
+                        size="small"
+                        onClick={() => handleRecommendedQuestionClick(question)}
+                        disabled={aiLoading}
+                      >
+                        {question}
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="suggested-questions">
+                    <Button
+                      type="default"
+                      size="small"
+                      onClick={() => handleRecommendedQuestionClick("请告诉我更多相关信息")}
+                      disabled={aiLoading}
+                    >
+                      请告诉我更多相关信息
+                    </Button>
+                    <Button
+                      type="default"
+                      size="small"
+                      onClick={() => handleRecommendedQuestionClick("还有其他问题吗？")}
+                      disabled={aiLoading}
+                    >
+                      还有其他问题吗？
+                    </Button>
+                  </div>
+                )}
+                <div className="input-section">
+                  <div className="textarea-container">
+                    <Input.TextArea
+                      value={questionInput}
+                      onChange={(e) => setQuestionInput(e.target.value)}
+                      placeholder="请在这里继续输入问题"
+                      rows={2}
+                      style={{ marginBottom: 0 }}
+                      disabled={aiLoading}
+                      onPressEnter={(e) => {
+                        if (!e.shiftKey) {
+                          e.preventDefault();
+                          handleQuestionSubmit();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="primary"
+                      icon={aiLoading ? <Spin size="small" /> : <SendOutlined />}
+                      className="send-button"
+                      onClick={handleQuestionSubmit}
+                      loading={aiLoading}
+                      disabled={aiLoading}
+                    >
+                      {aiLoading ? '发送中...' : '发送'}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           )}
 
           {/* 搜索结果区域 */}
@@ -1059,18 +1127,30 @@ const Knowledge = observer(() => {
                               <span className="title-text">{item.name}</span>
                             </div>
                             <div className="card-actions">
-                            
+
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="在当前标签页中打开">
-                                <GlobalOutlined style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} />
+                              <Tooltip title="在当前页面打开">
+                                <GlobalOutlined
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInCurrentPage(item);
+                                  }}
+                                />
                               </Tooltip>
-                              <Tooltip title="在新标签页中打开">
-                                <ExportOutlined style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} />
+                              <Tooltip title="在新页面打开">
+                                <ExportOutlined
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInNewPage(item);
+                                  }}
+                                />
                               </Tooltip>
                             </div>
                           </div>
                           <div className="card-content">
-                            <p>{item.description}</p>
+                            <p>{stripHtmlTags(item.description)}</p>
                           </div>
                         </Card>
                       ))}
@@ -1121,28 +1201,15 @@ const Knowledge = observer(() => {
                               <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
                               <span className="title-text">{item.name}</span>
                             </div>
-                            
+
                             <div className="card-actions">
-                              <DownOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
+                          
                               <span className="date-text">2025-01-15</span>
-                              
-                              <Tooltip title={favoriteStates[item.id] ? "取消收藏" : "收藏"} placement="top">
-                                <Button
-                                  type="text"
-                                  size="small"
-                                  icon={favoriteStates[item.id] ? <HeartFilled style={{ color: '#ff4d4f' }} /> : <HeartOutlined />}
-                                  onClick={(e) => handleFavorite(item.id, e)}
-                                  loading={favoriteLoading[item.id]}
-                                  style={{ 
-                                    color: favoriteStates[item.id] ? '#ff4d4f' : '#666',
-                                    marginLeft: '4px',
-                                    transition: 'all 0.3s ease'
-                                  }}
-                                />
-                              </Tooltip>
+
+                           
                               <Tooltip title="在当前页面打开">
-                                <GlobalOutlined 
-                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                                <GlobalOutlined
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleOpenInCurrentPage(item);
@@ -1150,8 +1217,8 @@ const Knowledge = observer(() => {
                                 />
                               </Tooltip>
                               <Tooltip title="在新页面打开">
-                                <ExportOutlined 
-                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                                <ExportOutlined
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleOpenInNewPage(item);
@@ -1161,7 +1228,7 @@ const Knowledge = observer(() => {
                             </div>
                           </div>
                           <div className="card-content">
-                            <p>{item.description}</p>
+                            <p>{stripHtmlTags(item.description)}</p>
                           </div>
                         </Card>
                       ))}
@@ -1212,11 +1279,11 @@ const Knowledge = observer(() => {
                               <span className="title-text">{item.displayName || item.name}</span>
                             </div>
                             <div className="card-actions">
-                             
+
                               <span className="date-text">2025-01-15</span>
                               <Tooltip title="在当前页面打开">
-                                <GlobalOutlined 
-                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }} 
+                                <GlobalOutlined
+                                  style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleOpenInCurrentPage(item);
@@ -1224,8 +1291,8 @@ const Knowledge = observer(() => {
                                 />
                               </Tooltip>
                               <Tooltip title="在新页面打开">
-                                <ExportOutlined 
-                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
+                                <ExportOutlined
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleOpenInNewPage(item);
@@ -1235,7 +1302,7 @@ const Knowledge = observer(() => {
                             </div>
                           </div>
                           <div className="card-content">
-                            <p>{item.description}</p>
+                            <p>{stripHtmlTags(item.description)}</p>
                           </div>
                         </Card>
                       ))}
@@ -1276,116 +1343,116 @@ const Knowledge = observer(() => {
         {/* 右侧Sources侧边栏 - 只在显示source模块时显示 */}
         {showAISourceModules && (
           <Sider className="sources-sider" width={420}>
-          <div className="sources-header">
-            <h3>Sources</h3>
-          </div>
+            <div className="sources-header">
+              <h3>Sources</h3>
+            </div>
 
-          <div className="sources-content">
-            {sourcesLoading ? (
-              <div className="sources-loading">
-                <Spin size="large" />
-                <p style={{ color: '#999', marginTop: '16px' }}>正在查找相关来源...</p>
-              </div>
-            ) : references.length > 0 ? (
-              references.map((reference, index) => (
-                <div key={reference.knowledgeId || index}>
-                  <Card 
-                    className="source-card" 
-                    size="small"
-                    style={{ cursor: 'pointer', marginBottom: '12px' }}
-                    onClick={() => handleToggleSourceExpansion(reference)}
-                  >
-                    <div className="source-knowledge">
-                      <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
-                      <div className="knowledge-info">
-                        <div className="knowledge-name">{reference.knowledgeName}</div>
-                      </div>
-                      <div className="source-actions">
-                        <Tooltip title="在当前页面打开">
-                          <GlobalOutlined 
-                            style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenInCurrentPage(reference);
-                            }}
-                          />
-                        </Tooltip>
-                        <Tooltip title="在新页面打开">
-                          <ExportOutlined 
-                            style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }} 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenInNewPage(reference);
-                            }}
-                          />
-                        </Tooltip>
-                      </div>
-                    </div>
-                  </Card>
-                  
-                  {/* 展开的知识详情 */}
-                  {expandedSources[reference.knowledgeId] && (
-                    <Card 
-                      className="expanded-source-detail" 
+            <div className="sources-content">
+              {sourcesLoading ? (
+                <div className="sources-loading">
+                  <Spin size="large" />
+                  <p style={{ color: '#999', marginTop: '16px' }}>正在查找相关来源...</p>
+                </div>
+              ) : references.length > 0 ? (
+                references.map((reference, index) => (
+                  <div key={reference.knowledgeId || index}>
+                    <Card
+                      className="source-card"
                       size="small"
-                      style={{ marginBottom: '12px' }}
+                      style={{ cursor: 'pointer', marginBottom: '12px' }}
+                      onClick={() => handleToggleSourceExpansion(reference)}
                     >
-                      {/* 展开详情的头部，包含收起按钮 */}
-                      <div className="expanded-detail-header" style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center'
-                      }}>
-                        <span style={{ fontSize: '14px', fontWeight: '500', color: '#333' }}>
-                          {reference.knowledgeName}
-                        </span>
-                        <Button 
-                          type="text" 
-                          size="small"
-                          icon={<CloseOutlined />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleSourceExpansion(reference);
-                          }}
-                          style={{ 
-                            color: '#999',
-                            padding: '4px 8px',
-                            height: 'auto'
-                          }}
-                        >
-                          收起
-                        </Button>
-                      </div>
-                      
-                      <div className="expanded-detail-content">
-                        {expandedSourceLoading[reference.knowledgeId] ? (
-                          <div style={{ padding: '16px', textAlign: 'center' }}>
-                            <Spin size="small" />
-                            <p style={{ margin: '8px 0 0 0', color: '#999' }}>加载中...</p>
-                          </div>
-                        ) : expandedSourceData[reference.knowledgeId] ? (
-                          <SourceExpandedDetail 
-                            knowledgeDetail={expandedSourceData[reference.knowledgeId]} 
-                            loading={false} 
-                          />
-                        ) : (
-                          <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
-                            加载失败，请重试
-                          </div>
-                        )}
+                      <div className="source-knowledge">
+                        <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                        <div className="knowledge-info">
+                          <div className="knowledge-name">{reference.knowledgeName}</div>
+                        </div>
+                        <div className="source-actions">
+                          <Tooltip title="在当前页面打开">
+                            <GlobalOutlined
+                              style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInCurrentPage(reference);
+                              }}
+                            />
+                          </Tooltip>
+                          <Tooltip title="在新页面打开">
+                            <ExportOutlined
+                              style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInNewPage(reference);
+                              }}
+                            />
+                          </Tooltip>
+                        </div>
                       </div>
                     </Card>
-                  )}
+
+                    {/* 展开的知识详情 */}
+                    {expandedSources[reference.knowledgeId] && (
+                      <Card
+                        className="expanded-source-detail"
+                        size="small"
+                        style={{ marginBottom: '12px' }}
+                      >
+                        {/* 展开详情的头部，包含收起按钮 */}
+                        <div className="expanded-detail-header" style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}>
+                          <span style={{ fontSize: '14px', fontWeight: '500', color: '#333' }}>
+                            {reference.knowledgeName}
+                          </span>
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<CloseOutlined />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSourceExpansion(reference);
+                            }}
+                            style={{
+                              color: '#999',
+                              padding: '4px 8px',
+                              height: 'auto'
+                            }}
+                          >
+                            收起
+                          </Button>
+                        </div>
+
+                        <div className="expanded-detail-content">
+                          {expandedSourceLoading[reference.knowledgeId] ? (
+                            <div style={{ padding: '16px', textAlign: 'center' }}>
+                              <Spin size="small" />
+                              <p style={{ margin: '8px 0 0 0', color: '#999' }}>加载中...</p>
+                            </div>
+                          ) : expandedSourceData[reference.knowledgeId] ? (
+                            <SourceExpandedDetail
+                              knowledgeDetail={expandedSourceData[reference.knowledgeId]}
+                              loading={false}
+                            />
+                          ) : (
+                            <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
+                              加载失败，请重试
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="no-sources">
+                  <InboxOutlined style={{ fontSize: '24px', color: '#ccc', marginBottom: '8px' }} />
+                  <p style={{ color: '#999', margin: 0 }}>暂无相关来源</p>
                 </div>
-              ))
-            ) : (
-              <div className="no-sources">
-                <InboxOutlined style={{ fontSize: '24px', color: '#ccc', marginBottom: '8px' }} />
-                <p style={{ color: '#999', margin: 0 }}>暂无相关来源</p>
-              </div>
-            )}
-          </div>
-        </Sider>
+              )}
+            </div>
+          </Sider>
         )}
 
         {/* 知识详情弹窗 */}
@@ -1403,13 +1470,13 @@ const Knowledge = observer(() => {
           onCancel={handleCloseSourcesModal}
           footer={null}
           width={800}
-                              destroyOnHidden
+          destroyOnHidden
           style={{ top: 20 }}
         >
           <div style={{ height: '70vh', overflow: 'hidden' }}>
-            <KnowledgeDetailContent 
-              knowledgeDetail={sourcesModalData} 
-              loading={sourcesModalLoading} 
+            <KnowledgeDetailContent
+              knowledgeDetail={sourcesModalData}
+              loading={sourcesModalLoading}
             />
           </div>
         </Modal>
@@ -1437,14 +1504,6 @@ const Knowledge = observer(() => {
               请告诉我们您对这次回答不满意的地方，帮助我们改进：
             </p>
             <div style={{ marginBottom: 16 }}>
-              <Select
-                placeholder="选择反馈类型"
-                style={{ width: '100%', marginBottom: 12 }}
-                options={feedbackTypes}
-                loading={feedbackTypesLoading}
-                value={selectedFeedbackType}
-                onChange={setSelectedFeedbackType}
-              />
               <Input.TextArea
                 value={feedbackContent}
                 onChange={(e) => setFeedbackContent(e.target.value)}
