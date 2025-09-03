@@ -47,28 +47,47 @@ export const useKnowledgeForm = (mode = 'add') => {
         
         // Parse effective time dates
         const effectiveTime = [
-          data.effective_from ? dayjs(data.effective_from) : null,
-          data.effective_to ? dayjs(data.effective_to) : null
+          data.effectiveStartTime ? dayjs(data.effectiveStartTime) : null,
+          data.effectiveEndTime ? dayjs(data.effectiveEndTime) : null
         ];
         
         // Check if table data exists and has columns
         const hasTableData = data.tableData && data.tableData.columns && data.tableData.columns.length > 0;
         
+        // Process attachments to ensure they have required fields
+        const processedAttachments = (data.attachments || []).map((attachment, index) => {
+          let downloadUrl = attachment.filePath || attachment.url || attachment.fileUrl;
+          
+          // Convert relative paths to full URLs
+          if (downloadUrl && downloadUrl.startsWith('/api/')) {
+            downloadUrl = `${window.location.origin}${downloadUrl}`;
+          }
+          
+          return {
+            id: attachment.id || attachment.uid || index,
+            uid: attachment.uid || attachment.id || index,
+            name: attachment.fileName || attachment.name || `attachment_${index + 1}`,
+            size: attachment.fileSize || attachment.size || 0,
+            url: downloadUrl,
+            isLocal: false // Mark as server-side attachment
+          };
+        });
+        
         // Set form data
         setFormData({
-          title: data.title || '',
-          category: data.category_id || null,
-          privateToRoles: data.audience_roles || ['ALL'],
+          title: data.name || data.title || '',
+          category: data.parentId || data.category_id || null,
+          privateToRoles: data.workspaces || data.audience_roles || ['ALL'],
           tags: data.tags || [],
           effectiveTime: effectiveTime,
-          attachments: data.attachments || [],
+          attachments: processedAttachments,
           tableData: data.tableData || createEmptyTable(),
           disclaimer: true, // Auto-check for edit mode
           enableTable: hasTableData // 如果有表格数据则启用表格
         });
         
         // Set content
-        setContentHtml(data.content_html || '');
+        setContentHtml(data.description || data.content_html || '');
       } else {
         message.error(response.message || '获取知识详情失败');
         navigate('/knowledge-admin/category-management');
@@ -142,86 +161,136 @@ export const useKnowledgeForm = (mode = 'add') => {
   const handlePublish = async (isUploading, nodeType = 'doc') => {
     const errors = validateKnowledgeForm(formData, contentHtml);
     if (errors.length > 0) {
-      // Show first error and scroll to corresponding field
       message.error(errors[0].message);
-      // TODO: implement scroll to error field
       return;
     }
-    // Check if files are uploading
     if (isUploading()) {
       message.warning('请等待文件上传完成');
       return;
     }
-    try {
-      setLoading(true);
-      
-      // First, upload any local files to the server
-      const uploadedAttachments = [];
-      for (const attachment of formData.attachments) {
-        if (attachment.isLocal && attachment.file) {
-          // This is a local file that needs to be uploaded
+  
+    setLoading(true);
+  
+    if (isEditMode) {
+      try {
+        const finalAttachments = [];
+        const newFilesToUpload = formData.attachments.filter(a => a.isLocal && a.file);
+  
+        // 1. Upload any NEW files first, since we have the ID.
+        await Promise.all(newFilesToUpload.map(async (attachment) => {
+          const messageKey = `upload-${attachment.file.uid || attachment.name}`;
           try {
-            message.loading(`正在上传 ${attachment.name}...`, 0);
-            const response = await knowledgeAPI.uploadAttachment(attachment.file);
-            message.destroy(); // Clear loading message
-            
-            uploadedAttachments.push({
-              name: attachment.name,
-              url: response.url,
-              size: attachment.size
-            });
-            
-            message.success(`${attachment.name} 上传成功`);
+            message.loading({ content: `正在上传 ${attachment.name}...`, key: messageKey });
+            // Upload attachment for this specific knowledge
+            const response = await knowledgeAPI.uploadKnowledgeAttachment(id, attachment.file);
+            message.success({ content: `${attachment.name} 上传成功`, key: messageKey, duration: 2 });
+            finalAttachments.push({ name: attachment.name, url: response.url, size: attachment.size });
           } catch (error) {
-            message.destroy(); // Clear loading message
-            message.error(`${attachment.name} 上传失败: ${error.message}`);
+            message.error({ content: `${attachment.name} 上传失败: ${error.message}`, key: messageKey, duration: 3 });
             throw new Error(`附件上传失败: ${attachment.name}`);
           }
-        } else {
-          // This file was already uploaded (edit mode or pre-existing)
-          uploadedAttachments.push({
-            name: attachment.name,
-            url: attachment.url,
-            size: attachment.size
-          });
+        }));
+  
+        // Add back the files that already existed and weren't changed.
+        const existingAttachments = formData.attachments.filter(a => !a.isLocal);
+        const allFinalAttachments = [...existingAttachments, ...finalAttachments];
+        
+        // 2. Assemble the final data and update the document.
+        const submitData = {
+          name: formData.title.trim(),
+          description: contentHtml,
+          parentId: formData.category,
+          nodeType: nodeType,
+          tags: formData.tags,
+          tableData: formData.tableData,
+          effectiveStartTime: formData.effectiveTime?.[0]?.toISOString() || null,
+          effectiveEndTime: formData.effectiveTime?.[1]?.toISOString() || null,
+          changeReason: "Knowledge update",
+          workspaces: formData.privateToRoles,
+          attachments: allFinalAttachments.map(att => ({
+            name: att.name,
+            url: att.url,
+            size: att.size
+          }))
+        };
+  
+        const response = await knowledgeAPI.updateKnowledge(id, submitData);
+        if (response.code !== 200) {
+          throw new Error(response.message || '更新失败');
         }
-      }
-      
-      // Assemble submit data with uploaded attachment URLs
-      const submitData = {
-        title: formData.title.trim(),
-        content_html: contentHtml,
-        category_id: formData.category,
-        audience_roles: formData.privateToRoles,
-        tags: formData.tags,
-        effective_from: formData.effectiveTime[0]?.toISOString() || null,
-        effective_to: formData.effectiveTime[1]?.toISOString() || null,
-        attachments: uploadedAttachments,
-        tableData: formData.tableData,
-        disclaimer_checked: formData.disclaimer,
-        node_type: nodeType
-      };
-      
-      // Call appropriate API based on mode
-      let response;
-      if (isEditMode) {
-        response = await knowledgeAPI.updateKnowledge(id, submitData);
-      } else {
-        response = await knowledgeAPI.createKnowledge(submitData);
-      }
-      
-      if (response.code === 200) {
-        message.success(isEditMode ? '知识更新成功' : '知识发布成功');
-        // Navigate to knowledge detail or list page
+  
+        message.success('知识更新成功');
+  
+        // Note: Attachment cleanup removed since we're not tracking original attachments
+  
         navigate('/knowledge-admin/category-management');
-      } else {
-        throw new Error(response.message || (isEditMode ? '更新失败' : '发布失败'));
+  
+      } catch (error) {
+        console.error('更新失败:', error);
+        message.error(error.message || '更新失败，请重试');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error(isEditMode ? '更新失败:' : '发布失败:', error);
-      message.error(error.message || (isEditMode ? '更新失败，请重试' : '发布失败，请重试'));
-    } finally {
-      setLoading(false);
+  
+    } else {
+      let newKnowledgeId = null;
+      try {
+        // 1. Create the document WITHOUT attachments first.
+        const initialSubmitData = {
+          name: formData.title.trim(),
+          description: contentHtml,
+          parentId: formData.category,
+          nodeType: nodeType,
+          tags: formData.tags,
+          tableData: formData.tableData,
+          effectiveStartTime: formData.effectiveTime?.[0]?.toISOString() || null,
+          effectiveEndTime: formData.effectiveTime?.[1]?.toISOString() || null,
+          changeReason: "Knowledge creation",
+          workspaces: formData.privateToRoles,
+          attachments: [] // Send an empty array initially
+        };
+  
+        const response = await knowledgeAPI.createKnowledge(initialSubmitData);
+        if (response.code !== 200 || !response.data?.id) {
+          throw new Error(response.message || '创建知识失败，无法获取ID');
+        }
+  
+        newKnowledgeId = response.data.id;
+        const filesToUpload = formData.attachments.filter(a => a.isLocal && a.file);
+  
+        // 2. If there are attachments, upload them now using the new ID.
+        if (filesToUpload.length > 0) {
+          message.info('知识已创建，正在上传附件...');
+          const uploadPromises = filesToUpload.map(attachment =>
+            // Upload attachment using the new knowledge ID
+            knowledgeAPI.uploadKnowledgeAttachment(newKnowledgeId, attachment.file)
+              .catch(err => ({ name: attachment.name, error: err })) // Catch individual errors
+          );
+          
+          const results = await Promise.all(uploadPromises);
+          const failedUploads = results.filter(res => res.error);
+  
+          if (failedUploads.length > 0) {
+            const failedNames = failedUploads.map(f => f.name).join(', ');
+            // The document is created, so we show a success message but warn about the failures.
+            message.warning(`知识发布成功，但以下附件上传失败: ${failedNames}`, 5);
+          } else {
+            message.success('知识发布成功，所有附件已上传');
+          }
+        } else {
+          message.success('知识发布成功');
+        }
+  
+        navigate('/knowledge-admin/category-management');
+  
+      } catch (error) {
+        // If the initial creation fails, we just show an error.
+        // If uploads fail, the user is already notified, but we log it.
+        console.error('发布失败:', error);
+        message.error(error.message || '发布失败，请重试');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 

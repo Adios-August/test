@@ -137,8 +137,8 @@ const CategorySidebar = ({
 
   return (
     <div className="common-sidebar" style={{
-      height: 'calc(100vh - 110px)',
-      marginTop: '0px',
+      height: 'calc(100vh - 134px)',
+      marginTop: '8px',
       marginLeft: '16px',
       marginRight: '8px',
       marginBottom: '16px',

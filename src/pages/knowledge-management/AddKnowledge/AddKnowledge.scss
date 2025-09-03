@@ -10,7 +10,7 @@
     border-radius: 12px;
     margin: 16px 8px 16px 16px;
     overflow: visible;
-    height: calc(100vh - 152px);
+    height: calc(100vh - 150px);
     overflow-y: scroll;
     display: flex;
     flex-direction: column;
@@ -75,7 +75,7 @@
   // Right content area styles - customized for add knowledge page
   .knowledge-management-content {
     flex: 1;
-     padding: 24px 24px 0 24px;
+    padding: 8px 24px 0 24px;
     margin-left: 0;
     background: #e9f0fb;
     overflow-y: auto;
@@ -84,8 +84,9 @@
       background: white;
       border-radius: 12px;
       padding: 24px;
-         max-height: calc(100vh - 150px);
-    overflow-y: scroll;
+      height: calc(100vh - 134px);
+      overflow-y: scroll;
+      margin-top: 0;
 
       .content-header {
         margin-bottom: 24px;
