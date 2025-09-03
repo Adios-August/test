@@ -294,8 +294,8 @@ const AddKnowledge = ({ mode = 'add' }) => {
                   onChange={(e) => setNodeTypeToCreate(e.target.value)}
                   size="small"
                 >
-                  <Radio value="doc">📄 文档</Radio>
-                  <Radio value="folder">📁 文件夹</Radio>
+                  <Radio value="doc">📄 Item</Radio>
+                  <Radio value="folder">📁 Category</Radio>
                 </Radio.Group>
               </div>
             )}
@@ -362,40 +362,6 @@ const AddKnowledge = ({ mode = 'add' }) => {
                 </Checkbox>
               </div>
             </div>
-            
-            {/* Action buttons */}
-            <div style={{ textAlign: 'center', marginTop: 24, marginBottom: 16 }}>
-              <Space size="large">
-                <Button 
-                  type="primary" 
-                  size="large"
-                  onClick={() => handlePublishWithNodeType(isUploading)}
-                  disabled={isPublishDisabled}
-                  loading={loading}
-                  style={{ 
-                    backgroundColor: '#ff4d4f',
-                    borderColor: '#ff4d4f'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isPublishDisabled && !loading) {
-                      e.target.style.backgroundColor = '#ff7875';
-                      e.target.style.borderColor = '#ff7875';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isPublishDisabled && !loading) {
-                      e.target.style.backgroundColor = '#ff4d4f';
-                      e.target.style.borderColor = '#ff4d4f';
-                    }
-                  }}
-                >
-                  {isEditMode ? '保存' : '发布'}
-                </Button>
-                <Button size="large" onClick={handleCancel}>
-                  取消
-                </Button>
-              </Space>
-            </div>
 
             {/* Attachment display area */}
             {formData.attachments.length > 0 && (
@@ -431,6 +397,40 @@ const AddKnowledge = ({ mode = 'add' }) => {
                 />
               </div>
             )}
+            
+            {/* Action buttons */}
+            <div style={{ textAlign: 'center', marginTop: 24, marginBottom: 16 }}>
+              <Space size="large">
+                <Button 
+                  type="primary" 
+                  size="large"
+                  onClick={() => handlePublishWithNodeType(isUploading)}
+                  disabled={isPublishDisabled}
+                  loading={loading}
+                  style={{ 
+                    backgroundColor: '#ff4d4f',
+                    borderColor: '#ff4d4f'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isPublishDisabled && !loading) {
+                      e.target.style.backgroundColor = '#ff7875';
+                      e.target.style.borderColor = '#ff7875';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isPublishDisabled && !loading) {
+                      e.target.style.backgroundColor = '#ff4d4f';
+                      e.target.style.borderColor = '#ff4d4f';
+                    }
+                  }}
+                >
+                  {isEditMode ? '保存' : '发布'}
+                </Button>
+                <Button size="large" onClick={handleCancel}>
+                  取消
+                </Button>
+              </Space>
+            </div>
           </div>
         </div>
       </div>

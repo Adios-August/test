@@ -60,6 +60,19 @@ export const knowledgeAPI = {
     });
   },
 
+  // 为特定知识上传附件
+  uploadKnowledgeAttachment: (knowledgeId, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return http.post(`/knowledge/${knowledgeId}/document`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+
+  deleteKnowledgeAttachment: (knowledgeId, attachmentId) => {
+    return http.delete(`/knowledge/${knowledgeId}/document/${attachmentId}`);
+  },
+  
   // 收藏知识
   favoriteKnowledge: (knowledgeId) => {
     return http.post(`/engagement/favorite/${knowledgeId}`);
