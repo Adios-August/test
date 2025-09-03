@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout, Menu, Spin, message, Button } from 'antd';
 import { ReloadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +22,7 @@ const CommonSidebar = ({
   const [openKeys, setOpenKeys] = useState([]);
   const [categoryTree, setCategoryTree] = useState([]);
   const [loading, setLoading] = useState(false);
+  const hasInitialized = useRef(false);
 
   // 获取知识树数据（根节点 children）
   const fetchCategoryTree = async () => {
@@ -56,7 +57,10 @@ const CommonSidebar = ({
 
   // 组件挂载时获取分类树
   useEffect(() => {
-    fetchCategoryTree();
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchCategoryTree();
+    }
   }, []);
 
   // 处理默认展开状态（只在没有特定目标时展开第一级）

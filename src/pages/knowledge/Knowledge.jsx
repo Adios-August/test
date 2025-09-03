@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Layout,
   Input,
@@ -161,6 +161,11 @@ const Knowledge = observer(() => {
   const [expandedSources, setExpandedSources] = useState({});
   const [expandedSourceData, setExpandedSourceData] = useState({});
   const [expandedSourceLoading, setExpandedSourceLoading] = useState({});
+
+  // 防止重复搜索的ref
+  const hasSearchedFromHome = useRef(false);
+  // 防止AI模块被重复隐藏的ref
+  const shouldKeepAIModule = useRef(false);
 
   // 生成sessionId
   const generateSessionId = () => {
@@ -337,13 +342,9 @@ const Knowledge = observer(() => {
 
     // 延迟跳转，让用户看到loading效果
     setTimeout(() => {
-      // 跳转到问答页面，并传递问题内容
-      navigate("/knowledge-qa", {
-        state: {
-          question: question,
-          fromPage: "knowledge"
-        }
-      });
+      // 跳转到问答页面，使用params参数传递问题内容
+      const encodedQuestion = encodeURIComponent(question);
+      navigate(`/knowledge-qa/${encodedQuestion}/knowledge`);
     }, 500); // 显示500ms的loading效果
   };
 
@@ -516,7 +517,7 @@ const Knowledge = observer(() => {
     } finally {
       setCategoryLoading(false);
     }
-  }, [knowledgeStore]);
+  }, []); // 移除所有依赖项，避免无限循环
 
   // 处理分类知识列表分页
   const handleCategoryPaginationChange = (page, pageSize) => {
@@ -622,10 +623,11 @@ const Knowledge = observer(() => {
       // 如果没有RAG结果，在这里清除AI和Sources模块的loading状态
       // 如果有RAG结果，loading状态已经在上面清除了
     }
-  }, [knowledgeStore]);
+  }, []); // 移除所有依赖项，避免无限循环
 
   // 处理搜索
   const handleSearch = (value) => {
+    console.log('🔍 handleSearch 被调用:', { value, timestamp: Date.now() });
 
     setSearchValue(value);
     // 清空之前的搜索结果
@@ -639,12 +641,16 @@ const Knowledge = observer(() => {
       setIsCategorySearchMode(true); // 进入搜索模式
       fetchSearchResults(value.trim(), 1, 10);
       // 搜索时显示AI和source模块
+      console.log('🔓 设置AI模块显示为true');
       setShowAISourceModules(true);
+      shouldKeepAIModule.current = true; // 设置为true，表示需要保持AI模块显示
     } else {
       // 如果搜索框为空，隐藏AI和source模块
+      console.log('🔒 设置AI模块显示为false');
       setShowAISourceModules(false);
       setIsCategorySearchMode(false);
       setSearchResults([]);
+      shouldKeepAIModule.current = false; // 设置为false，表示不需要保持AI模块显示
     }
   };
 
@@ -663,7 +669,6 @@ const Knowledge = observer(() => {
   // 当categoryId变化时获取分类知识列表
   useEffect(() => {
     if (categoryId) {
-
       // 切换到路由分类时退出分类搜索模式，回到分类展示
       setIsCategorySearchMode(false);
       setSearchResults([]);
@@ -675,16 +680,32 @@ const Knowledge = observer(() => {
       fetchCategoryKnowledge(categoryId, 1, 10); // 从第一页开始加载
       // 隐藏AI和sourceModules
       setShowAISourceModules(false);
-    } else {
-      // 如果没有categoryId，清空分类知识列表
-      setCategoryKnowledge([]);
-      setIsCategorySearchMode(false);
+      shouldKeepAIModule.current = false; // 切换分类时，确保AI模块不保持显示
     }
-  }, [categoryId, fetchCategoryKnowledge]);
+    // 移除else分支，避免在categoryId为null时执行不必要的逻辑
+  }, [categoryId]); // 移除fetchCategoryKnowledge依赖，避免无限循环
+
+  // 组件初始化时清空搜索结果
+  useEffect(() => {
+    console.log('🔄 组件初始化 useEffect 执行:', { 
+      hasSearchKeyword: !!location.state?.searchKeyword,
+      searchKeyword: location.state?.searchKeyword,
+      shouldKeepAI: shouldKeepAIModule.current
+    });
+    setSearchResults([]);
+    setSearchValue('');
+    setCurrentCategoryId(null);
+    // 只有在没有从首页跳转且不需要保持AI模块时才隐藏AI和source模块
+    if (!location.state?.searchKeyword && !shouldKeepAIModule.current) {
+      console.log('🔒 隐藏AI模块（没有搜索关键词且不需要保持）');
+      setShowAISourceModules(false);
+    } else {
+      console.log('🔓 保持AI模块显示（有搜索关键词或需要保持）');
+    }
+  }, [location.state?.searchKeyword]);
 
   // 处理侧边栏分类点击（不依赖URL参数变化）
   const handleCategoryClick = (category, isTopLevel) => {
-
     // 清空之前的搜索结果
     setSearchResults([]);
     // 使用分类ID获取知识列表（进入分类搜索模式）
@@ -695,50 +716,37 @@ const Knowledge = observer(() => {
     fetchCategoryKnowledge(category.id, 1, 10); // 从第一页开始加载
     // 隐藏AI和source模块
     setShowAISourceModules(false);
+    shouldKeepAIModule.current = false; // 切换分类时，确保AI模块不保持显示
   };
-
-
-
-  // 组件初始化时清空搜索结果
-  useEffect(() => {
-    setSearchResults([]);
-    setSearchValue('');
-    setCurrentCategoryId(null);
-    // 从顶部菜单直接进入知识库页面时，隐藏AI和source模块
-    setShowAISourceModules(false);
-  }, []);
 
   // 处理从首页传递的搜索关键词
   useEffect(() => {
-    if (location.state?.searchKeyword) {
+    console.log('🔄 从首页跳转 useEffect 执行:', { 
+      hasSearchKeyword: !!location.state?.searchKeyword,
+      searchKeyword: location.state?.searchKeyword,
+      hasSearched: hasSearchedFromHome.current
+    });
+    
+    if (location.state?.searchKeyword && !hasSearchedFromHome.current) {
       const keyword = location.state.searchKeyword;
+      console.log('🔍 开始处理首页搜索:', keyword);
+      hasSearchedFromHome.current = true;
       setSearchValue(keyword);
       // 自动触发搜索（handleSearch现在会自动设置showAISourceModules为true）
       handleSearch(keyword);
       // 清空location.state，避免重复触发
       navigate(location.pathname + location.search, { replace: true });
     }
-  }, [location.state]);
+  }, [location.state?.searchKeyword]); // 只依赖searchKeyword，不依赖整个location.state对象
 
   // 处理知识卡片点击
-  const handleResultClick = async (item) => {
-    try {
-      // 获取完整的知识详情
-      const response = await knowledgeAPI.getKnowledgeDetail(item.id);
-      if (response.code === 200) {
-        setCurrentKnowledge(response.data);
-        
-        // 滚动到详情区域
-        const detailSection = document.querySelector('.knowledge-detail-section');
-        if (detailSection) {
-          detailSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      } else {
-        message.error(response.message || '获取知识详情失败');
-      }
-    } catch (error) {
-      console.error('获取知识详情失败:', error);
-      message.error('获取知识详情失败，请稍后重试');
+  const handleResultClick = (item) => {
+    // 跳转到知识详情页面
+    const knowledgeId = item.id || item.knowledgeId;
+    if (knowledgeId) {
+      navigate(`/knowledge/${knowledgeId}`);
+    } else {
+      message.error('知识ID不存在');
     }
   };
 
@@ -1325,8 +1333,74 @@ const Knowledge = observer(() => {
                 ) : searchValue ? (
                   <div className="search-empty">
                     <InboxOutlined className="empty-icon" />
+                    <h3>{showAISourceModules ? '暂无知识内容' : '暂无搜索结果'}</h3>
+                    <p>{showAISourceModules ? '当前分类下暂无知识内容，请稍后再试' : `未找到与"${searchValue}"相关的知识内容，请尝试其他关键词`}</p>
+                  </div>
+                ) : showAISourceModules ? (
+                  // 有AI模块时，显示搜索相关的空状态
+                  <div className="search-empty">
+                    <InboxOutlined className="empty-icon" />
                     <h3>暂无知识内容</h3>
                     <p>当前分类下暂无知识内容，请稍后再试</p>
+                  </div>
+                ) : categoryKnowledge.length > 0 ? (
+                  // 没有搜索时，显示分类知识
+                  <div className="category-content">
+                    <div className="results-grid">
+                      {categoryKnowledge.map((item) => (
+                        <Card
+                          key={item.id}
+                          className="result-card"
+                          onClick={() => handleResultClick(item)}
+                          style={{ cursor: 'pointer', marginBottom: '16px' }}
+                        >
+                          <div className="card-header">
+                            <div className="card-title">
+                              <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
+                              <span className="title-text">{item.name}</span>
+                            </div>
+                            <div className="card-actions">
+                              <span className="date-text">2025-01-15</span>
+                              <Tooltip title="在当前页面打开">
+                                <GlobalOutlined
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInCurrentPage(item);
+                                  }}
+                                />
+                              </Tooltip>
+                              <Tooltip title="在新页面打开">
+                                <ExportOutlined
+                                  style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenInNewPage(item);
+                                  }}
+                                />
+                              </Tooltip>
+                            </div>
+                          </div>
+                          <div className="card-content">
+                            <p>{stripHtmlTags(item.description)}</p>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                    <div className="pagination-section">
+                      <Pagination
+                        current={categoryPagination.current}
+                        total={categoryPagination.total}
+                        pageSize={categoryPagination.pageSize}
+                        onChange={handleCategoryPaginationChange}
+                        showSizeChanger={false}
+                        showQuickJumper={false}
+                        showPrevNextJumpers={true}
+                        showLessItems={true}
+                        prevIcon="上一页"
+                        nextIcon="下一页"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="search-placeholder">

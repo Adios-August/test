@@ -51,6 +51,10 @@ const router = createBrowserRouter([
             element: <KnowledgeQA />,
           },
           {
+            path: '/knowledge-qa/:question/:fromPage',
+            element: <KnowledgeQA />,
+          },
+          {
             path: '/add-knowledge',
             element: <AddKnowledge />,
           },
