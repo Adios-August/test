@@ -8,6 +8,7 @@ import { knowledgeAPI } from '../api/knowledge';
 import FavoriteButton from './FavoriteButton';
 
 import PdfPreview from './PdfPreview';
+import KnowledgeTable from './KnowledgeTable';
 import './SourceExpandedDetail.scss';
 
 const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
@@ -68,6 +69,13 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
         </div>
 
         <div className="document-content">
+          {/* 数据表格区域 */}
+          {knowledgeDetail.tableData && (
+            <div className="content-section">
+              <KnowledgeTable tableData={knowledgeDetail.tableData} />
+            </div>
+          )}
+
           <div className="content-section">
             <div 
               dangerouslySetInnerHTML={{ 

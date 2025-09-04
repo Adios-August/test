@@ -1,0 +1,146 @@
+.knowledge-table-container {
+  margin-bottom: 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+
+
+
+  .table-wrapper {
+    padding: 0;
+    overflow-x: auto;
+
+    .knowledge-table {
+      .ant-table-thead > tr > th {
+        background: #fafafa;
+        border-bottom: 1px solid #f0f0f0;
+        font-weight: 500;
+        color: #333;
+        padding: 12px 16px;
+      }
+
+      .ant-table-tbody > tr > td {
+        border-bottom: 1px solid #f0f0f0;
+        padding: 12px 16px;
+        vertical-align: top;
+      }
+
+      .ant-table-tbody > tr:hover > td {
+        background-color: #f5f5f5;
+      }
+
+      .ant-table-tbody > tr:nth-child(even) > td {
+        background-color: #fafafa;
+      }
+
+      .ant-table-tbody > tr:nth-child(even):hover > td {
+        background-color: #f0f0f0;
+      }
+    }
+  }
+
+  // 文件类型单元格样式
+  .file-cell {
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      border-bottom: 1px solid #f0f0f0;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .file-icon {
+        color: #db0011;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+
+      .file-name {
+        color: #333;
+        font-size: 14px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+        cursor: pointer;
+        transition: color 0.2s ease;
+
+        &.clickable {
+          &:hover {
+            color: #db0011;
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+  }
+
+  // 链接类型单元格样式
+  .link-cell {
+    display: flex;
+    align-items: center;
+    
+    a {
+      color: #db0011;
+      text-decoration: none;
+      word-break: break-all;
+      
+      .anticon {
+        color: #db0011 !important;
+        
+        svg {
+          fill: #db0011 !important;
+        }
+      }
+      
+      &:hover {
+        color: #b3000e;
+        text-decoration: underline;
+        
+        .anticon {
+          color: #b3000e !important;
+          
+          svg {
+            fill: #b3000e !important;
+          }
+        }
+      }
+    }
+  }
+
+  // 长文本类型单元格样式
+  .longtext-cell {
+    .text-content {
+      color: #333;
+      cursor: pointer;
+      
+      &:hover {
+        color: #1890ff;
+      }
+    }
+  }
+
+  // 响应式设计
+  @media (max-width: 768px) {
+    .table-wrapper {
+      .knowledge-table {
+        .ant-table-thead > tr > th,
+        .ant-table-tbody > tr > td {
+          padding: 8px 12px;
+        }
+      }
+    }
+
+    .file-cell {
+      .file-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+    }
+  }
+} 

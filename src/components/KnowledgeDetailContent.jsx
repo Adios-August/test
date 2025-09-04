@@ -13,6 +13,7 @@ import { useAuthStore } from '../stores';
 import { sanitizeHtmlLinks } from '../utils/htmlUtils';
 
 import PdfPreview from './PdfPreview';
+import KnowledgeTable from './KnowledgeTable';
 import './KnowledgeDetailContent.scss';
 
 const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
@@ -139,6 +140,13 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
         </div>
 
         <div className="document-content">
+          {/* 数据表格区域 */}
+          {knowledgeDetail.tableData && (
+            <div className="content-section">
+              <KnowledgeTable tableData={knowledgeDetail.tableData} />
+            </div>
+          )}
+
           <div className="content-section">
             <div 
               dangerouslySetInnerHTML={{ 

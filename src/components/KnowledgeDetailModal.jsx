@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Card, Tag, Spin, message, Button, Tooltip } from 'antd';
 import { FileTextOutlined, CloseOutlined, HeartOutlined, HeartFilled } from '@ant-design/icons';
 import { knowledgeAPI } from '../api/knowledge';
+import KnowledgeTable from './KnowledgeTable';
 import './KnowledgeDetailModal.scss';
 
 const KnowledgeDetailModal = ({ 
@@ -103,6 +104,14 @@ const KnowledgeDetailModal = ({
                 </div>
               )}
             </div>
+            
+            {/* 数据表格区域 */}
+            {knowledge.tableData && (
+              <div className="knowledge-table-section">
+                <h4>数据表格</h4>
+                <KnowledgeTable tableData={knowledge.tableData} />
+              </div>
+            )}
             
             {knowledge.description && (
               <div className="knowledge-description">

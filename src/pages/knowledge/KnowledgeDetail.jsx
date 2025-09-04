@@ -9,6 +9,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
 import PdfPreview from '../../components/PdfPreview';
 import FeedbackMailButton from '../../components/FeedbackMailButton';
+import KnowledgeTable from '../../components/KnowledgeTable';
 import { knowledgeAPI } from '../../api/knowledge';
 import { feedbackAPI } from '../../api/feedback';
 import { engagementAPI } from '../../api/engagement';
@@ -527,6 +528,13 @@ const KnowledgeDetail = () => {
                       </div>
 
                       <div className="document-content">
+                        {/* 数据表格区域 */}
+                        {tab.content?.tableData && (
+                          <div className="content-section">
+                            <KnowledgeTable tableData={tab.content.tableData} />
+                          </div>
+                        )}
+
                         <div className="content-section">
                           <div 
                             dangerouslySetInnerHTML={{ 
