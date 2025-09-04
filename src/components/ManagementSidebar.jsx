@@ -13,8 +13,8 @@ const { Sider } = Layout;
 
 const ManagementSidebar = ({ 
   width = 250,
-  height = "calc(100vh - 152px)",
-  marginTop = "0px"
+  height = "calc(100vh - 135px)",
+ 
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,7 +71,7 @@ const ManagementSidebar = ({
       width={width}
       style={{
         height: height,
-        marginTop: marginTop,
+        
       }}
     >
       <div className="sidebar-content">
