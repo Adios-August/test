@@ -1,6 +1,20 @@
 import axios from "axios";
 import { message } from "antd";
 
+// 统一的token获取函数
+const getTokenFromStorage = () => {
+  try {
+    const authStoreData = localStorage.getItem("authStore");
+    if (authStoreData) {
+      const parsedData = JSON.parse(authStoreData);
+      return parsedData.token;
+    }
+  } catch (error) {
+    console.warn('Failed to parse authStore data:', error);
+  }
+  return null;
+};
+
 // 创建axios实例
 const request = axios.create({
   baseURL: "/api",
@@ -15,9 +29,11 @@ request.interceptors.request.use(
   (config) => {
     // 在发送请求之前做些什么
 
-    // 添加token到请求头
-    const token = localStorage.getItem("token");
-    if (token) {
+    // 添加token到请求头（登录接口除外）
+    const isLoginRequest = config.url && config.url.includes('/auth/login');
+    const token = getTokenFromStorage();
+    
+    if (token && !isLoginRequest) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -123,6 +139,25 @@ export const http = {
   patch: (url, data, config = {}) => {
     return request.patch(url, data, config);
   },
+};
+
+// 封装带认证的fetch请求
+export const authenticatedFetch = (url, options = {}) => {
+  const token = getTokenFromStorage();
+  const headers = {
+    ...options.headers,
+  };
+  
+  // 为非登录接口添加token
+  const isLoginRequest = url && url.includes('/auth/login');
+  if (token && !isLoginRequest) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers,
+  });
 };
 
 // 导出axios实例

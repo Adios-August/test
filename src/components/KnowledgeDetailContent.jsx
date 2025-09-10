@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Avatar, Select, Input, message, Tooltip } from 'antd';
+import { Button, Avatar, Select, Input, message, Tooltip, Card } from 'antd';
 import {
   FilePdfOutlined, FileExcelOutlined, TagOutlined,
   SendOutlined, UserOutlined, ArrowLeftOutlined,
@@ -16,7 +16,7 @@ import PdfPreview from './PdfPreview';
 import KnowledgeTable from './KnowledgeTable';
 import './KnowledgeDetailContent.scss';
 
-const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
+const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButton = true, showFeedback = true, showEmailButton = true }) => {
   const { feedbackTypes, loading: feedbackTypesLoading } = useFeedbackTypes();
   const authStore = useAuthStore();
   const currentUserId = authStore.user?.id || authStore.user?.userId;
@@ -102,7 +102,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
 
   return (
     <div className="knowledge-detail-content">
-      <div className="document-detail">
+      <Card className="document-detail">
         <div className="document-header">
           <div className="header-left">
             <div className="author-info">
@@ -126,17 +126,19 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
               ))}
             </div>
           </div>
-          <div className="header-right">
-            <Button 
-              type="primary" 
-              icon={<ArrowLeftOutlined />} 
-              size="large"
-              onClick={() => window.history.back()}
-              style={{ fontSize: '16px' }}
-            >
-              返回
-            </Button>
-          </div>
+          {showBackButton && (
+            <div className="header-right">
+              <Button 
+                type="primary" 
+                icon={<ArrowLeftOutlined />} 
+                size="large"
+                onClick={() => window.history.back()}
+                style={{ fontSize: '16px' }}
+              >
+                返回
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="document-content">
@@ -206,39 +208,41 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false }) => {
           </div>
         </div>
 
-        <div className="feedback-section">
-          <div className="feedback-header">
-            <h3>Feedback</h3>
-            <div className="feedback-controls">
-              <Select
-                placeholder="选择反馈..."
-                style={{ width: 120 }}
-                options={feedbackTypes}
-                loading={feedbackTypesLoading}
-                value={selectedFeedbackType}
-                onChange={setSelectedFeedbackType}
-              />
-              <Input
-                placeholder="请输入反馈内容"
-                style={{ width: 300 }}
-                value={feedbackContent}
-                onChange={(e) => setFeedbackContent(e.target.value)}
-                onPressEnter={handleSubmitFeedback}
-              />
-              <Button 
-                type="text" 
-                icon={<SendOutlined />} 
-                onClick={handleSubmitFeedback}
-                loading={feedbackSubmitting}
-                disabled={!selectedFeedbackType || !feedbackContent.trim()}
-              />
-              <FeedbackMailButton knowledgeDetail={knowledgeDetail} />
+        {showFeedback && (
+          <div className="feedback-section">
+            <div className="feedback-header">
+              <h3>Feedback</h3>
+              <div className="feedback-controls">
+                <Select
+                  placeholder="选择反馈..."
+                  style={{ width: 120 }}
+                  options={feedbackTypes}
+                  loading={feedbackTypesLoading}
+                  value={selectedFeedbackType}
+                  onChange={setSelectedFeedbackType}
+                />
+                <Input
+                  placeholder="请输入反馈内容"
+                  style={{ width: 300 }}
+                  value={feedbackContent}
+                  onChange={(e) => setFeedbackContent(e.target.value)}
+                  onPressEnter={handleSubmitFeedback}
+                />
+                <Button 
+                  type="text" 
+                  icon={<SendOutlined />} 
+                  onClick={handleSubmitFeedback}
+                  loading={feedbackSubmitting}
+                  disabled={!selectedFeedbackType || !feedbackContent.trim()}
+                />
+                {showEmailButton && <FeedbackMailButton knowledgeDetail={knowledgeDetail} />}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        )}
+      </Card>
     </div>
   );
 };
 
-export default KnowledgeDetailContent; 
+export default KnowledgeDetailContent;

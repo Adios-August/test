@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button, List, Typography, message } from 'antd';
 import { DeleteOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons';
+import { authenticatedFetch } from '../../../../utils/request';
 
 const { Text } = Typography;
 
@@ -34,13 +35,9 @@ const AttachmentList = ({ attachments, onRemoveAttachment, setFormData }) => {
     }
 
     try {
-      // Use fetch with authentication headers for download
-      const token = localStorage.getItem('token');
-      const response = await fetch(downloadUrl, {
+      // Use authenticatedFetch for download
+      const response = await authenticatedFetch(downloadUrl, {
         method: 'GET',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-        },
       });
       
       if (response.ok) {

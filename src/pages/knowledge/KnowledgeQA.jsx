@@ -4,6 +4,7 @@ import { authStore, useSearchHistoryStore } from "../../stores";
 import { chatAPI } from "../../api/chat";
 import { knowledgeAPI } from "../../api/knowledge";
 import { engagementAPI } from "../../api/engagement";
+import { authenticatedFetch } from "../../utils/request";
 import { message, Button, Avatar, Input, Spin, Layout, List, Typography, Space, Card, Tag, Tooltip, Divider, Modal, Empty, Badge } from "antd";
 import { 
   SendOutlined, 
@@ -363,12 +364,11 @@ const KnowledgeQA = () => {
       };
 
       // 调用新的RAG流式对话接口
-      const response = await fetch("/api/chat/stream", {
+      const response = await authenticatedFetch("/api/chat/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "text/event-stream",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(requestData),
         signal: controller.signal,
@@ -528,7 +528,7 @@ const KnowledgeQA = () => {
               // 自动加载首条引用到右侧预览
               if (references.length && references[0].downloadUrl) {
                 try {
-                  fetch(references[0].downloadUrl)
+                  authenticatedFetch(references[0].downloadUrl)
                     .then((r) => r.blob())
                     .then((b) => {
                       const url = URL.createObjectURL(b);
@@ -1285,7 +1285,7 @@ const KnowledgeQA = () => {
                                   const idx = Number(m[1]);
                                   const ref = message.references?.[idx];
                                   if (ref?.downloadUrl) {
-                                    fetch(ref.downloadUrl)
+                                    authenticatedFetch(ref.downloadUrl)
                                       .then((r) => r.blob())
                                       .then((b) => {
                                         const url = URL.createObjectURL(b);

@@ -149,6 +149,10 @@ const Knowledge = observer(() => {
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
 
+  // 选中知识项详情相关状态
+  const [selectedKnowledgeDetail, setSelectedKnowledgeDetail] = useState(null);
+  const [selectedKnowledgeLoading, setSelectedKnowledgeLoading] = useState(false);
+
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackPosition, setFeedbackPosition] = useState({ x: 0, y: 0 });
 
@@ -492,6 +496,8 @@ const Knowledge = observer(() => {
           pageSize: response.data.size || size
         }));
 
+        // 注释：不再自动选择第一个知识项，因为在handleCategoryClick中已经获取分类详情
+
       } else {
         message.error(response.message || '获取子知识列表失败');
         console.error('子知识API错误:', response.message);
@@ -687,6 +693,8 @@ const Knowledge = observer(() => {
     // 不更新搜索框内容，保持用户输入的内容
     // 使用分类知识接口获取该分类下的知识
     fetchCategoryKnowledge(category.id, 1, 10); // 从第一页开始加载
+    // 获取当前点击分类的详情
+    fetchSelectedKnowledgeDetail(category.id);
     // 隐藏AI和source模块
     setShowAISourceModules(false);
     shouldKeepAIModule.current = false; // 切换分类时，确保AI模块不保持显示
@@ -714,6 +722,20 @@ const Knowledge = observer(() => {
     if (knowledgeId) {
       navigate(`/knowledge/${knowledgeId}`);
     } else {
+      message.error('知识ID不存在');
+    }
+  };
+
+  // 处理知识项点击（显示详情在当前页面）
+  const handleKnowledgeDetailClick = (item) => {
+    console.log('点击的知识卡片:', item);
+    const knowledgeId = item.id || item._id || item.knowledgeId;
+    console.log('知识ID:', knowledgeId);
+    
+    if (knowledgeId) {
+      fetchSelectedKnowledgeDetail(knowledgeId);
+    } else {
+      console.error('无法获取知识ID，知识项数据:', item);
       message.error('知识ID不存在');
     }
   };
@@ -779,6 +801,29 @@ const Knowledge = observer(() => {
       message.error('获取知识详情失败');
     } finally {
       setKnowledgeDetailLoading(false);
+    }
+  };
+
+  // 获取选中知识项的详情
+  const fetchSelectedKnowledgeDetail = async (knowledgeId) => {
+    if (!knowledgeId) return;
+
+    setSelectedKnowledgeLoading(true);
+    try {
+      const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+
+      if (response.code === 200) {
+        setSelectedKnowledgeDetail(response.data);
+      } else {
+        message.error(response.message || '获取知识详情失败');
+        setSelectedKnowledgeDetail(null);
+      }
+    } catch (error) {
+      console.error('获取知识详情失败:', error);
+      message.error('获取知识详情失败');
+      setSelectedKnowledgeDetail(null);
+    } finally {
+      setSelectedKnowledgeLoading(false);
     }
   };
 
@@ -1070,6 +1115,18 @@ const Knowledge = observer(() => {
 
           {/* 搜索结果区域 */}
           <div className="search-results">
+            {/* 选中知识项详情展示 */}
+            {selectedKnowledgeDetail && (
+              <div className="selected-knowledge-detail" style={{ marginBottom: '24px' }}>
+                <KnowledgeDetailContent
+                  knowledgeDetail={selectedKnowledgeDetail}
+                  loading={selectedKnowledgeLoading}
+                  showBackButton={false}
+                  showEmailButton={false}
+                />
+              </div>
+            )}
+            
             {showAISourceModules && (
               <div className="results-header">
                 <span className="results-count">共找到{searchResults.length}个结果</span>
@@ -1094,7 +1151,7 @@ const Knowledge = observer(() => {
                         <Card
                           key={item.id}
                           className="result-card"
-                          onClick={() => handleResultClick(item)}
+                          onClick={() => handleKnowledgeDetailClick(item)}
                           style={{ cursor: 'pointer', marginBottom: '16px' }}
                         >
                           <div className="card-header">
@@ -1169,7 +1226,7 @@ const Knowledge = observer(() => {
                         <Card
                           key={item.id}
                           className="result-card"
-                          onClick={() => handleResultClick(item)}
+                          onClick={() => handleKnowledgeDetailClick(item)}
                           style={{ cursor: 'pointer', marginBottom: '16px' }}
                         >
                           <div className="card-header">
@@ -1246,7 +1303,7 @@ const Knowledge = observer(() => {
                         <Card
                           key={item.id}
                           className="result-card"
-                          onClick={() => handleResultClick(item)}
+                          onClick={() => handleKnowledgeDetailClick(item)}
                           style={{ cursor: 'pointer', marginBottom: '16px' }}
                         >
                           <div className="card-header">
@@ -1319,7 +1376,7 @@ const Knowledge = observer(() => {
                         <Card
                           key={item.id}
                           className="result-card"
-                          onClick={() => handleResultClick(item)}
+                          onClick={() => handleKnowledgeDetailClick(item)}
                           style={{ cursor: 'pointer', marginBottom: '16px' }}
                         >
                           <div className="card-header">
