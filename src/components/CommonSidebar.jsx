@@ -310,8 +310,8 @@ const CommonSidebar = ({
         const isTopLevelCategory = categoryTree.some(cat => cat.id.toString() === key);
         
         if (isTopLevelCategory) {
-          // 点击的是顶级分类，跳转到知识库页面
-          navigate('/knowledge');
+          // 点击的是顶级分类，跳转到知识库页面并传递分类ID
+          navigate(`/knowledge?parent=${selectedItem.id}`);
         }
       }
     }
@@ -373,4 +373,4 @@ const CommonSidebar = ({
   );
 };
 
-export default CommonSidebar; 
+export default CommonSidebar;

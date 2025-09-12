@@ -50,6 +50,7 @@ import { knowledgeAPI } from "../../api/knowledge";
 import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
+import { homeAPI } from "../../api/home";
 import { useSearchHistoryStore, useKnowledgeStore, useAuthStore } from "../../stores";
 
 import "./Knowledge.scss";
@@ -652,7 +653,7 @@ const Knowledge = observer(() => {
 
 
 
-  // 当categoryId变化时获取分类知识列表
+  // 当categoryId变化时获取分类知识列表和详情
   useEffect(() => {
     if (categoryId) {
       // 切换到路由分类时退出分类搜索模式，回到分类展示
@@ -664,6 +665,8 @@ const Knowledge = observer(() => {
       }
       setCurrentCategoryId(categoryId);
       fetchCategoryKnowledge(categoryId, 1, 10); // 从第一页开始加载
+      // 获取分类详情
+      fetchSelectedKnowledgeDetail(categoryId);
       // 隐藏AI和sourceModules
       setShowAISourceModules(false);
       shouldKeepAIModule.current = false; // 切换分类时，确保AI模块不保持显示
@@ -671,7 +674,7 @@ const Knowledge = observer(() => {
     // 移除else分支，避免在categoryId为null时执行不必要的逻辑
   }, [categoryId]); // 移除fetchCategoryKnowledge依赖，避免无限循环
 
-  // 组件初始化时清空搜索结果
+  // 组件初始化时清空搜索结果并获取默认内容
   useEffect(() => {
     
     setSearchResults([]);
@@ -680,8 +683,33 @@ const Knowledge = observer(() => {
     
     if (!location.state?.searchKeyword && !shouldKeepAIModule.current) { 
       setShowAISourceModules(false);
-    }  
+    }
+    
+    // 如果没有分类ID且没有搜索关键词，获取默认的知识详情
+    if (!categoryId && !location.state?.searchKeyword) {
+      fetchDefaultKnowledgeDetail();
+    }
   }, [location.state?.searchKeyword]);
+  
+  // 获取默认知识详情和列表（模拟侧边栏分类点击的行为）
+  const fetchDefaultKnowledgeDetail = async () => {
+    try {
+      // 获取最新知识列表
+      const response = await homeAPI.getLatestKnowledge(10); // 获取10条最新知识作为列表
+      
+      if (response.code === 200 && response.data && response.data.length > 0) {
+        // 设置知识列表到分类知识状态中，模拟分类点击后的列表显示
+        setCategoryKnowledge(response.data);
+        setIsCategorySearchMode(true); // 进入分类搜索模式以显示列表
+        
+        // 获取第一个知识的详情
+        const latestKnowledge = response.data[0];
+        fetchSelectedKnowledgeDetail(latestKnowledge.id);
+      }
+    } catch (error) {
+      console.error('获取默认知识详情失败:', error);
+    }
+  };
 
   // 处理侧边栏分类点击（不依赖URL参数变化）
   const handleCategoryClick = (category, isTopLevel) => {
@@ -1115,8 +1143,8 @@ const Knowledge = observer(() => {
 
           {/* 搜索结果区域 */}
           <div className="search-results">
-            {/* 选中知识项详情展示 */}
-            {selectedKnowledgeDetail && (
+            {/* 选中知识项详情展示 - 只在没有AI模块时显示 */}
+            {selectedKnowledgeDetail && !showAISourceModules && (
               <div className="selected-knowledge-detail" style={{ marginBottom: '24px' }}>
                 <KnowledgeDetailContent
                   knowledgeDetail={selectedKnowledgeDetail}
