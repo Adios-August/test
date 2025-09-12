@@ -16,8 +16,14 @@ export const engagementAPI = {
   likeAnswer: (sessionId, messageId, userId) => {
     return http.post(`/chat/answer/${sessionId}/${messageId}/like`, { userId });
   },
+  unlikeAnswer: (sessionId, messageId, userId) => {
+    return http.delete(`/chat/answer/${sessionId}/${messageId}/like`, { data: { userId } });
+  },
   dislikeAnswer: (sessionId, messageId, content = "", userId) => {
     return http.post(`/chat/answer/${sessionId}/${messageId}/dislike`, { content, userId });
+  },
+  undislikeAnswer: (sessionId, messageId, userId) => {
+    return http.delete(`/chat/answer/${sessionId}/${messageId}/dislike`, { data: { userId } });
   },
   // 查询收藏状态
   getFavoriteStatus: (knowledgeId) => {

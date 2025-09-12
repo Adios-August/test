@@ -343,8 +343,33 @@ const Knowledge = observer(() => {
     if (!aiAnswer) return;
 
     if (type === "dislike") {
-      // 点踩时需要打开反馈弹窗
+      // 如果已经点踩，则取消点踩
+      if (aiAnswer.isDisliked) {
+        try {
+          const response = await engagementAPI.undislikeAnswer(
+            aiAnswer.sessionId,
+            aiAnswer.messageId,
+            currentUserId
+          );
+          
+          if (response.code === 200) {
+            message.success('已取消点踩');
+            // 立即更新UI状态，让点踩图标变暗
+            setAiAnswer(prev => ({
+              ...prev,
+              isDisliked: false
+            }));
+          } else {
+            message.error(response.message || '取消点踩失败');
+          }
+        } catch (error) {
+          console.error('取消点踩失败:', error);
+          message.error('操作失败，请重试');
+        }
+        return;
+      }
 
+      // 点踩时需要打开反馈弹窗
       // 获取点踩按钮的位置
       const button = event?.target?.closest('.ant-btn');
       if (button) {
@@ -379,26 +404,48 @@ const Knowledge = observer(() => {
       return;
     }
 
-    // 点赞直接提交
+    // 点赞/取消点赞逻辑
     try {
-      const response = await engagementAPI.likeAnswer(
-        aiAnswer.sessionId,
-        aiAnswer.messageId,
-        currentUserId
-      );
-
-      if (response.code === 200) {
-        message.success('已点赞该回答');
-        // 立即更新UI状态，让点赞图标变亮
-        setAiAnswer(prev => ({
-          ...prev,
-          isLiked: true
-        }));
+      let response;
+      if (aiAnswer.isLiked) {
+        // 如果已经点赞，则取消点赞
+        response = await engagementAPI.unlikeAnswer(
+          aiAnswer.sessionId,
+          aiAnswer.messageId,
+          currentUserId
+        );
+        
+        if (response.code === 200) {
+          message.success('已取消点赞');
+          // 立即更新UI状态，让点赞图标变暗
+          setAiAnswer(prev => ({
+            ...prev,
+            isLiked: false
+          }));
+        } else {
+          message.error(response.message || '取消点赞失败');
+        }
       } else {
-        message.error(response.message || '点赞失败');
+        // 如果未点赞，则点赞
+        response = await engagementAPI.likeAnswer(
+          aiAnswer.sessionId,
+          aiAnswer.messageId,
+          currentUserId
+        );
+        
+        if (response.code === 200) {
+          message.success('已点赞该回答');
+          // 立即更新UI状态，让点赞图标变亮
+          setAiAnswer(prev => ({
+            ...prev,
+            isLiked: true
+          }));
+        } else {
+          message.error(response.message || '点赞失败');
+        }
       }
     } catch (error) {
-      console.error('点赞失败:', error);
+      console.error('点赞操作失败:', error);
       message.error('操作失败，请重试');
     }
   };
@@ -529,7 +576,8 @@ const Knowledge = observer(() => {
       const response = await knowledgeAPI.searchKnowledgeByQuery({
         query: query.trim(),
         page: page,
-        size: size
+        size: size,
+        userId: currentUserId
       });
 
 
@@ -1042,7 +1090,7 @@ const Knowledge = observer(() => {
                           {aiAnswer.references[0].sourceFile}
                         </Button>
                       )}
-                      <Tooltip title="点赞回答">
+                      <Tooltip title={aiAnswer?.isLiked ? "取消点赞" : "点赞回答"}>
                         <Button
                           type="text"
                           size="small"
@@ -1050,7 +1098,7 @@ const Knowledge = observer(() => {
                           onClick={() => handleAIFeedback("like")}
                         />
                       </Tooltip>
-                      <Tooltip title="点踩回答（需要填写反馈）">
+                      <Tooltip title={aiAnswer?.isDisliked ? "取消点踩" : "点踩回答（需要填写反馈）"}>
                         <Button
                           type="text"
                           size="small"

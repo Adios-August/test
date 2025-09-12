@@ -10,7 +10,7 @@ const getTokenFromStorage = () => {
       return parsedData.token;
     }
   } catch (error) {
-    console.warn('Failed to parse authStore data:', error);
+    console.warn("Failed to parse authStore data:", error);
   }
   return null;
 };
@@ -18,7 +18,7 @@ const getTokenFromStorage = () => {
 // 创建axios实例
 const request = axios.create({
   baseURL: "/api",
-  timeout: 10000, // 请求超时时间
+  timeout: 60000, // 请求超时时间
   headers: {
     "Content-Type": "application/json",
   },
@@ -30,9 +30,9 @@ request.interceptors.request.use(
     // 在发送请求之前做些什么
 
     // 添加token到请求头（登录接口除外）
-    const isLoginRequest = config.url && config.url.includes('/auth/login');
+    const isLoginRequest = config.url && config.url.includes("/auth/login");
     const token = getTokenFromStorage();
-    
+
     if (token && !isLoginRequest) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -147,13 +147,13 @@ export const authenticatedFetch = (url, options = {}) => {
   const headers = {
     ...options.headers,
   };
-  
+
   // 为非登录接口添加token
-  const isLoginRequest = url && url.includes('/auth/login');
+  const isLoginRequest = url && url.includes("/auth/login");
   if (token && !isLoginRequest) {
     headers.Authorization = `Bearer ${token}`;
   }
-  
+
   return fetch(url, {
     ...options,
     headers,
