@@ -553,9 +553,7 @@ const KnowledgeDetail = () => {
                                     {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
                                   </span>
                                   <span className="attachment-name">{attachment.fileName || attachment.name}</span>
-                                  <span className="attachment-size">{attachment.fileSize}</span>
-                                  <span className="attachment-downloads">下载 {attachment.downloadCount || 0}</span>
-                                  <Button type="text" size="small">下载</Button>
+                                  
                                 </div>
                                 
 

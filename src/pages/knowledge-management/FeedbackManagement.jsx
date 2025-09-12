@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Space, Input, Button, Popconfirm, message } from 'antd';
+import { Table, Space, Input, Button, Popconfirm, message, Tag } from 'antd';
 import { http } from '../../utils/request';
+import { getKnowledgeFeedbackOptions } from '../../constants/feedbackTypes';
  
 import '../knowledge-management/KnowledgeManagement.scss';
 
@@ -42,11 +43,27 @@ const FeedbackManagement = () => {
     }
   };
 
+  const feedbackOptions = getKnowledgeFeedbackOptions();
+  
+  const getFeedbackTypeLabel = (type) => {
+    const option = feedbackOptions.find(opt => opt.value === type);
+    return option ? option.label : type;
+  };
+
   const columns = [
     { title: 'ID', dataIndex: 'id', width: 80 },
-    { title: '知识ID', dataIndex: 'knowledgeId', width: 120 },
     { title: '用户ID', dataIndex: 'userId', width: 120 },
     { title: '内容', dataIndex: 'content' },
+    { 
+      title: '反馈类型', 
+      dataIndex: 'feedbackType', 
+      width: 120,
+      render: (type) => (
+        <Tag color={type === 'POSITIVE' ? 'green' : type === 'NEGATIVE' ? 'red' : 'blue'}>
+          {getFeedbackTypeLabel(type)}
+        </Tag>
+      )
+    },
     { title: '时间', dataIndex: 'createdTime', width: 200 },
     {
       title: '操作', width: 120, render: (_, r) => (
@@ -82,4 +99,4 @@ const FeedbackManagement = () => {
   );
 };
 
-export default FeedbackManagement; 
+export default FeedbackManagement;

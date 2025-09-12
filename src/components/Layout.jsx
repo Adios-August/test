@@ -83,7 +83,7 @@ const LayoutComponent = observer(() => {
                   onClick={() => navigate('/favorites')}
                 />
               </Tooltip>
-              <Button type="text" className="wpd-button">WPB</Button>
+              <div   className="wpd-button">{authStore.user?.staffRole}</div>
               <Dropdown
                 menu={{ items: userMenuItems }}
                 placement="bottomRight"

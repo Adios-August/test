@@ -26,6 +26,11 @@ export const homeAPI = {
   getRecommendedQuestions: (limit = 3) => {
     return http.get("/search/recommendations", { limit });
   },
+
+  // 获取历史问题
+  getHistoryQuestions: (userId) => {
+    return http.get(`/search/history/user/${userId}`);
+  },
 };
 
 export default homeAPI;

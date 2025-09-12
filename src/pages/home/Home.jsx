@@ -11,7 +11,8 @@ import {
 import { observer } from "mobx-react-lite";
 import CommonSidebar from "../../components/CommonSidebar";
 import { homeAPI } from "../../api/home";
-import { useSearchHistoryStore } from "../../stores";
+import { http } from "../../utils/request";
+import { addSearchHistory } from "../../utils/searchHistoryAPI";
 import homeBanner from "../../assets/image/home_banner.png";
 import "./Home.scss";
 
@@ -19,7 +20,6 @@ const { Content } = Layout;
 
 const Home = observer(() => {
   const navigate = useNavigate();
-  const searchHistoryStore = useSearchHistoryStore();
   const [searchValue, setSearchValue] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [showAllHistory, setShowAllHistory] = useState(false);
@@ -31,6 +31,8 @@ const Home = observer(() => {
   const [hotDownloadsLoading, setHotDownloadsLoading] = useState(false);
   const [recommendedQuestions, setRecommendedQuestions] = useState([]);
   const [recommendedLoading, setRecommendedLoading] = useState(false);
+  const [historyQuestions, setHistoryQuestions] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const hotTags = [
     { name: "热门标签" },
@@ -119,6 +121,54 @@ const Home = observer(() => {
     }
   };
 
+  // 获取历史问题
+  const fetchHistoryQuestions = async () => {
+    console.log('=== fetchHistoryQuestions 开始执行 ===');
+    setHistoryLoading(true);
+    try {
+      // 从localStorage获取用户信息（使用authStore的存储key）
+      const authStoreStr = localStorage.getItem('authStore');
+      console.log('localStorage authStore:', authStoreStr);
+      
+      const authStore = JSON.parse(authStoreStr || '{}');
+      console.log('解析后的 authStore:', authStore);
+      
+      const userId = authStore.user?.id;
+      console.log('提取的 userId:', userId);
+      
+      if (!userId) {
+        console.log('userId 为空，设置空数组');
+        setHistoryQuestions([]);
+        return;
+      }
+      
+      console.log('准备调用 homeAPI.getHistoryQuestions，userId:', userId);
+      const response = await homeAPI.getHistoryQuestions(userId);
+      console.log('API 响应:', response);
+      
+      if (response.code === 200) {
+        console.log('API 调用成功，数据:', response.data);
+        // 将字符串数组转换为对象数组，以适配渲染逻辑
+        const formattedData = (response.data || []).map((query, index) => ({
+          id: index,
+          query: query
+        }));
+        console.log('格式化后的数据:', formattedData);
+        setHistoryQuestions(formattedData);
+      } else {
+        console.log('API 调用失败，错误信息:', response.message);
+        message.error(response.message || '获取历史问题失败');
+        setHistoryQuestions([]);
+      }
+    } catch (error) {
+      console.error('获取历史问题异常:', error);
+      setHistoryQuestions([]);
+    } finally {
+      console.log('=== fetchHistoryQuestions 执行结束 ===');
+      setHistoryLoading(false);
+    }
+  };
+
   // 处理搜索
   const handleSearch = () => {
     if (!searchValue.trim()) {
@@ -127,7 +177,7 @@ const Home = observer(() => {
     }
     
     // 添加搜索历史
-    searchHistoryStore.addSearchHistory(searchValue.trim());
+    addSearchHistory(searchValue.trim());
     
     // 跳转到知识库页面，并传递搜索关键词
     navigate("/knowledge", { 
@@ -148,7 +198,7 @@ const Home = observer(() => {
   const handleHistoryQuestionClick = (question) => {
     setSearchValue(question);
     // 添加搜索历史
-    searchHistoryStore.addSearchHistory(question);
+    addSearchHistory(question);
     // 自动跳转到知识库页面
     navigate("/knowledge", { 
       state: { 
@@ -163,7 +213,7 @@ const Home = observer(() => {
     const questionText = typeof question === 'string' ? question : question.text || question.title || question;
     setSearchValue(questionText);
     // 添加搜索历史
-    searchHistoryStore.addSearchHistory(questionText);
+    addSearchHistory(questionText);
     // 自动跳转到知识库页面
     navigate("/knowledge", { 
       state: { 
@@ -197,6 +247,7 @@ const Home = observer(() => {
     fetchLatestKnowledge();
     fetchHotDownloads();
     fetchRecommendedQuestions(); // 添加获取推荐问题的调用
+    fetchHistoryQuestions(); // 添加获取历史问题的调用
   }, []);
 
 
@@ -256,9 +307,14 @@ const Home = observer(() => {
                       <div className="suggestions-content">
                         <div className="history-questions">
                           <div className="section-title">历史问题</div>
-                          {searchHistoryStore.hasHistory ? (
+                          {historyLoading ? (
+                            <div className="loading-questions">
+                              <Spin size="small" />
+                              <span>加载中...</span>
+                            </div>
+                          ) : historyQuestions.length > 0 ? (
                             <>
-                              {(showAllHistory ? searchHistoryStore.getSearchHistory() : searchHistoryStore.getSearchHistory(2)).map((historyItem) => (
+                              {(showAllHistory ? historyQuestions : historyQuestions.slice(0, 2)).map((historyItem) => (
                                 <div 
                                   key={historyItem.id} 
                                   className="question-item"
@@ -271,7 +327,7 @@ const Home = observer(() => {
                                   {historyItem.query}
                                 </div>
                               ))}
-                              {searchHistoryStore.historyCount > 2 && (
+                              {historyQuestions.length > 2 && (
                                 <div 
                                   className="show-more-btn"
                                   onMouseDown={(e) => e.preventDefault()}
@@ -280,7 +336,7 @@ const Home = observer(() => {
                                     setShowAllHistory(!showAllHistory);
                                   }}
                                 >
-                                  {showAllHistory ? '收起' : `查看更多 (${searchHistoryStore.historyCount - 2})`}
+                                  {showAllHistory ? '收起' : `查看更多 (${historyQuestions.length - 2})`}
                                 </div>
                               )}
                             </>

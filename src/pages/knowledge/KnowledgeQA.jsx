@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { authStore, useSearchHistoryStore } from "../../stores";
+import { authStore } from "../../stores";
 import { chatAPI } from "../../api/chat";
 import { knowledgeAPI } from "../../api/knowledge";
 import { engagementAPI } from "../../api/engagement";

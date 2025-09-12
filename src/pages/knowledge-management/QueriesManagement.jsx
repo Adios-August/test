@@ -71,8 +71,9 @@ const QueriesManagement = () => {
   const columns = [
     { title: 'ID', dataIndex: 'id', width: 80 },
     { title: '用户ID', dataIndex: 'userId', width: 120 },
-    { title: '搜索关键词', dataIndex: 'keyword', ellipsis: true },
-    { title: '搜索时间', dataIndex: 'createdTime', width: 200 },
+    { title: '搜索关键词', dataIndex: 'query', ellipsis: true },
+    { title: '搜索时间', dataIndex: 'searchTime', width: 200 },
+    { title: '结果数量', dataIndex: 'resultCount', width: 100 },
     {
       title: '操作',
       width: 120,

@@ -51,7 +51,8 @@ import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
 import { homeAPI } from "../../api/home";
-import { useSearchHistoryStore, useKnowledgeStore, useAuthStore } from "../../stores";
+import { useKnowledgeStore, useAuthStore } from "../../stores";
+import { addSearchHistory } from "../../utils/searchHistoryAPI";
 
 import "./Knowledge.scss";
 
@@ -95,7 +96,6 @@ const Knowledge = observer(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const searchHistoryStore = useSearchHistoryStore();
   const knowledgeStore = useKnowledgeStore();
   const authStore = useAuthStore();
   const categoryId = searchParams.get('parent');
@@ -672,7 +672,7 @@ const Knowledge = observer(() => {
 
     if (value.trim()) {
       // 添加搜索历史
-      searchHistoryStore.addSearchHistory(value.trim());
+      addSearchHistory(value.trim());
 
       setCurrentCategoryId(1);
       setIsCategorySearchMode(true); // 进入搜索模式
@@ -1206,9 +1206,7 @@ const Knowledge = observer(() => {
             {showAISourceModules && (
               <div className="results-header">
                 <span className="results-count">共找到{searchResults.length}个结果</span>
-                <Button type="text" icon={<CalendarOutlined />}>
-                  更新日期 <DownOutlined />
-                </Button>
+                 
               </div>
             )}
 

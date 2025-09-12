@@ -29,12 +29,9 @@ export const useAuthStore = () => {
   return authStore;
 };
 
-export const useSearchHistoryStore = () => {
-  const { searchHistoryStore } = useStore();
-  return searchHistoryStore;
-}; 
+ 
 
 export const useKnowledgeStore = () => {
   const { knowledgeStore } = useStore();
   return knowledgeStore;
-}; 
+};

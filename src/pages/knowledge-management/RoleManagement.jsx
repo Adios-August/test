@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Space, Select, message, Input, Button, Modal, Form, Dropdown, Menu } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { http } from '../../utils/request';
+import { workspaceAPI } from '../../api/workspace';
  
 import '../knowledge-management/KnowledgeManagement.scss';
 
@@ -24,9 +25,19 @@ const RoleManagement = () => {
 
   const fetchDept = async () => {
     try {
-      const res = await http.get('/users/departments');
-      setDepartments(res);
-    } catch {}
+      // 只获取workspaces数据
+      const workspaceRes = await workspaceAPI.getWorkspaces();
+      
+      // 处理workspaces数据
+      const workspaceList = Array.isArray(workspaceRes?.data) ? workspaceRes.data.map(ws => ws.name) : 
+                           Array.isArray(workspaceRes) ? workspaceRes.map(ws => ws.name || ws) : [];
+      
+      setDepartments(workspaceList);
+    } catch (e) {
+      console.error('获取工作空间列表失败:', e);
+      // 如果API调用失败，使用默认值
+      setDepartments(['WPB', 'GPB', 'IWS', 'FCCS', 'CCSS']);
+    }
   };
 
   const fetchData = async (p = page, s = size) => {
@@ -120,14 +131,25 @@ const RoleManagement = () => {
   const handleAddWorkspace = () => {
     workspaceForm.validateFields().then(async (values) => {
       try {
-        // 这里可以调用API添加新的workspace
-        message.success(`添加Workspace: ${values.workspaceName}`);
-        setWorkspaceModalVisible(false);
-        workspaceForm.resetFields();
-        // 重新获取workspace列表
-        fetchDept();
+        // 调用API添加新的workspace
+        const response = await workspaceAPI.createWorkspace({
+          code: values.workspaceName,
+          name: values.workspaceName,
+          description: values.workspaceName
+        });
+        
+        if (response.code === 200 || response.success) {
+          message.success(`添加Workspace成功: ${values.workspaceName}`);
+          setWorkspaceModalVisible(false);
+          workspaceForm.resetFields();
+          // 重新获取workspace列表
+          fetchDept();
+        } else {
+          message.error(response.message || '添加Workspace失败');
+        }
       } catch (e) {
-        message.error('添加Workspace失败');
+        console.error('添加Workspace失败:', e);
+        message.error(e.response?.data?.message || '添加Workspace失败');
       }
     });
   };
@@ -186,18 +208,7 @@ const RoleManagement = () => {
           </div>
         );
       }
-    },
-    {
-      title: 'Delete',
-      key: 'delete',
-      width: 80,
-      render: (_, record) => (
-        <DeleteOutlined 
-          style={{ color: '#ff4d4f', cursor: 'pointer', fontSize: '16px' }}
-          onClick={() => handleDelete(record)}
-        />
-      )
-    },
+    }
   ];
 
   return (
@@ -217,8 +228,29 @@ const RoleManagement = () => {
             placeholder="All"
             showSearch
             allowClear
-            options={[{ value: 'ALL', label: 'All' }, { value: 'WPB', label: 'WPB' }, { value: 'GPB', label: 'GPB' }]}
-            onChange={(v) => { setWsFilter(v); fetchData(1, size); }}
+            options={[
+              { value: 'ALL', label: 'All' },
+              ...departments.map(dept => ({ value: dept, label: dept }))
+            ]}
+            onChange={(v) => { 
+              setWsFilter(v); 
+              // 直接使用选中的值调用fetchData，避免状态更新延迟
+              const fetchDataWithFilter = async () => {
+                setLoading(true);
+                try {
+                  const res = await http.get('/admin/users', { page: 1, size, keyword, workspace: v });
+                  const records = res?.data?.records || res?.records || [];
+                  setData(records);
+                  setTotal(res?.data?.total || res?.total || records.length);
+                  setPage(1);
+                } catch (e) {
+                  message.error('加载失败');
+                } finally {
+                  setLoading(false);
+                }
+              };
+              fetchDataWithFilter();
+            }}
             filterOption={(input, option) =>
               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
@@ -332,13 +364,7 @@ const RoleManagement = () => {
                 mode="multiple"
                 allowClear
                 placeholder="请选择工作空间"
-                options={workspaceOptions.length ? workspaceOptions : [
-                  { value: 'WPB', label: 'WPB' },
-                  { value: 'GPB', label: 'GPB' },
-                  { value: 'IWS', label: 'IWS' },
-                  { value: 'FCCS', label: 'FCCS' },
-                  { value: 'CCSS', label: 'CCSS' },
-                ]}
+                options={departments.map(dept => ({ value: dept, label: dept }))}
               />
             </Form.Item>
           )}
@@ -401,4 +427,4 @@ const RoleManagement = () => {
   );
 };
 
-export default RoleManagement; 
+export default RoleManagement;
