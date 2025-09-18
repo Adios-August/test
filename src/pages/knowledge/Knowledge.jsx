@@ -802,16 +802,29 @@ const Knowledge = observer(() => {
     }
   };
 
-  // 处理知识项点击（显示详情在当前页面）
+  // 处理知识项点击（跳转到知识详情页面）
   const handleKnowledgeDetailClick = (item) => {
     console.log('点击的知识卡片:', item);
     const knowledgeId = item.id || item._id || item.knowledgeId;
     console.log('知识ID:', knowledgeId);
     
     if (knowledgeId) {
-      fetchSelectedKnowledgeDetail(knowledgeId);
+      // 跳转到带搜索列表的知识详情页面
+      const categoryParam = categoryId ? `?category=${categoryId}` : '';
+      navigate(`/knowledge/${knowledgeId}${categoryParam}`);
     } else {
       console.error('无法获取知识ID，知识项数据:', item);
+      message.error('知识ID不存在');
+    }
+  };
+
+  // 在新页面打开知识详情
+  const handleOpenInNewPage = (item) => {
+    const knowledgeId = item.id || item._id || item.knowledgeId;
+    if (knowledgeId) {
+      const categoryParam = categoryId ? `?category=${categoryId}` : '';
+      window.open(`/knowledge-detail/${knowledgeId}${categoryParam}`, '_blank');
+    } else {
       message.error('知识ID不存在');
     }
   };
@@ -882,11 +895,14 @@ const Knowledge = observer(() => {
 
   // 获取选中知识项的详情
   const fetchSelectedKnowledgeDetail = async (knowledgeId) => {
+   
+    
     if (!knowledgeId) return;
 
     setSelectedKnowledgeLoading(true);
     try {
       const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+ 
 
       if (response.code === 200) {
         setSelectedKnowledgeDetail(response.data);
@@ -928,18 +944,6 @@ const Knowledge = observer(() => {
     const knowledgeId = item.id || item.knowledgeId;
     if (knowledgeId) {
       navigate(`/knowledge-detail/${knowledgeId}${categoryParam}`);
-    } else {
-      message.error('知识ID不存在');
-    }
-  };
-
-  // 在新页面打开知识详情
-  const handleOpenInNewPage = (item) => {
-    const categoryParam = categoryId ? `?category=${categoryId}` : '';
-    const knowledgeId = item.id || item.knowledgeId;
-    if (knowledgeId) {
-      const url = `/knowledge-detail/${knowledgeId}${categoryParam}`;
-      window.open(url, '_blank');
     } else {
       message.error('知识ID不存在');
     }

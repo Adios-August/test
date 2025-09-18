@@ -15,7 +15,8 @@ const CommonSidebar = ({
   marginTop = "24px",
   enableNavigation = false,
   filterCategoryId = null,
-  onCategoryClick = null
+  onCategoryClick = null,
+  collapsed = false
 }) => {
   const navigate = useNavigate();
   const [selectedKeys, setSelectedKeys] = useState([]);
@@ -63,7 +64,7 @@ const CommonSidebar = ({
     }
   }, []);
 
-  // 处理默认展开状态（只在没有特定目标时展开第一级）
+  // 处理默认展开状态（默认不展开任何分类）
   useEffect(() => {
     if (categoryTree.length === 0) return;
     
@@ -71,9 +72,8 @@ const CommonSidebar = ({
     const hasSpecificTarget = filterCategoryId || new URLSearchParams(window.location.search).get('parent');
     
     if (!hasSpecificTarget) {
-      // 只有在没有特定目标时才默认展开第一级分类
-      const firstLevelKeys = categoryTree.map(item => item.id.toString());
-      setOpenKeys(firstLevelKeys);
+      // 默认不展开任何分类，保持折叠状态
+      setOpenKeys([]);
     }
   }, [categoryTree, filterCategoryId]);
 
@@ -321,6 +321,7 @@ const CommonSidebar = ({
     <Sider
       className="common-sidebar"
       width={width}
+      collapsed={collapsed}
       style={{ height: height, marginTop: marginTop }}
     >
       <div className="sidebar-content">

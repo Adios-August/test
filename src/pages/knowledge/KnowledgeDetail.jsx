@@ -15,6 +15,7 @@ import { feedbackAPI } from '../../api/feedback';
 import { engagementAPI } from '../../api/engagement';
 import { useKnowledgeStore, useAuthStore } from '../../stores';
 import { useFeedbackTypes } from '../../hooks/useFeedbackTypes';
+import { addSearchHistory } from '../../utils/searchHistoryAPI';
 import './KnowledgeDetail.scss';
 
 // HTML标签清理函数
@@ -59,6 +60,8 @@ const KnowledgeDetail = () => {
   const [searchCollapsed, setSearchCollapsed] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [activeTabKey, setActiveTabKey] = useState('1');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   
   // 知识详情数据状态
   const [knowledgeDetail, setKnowledgeDetail] = useState(null);
@@ -92,11 +95,18 @@ const KnowledgeDetail = () => {
       if (response.code === 200) {
         setKnowledgeDetail(response.data);
         
+        // 调试：打印返回的数据结构
+        console.log('Knowledge detail data:', response.data);
+        
         // 如果有知识详情，自动创建第一个标签页
         if (response.data && tabs.length === 0) {
+          // 尝试多个可能的标题字段
+          const title = response.data.name || response.data.title || response.data.knowledgeName || response.data.knowledge_name || '知识详情';
+          console.log('Tab title will be:', title);
+          
           const firstTab = {
             key: `knowledge-${knowledgeId}`,
-            label: response.data.title || '知识详情',
+            label: title,
             closable: true,
             content: response.data
           };
@@ -262,8 +272,9 @@ const KnowledgeDetail = () => {
   // 初始化标签页
   const [tabs, setTabs] = useState([]);
 
-  // 从store中获取搜索列表数据
-  const searchResults = knowledgeStore.knowledgeList.map(item => ({
+  // 从搜索结果中获取搜索列表数据
+  const searchResultsData = searchResults.length > 0 ? searchResults : knowledgeStore.knowledgeList;
+  const displayResults = searchResultsData.map(item => ({
     id: item.id,
     title: item.name || item.title || '无标题',
     date: item.createdTime || item.date || '未知日期',
@@ -278,12 +289,62 @@ const KnowledgeDetail = () => {
   };
 
   const handleTabClose = (targetKey) => {
-    // 处理标签页关闭逻辑
+    const newTabs = tabs.filter(tab => tab.key !== targetKey);
+    setTabs(newTabs);
+    
+    // 如果关闭的是当前活跃的标签页，需要切换到其他标签页
+    if (activeTabKey === targetKey) {
+      if (newTabs.length > 0) {
+        // 切换到最后一个标签页
+        setActiveTabKey(newTabs[newTabs.length - 1].key);
+      } else {
+        // 如果没有标签页了，清空活跃标签页
+        setActiveTabKey('');
+      }
+    }
   };
 
-  const handleSearch = () => {
-    // 这里可以添加实际的搜索逻辑
-    // 比如调用API、过滤数据等
+  const handleSearch = async () => {
+    if (!searchValue.trim()) {
+      message.warning("请输入搜索关键词");
+      return;
+    }
+    
+    setSearchLoading(true);
+    try {
+      // 添加搜索历史
+      addSearchHistory(searchValue.trim());
+      
+      // 调用搜索API
+      const response = await knowledgeAPI.searchKnowledgeByQuery({
+        query: searchValue.trim(),
+        page: 1,
+        size: 20,
+        userId: currentUserId
+      });
+      
+      if (response.code === 200) {
+        // 处理搜索结果，如果name为空则使用description的前50个字符作为标题
+        const processedResults = (response.data.esResults || []).map(item => ({
+          ...item,
+          name: item.name || item.description?.substring(0, 50) + '...' || '无标题',
+          displayName: item.name || item.description?.substring(0, 50) + '...' || '无标题'
+        }));
+        
+        setSearchResults(processedResults);
+        // 更新knowledgeStore中的数据
+        knowledgeStore.setKnowledgeList(processedResults);
+      } else {
+        message.error(response.message || '搜索失败');
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error('搜索失败:', error);
+      message.error('搜索失败，请稍后重试');
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   const handleSearchChange = (e) => {
@@ -383,7 +444,7 @@ const KnowledgeDetail = () => {
             <div className="search-container">
               <div className="search-input">
                 <Input
-                  placeholder="7月产品推荐"
+                  placeholder="请输入关键字"
                   prefix={<SearchOutlined />}
                   value={searchValue}
                   onChange={handleSearchChange}
@@ -414,44 +475,52 @@ const KnowledgeDetail = () => {
               </div>
             </div>
             
-            <div className="sort-options">
-              <Button type="text">最新</Button>
-              <Button type="text">最热</Button>
-              <Button type="text">相关度</Button>
-            </div>
+            
             
             <div className="search-results">
-              {searchResults.length > 0 ? (
-                searchResults.map((item, index) => (
-                  <div
-                    key={item.id || index}
-                    className="result-item"
-                    onClick={() => addTabFromSearch(item)}
-                  >
-                    <div className="result-header">
-                      <div className="result-title">{item.title}</div>
-                      <div className="result-date">{item.date}</div>
-                    </div>
-                    <div className="result-description" 
-                      style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        lineHeight: '1.4',
-                        maxHeight: '2.8em',
-                        fontSize: '16px'
-                      }}
+              {searchLoading ? (
+                <div className="loading-container">
+                  <Spin size="small" />
+                  <span>搜索中...</span>
+                </div>
+              ) : displayResults.length > 0 ? (
+                displayResults.map((item, index) => {
+                  // 检查当前项是否为活跃标签页 - 需要同时检查知识详情标签页和搜索标签页
+                  const isActiveKnowledge = activeTabKey === `knowledge-${item.id}`;
+                  const isActiveSearch = activeTabKey === `search-${item.id}`;
+                  const isActive = isActiveKnowledge || isActiveSearch;
+                  
+                  return (
+                    <div
+                      key={item.id || index}
+                      className={`result-item ${isActive ? 'active' : ''}`}
+                      onClick={() => addTabFromSearch(item)}
                     >
-                      {stripHtmlTags(item.description)}
+                      <div className="result-header">
+                        <div className="result-title">{item.title}</div>
+                    
+                      </div>
+                      <div className="result-description" 
+                        style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          lineHeight: '1.4',
+                          maxHeight: '2.8em',
+                          fontSize: '16px'
+                        }}
+                      >
+                        {stripHtmlTags(item.description)}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="no-results">
                   <span className="info-icon">!</span>
-                  未找到结果! 请更换搜索词,重新尝试!
+                  {searchValue.trim() ? '未找到结果! 请更换搜索词,重新尝试!' : '请输入关键词进行搜索'}
                 </div>
               )}
             </div>
@@ -474,9 +543,18 @@ const KnowledgeDetail = () => {
               <Spin size="large" />
               <p>加载中...</p>
             </div>
+          ) : tabs.length === 0 ? (
+            <div className="empty-tabs-container">
+              <div className="empty-tabs-content">
+                <div className="empty-icon">📄</div>
+                <h3>暂无打开的文档</h3>
+                <p>请从左侧搜索结果中选择文档查看</p>
+              </div>
+            </div>
           ) : (
             <div className="detail-tabs">
               <Tabs
+              hideAdd
                 activeKey={activeTabKey}
                 onChange={setActiveTabKey}
                 type="editable-card"
@@ -640,4 +718,4 @@ const KnowledgeDetail = () => {
   );
 };
 
-export default KnowledgeDetail; 
+export default KnowledgeDetail;

@@ -257,7 +257,7 @@
 
     .search-results {
       flex: 1;
-      padding: 0 16px;
+    
       overflow-y: auto;
 
       .result-item {
@@ -344,6 +344,48 @@
           font-weight: bold;
         }
       }
+
+      .search-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 16px;
+        color: #666666;
+        font-size: 14px;
+
+        p {
+          margin-top: 12px;
+          margin-bottom: 0;
+        }
+      }
+
+      .search-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 16px;
+        color: #999999;
+        font-size: 14px;
+
+        .search-icon {
+          font-size: 24px;
+          margin-bottom: 8px;
+        }
+
+        p {
+          margin: 0;
+        }
+      }
+
+      .search-pagination {
+        display: flex;
+        justify-content: center;
+        padding: 16px 0;
+        border-top: 1px solid #f0f0f0;
+        margin-top: 16px;
+      }
     }
   }
 
@@ -394,7 +436,7 @@
     overflow-y: auto;
     flex: 1;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+  
 
     .empty-state {
       display: flex;
@@ -425,6 +467,41 @@
         color: #666;
         margin: 0;
         text-align: center;
+      }
+    }
+
+    .empty-tabs-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+      .empty-tabs-content {
+        text-align: center;
+        padding: 40px;
+
+        .empty-icon {
+          font-size: 64px;
+          margin-bottom: 24px;
+          opacity: 0.6;
+        }
+
+        h3 {
+          font-size: 20px;
+          color: #333;
+          margin: 0 0 12px 0;
+          font-weight: 600;
+        }
+
+        p {
+          font-size: 16px;
+          color: #666;
+          margin: 0;
+          line-height: 1.5;
+        }
       }
     }
 

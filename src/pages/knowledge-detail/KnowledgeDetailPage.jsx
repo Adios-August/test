@@ -58,4 +58,4 @@ const KnowledgeDetailPage = () => {
   );
 };
 
-export default KnowledgeDetailPage; 
+export default KnowledgeDetailPage;

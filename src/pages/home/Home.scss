@@ -359,7 +359,6 @@
         overflow-y: auto;
         margin-bottom: 0;
         height: 400px; // 固定列表高度
-       
         
         .panel-item {
           padding: 2px 0; // 减少项目间距
@@ -456,8 +455,6 @@
     }
   }
 }
-
- 
   .ant-list-items{
     height: 390px !important;
     display: flex;
@@ -465,8 +462,6 @@
     justify-content: space-between;
    
 }
-
-
 @media (max-width: 768px) {
   .home-page {
     .search-section {

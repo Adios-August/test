@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Table, Button, message, Modal, Space } from 'antd';
 import {
-  EyeOutlined, DeleteOutlined
+  EyeOutlined, DeleteOutlined, ExportOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
@@ -60,6 +60,11 @@ const Favorites = () => {
   // 处理查看知识详情
   const handleView = (record) => {
     navigate(`/knowledge-detail/${record.knowledgeId}`);
+  };
+
+  // 在新页面打开知识详情
+  const handleOpenInNewPage = (record) => {
+    window.open(`/knowledge-detail/${record.knowledgeId}`, '_blank');
   };
 
   // 处理删除收藏
@@ -178,7 +183,7 @@ const Favorites = () => {
     {
       title: '操作',
       key: 'action',
-      width: 140,
+      width: 180,
       align: 'center',
       render: (_, record) => (
         <div style={{ 
@@ -204,6 +209,24 @@ const Favorites = () => {
             }}
           >
             查看
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<ExportOutlined />}
+            onClick={() => handleOpenInNewPage(record)}
+            className="open-new-button"
+            style={{ 
+              color: '#52c41a',
+              padding: '4px 8px',
+              height: 'auto',
+              fontSize: '12px',
+              border: 'none',
+              background: 'transparent',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            新页面
           </Button>
           <Button
             type="link"
@@ -259,4 +282,4 @@ const Favorites = () => {
   );
 };
 
-export default Favorites; 
+export default Favorites;

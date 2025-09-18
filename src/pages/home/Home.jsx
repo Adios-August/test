@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Input, Button, Card, Row, Col, List, Tag, message, Spin } from "antd";
+import { Layout, Input, Button, Card, Row, Col, List, Tag, message, Spin, Dropdown } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
   HeartOutlined,
@@ -7,6 +7,8 @@ import {
   FireOutlined,
   EyeOutlined,
   TagOutlined,
+  ExportOutlined,
+  GlobalOutlined,
 } from "@ant-design/icons";
 import { observer } from "mobx-react-lite";
 import CommonSidebar from "../../components/CommonSidebar";
@@ -44,6 +46,16 @@ const Home = observer(() => {
 
   // 最热资料
   const [hotDownloads, setHotDownloads] = useState([]);
+
+  // 在当前页面打开知识详情
+  const handleOpenInCurrentPage = (knowledgeId) => {
+    navigate(`/knowledge-detail/${knowledgeId}`);
+  };
+
+  // 在新页面打开知识详情
+  const handleOpenInNewPage = (knowledgeId) => {
+    window.open(`/knowledge-detail/${knowledgeId}`, '_blank');
+  };
 
   // 获取热门知识列表
   const fetchPopularKnowledge = async () => {
@@ -436,20 +448,40 @@ const Home = observer(() => {
                     className="panel-list"
                     dataSource={popularKnowledge}
                     renderItem={(item, index) => (
-                      <List.Item 
-                        className="panel-item"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/knowledge-detail/${item.id}`)}
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              key: 'current',
+                              label: '在当前页面打开',
+                              icon: <GlobalOutlined />,
+                              onClick: () => handleOpenInCurrentPage(item.id),
+                            },
+                            {
+                              key: 'new',
+                              label: '在新页面打开',
+                              icon: <ExportOutlined />,
+                              onClick: () => handleOpenInNewPage(item.id),
+                            },
+                          ],
+                        }}
+                        trigger={['contextMenu']}
                       >
-                        <div className="item-content">
-                          <span className="item-number">{index + 1}</span>
-                          <span className="item-title">{item.name}</span>
-                          <span className="item-meta">
-                            <EyeOutlined /> {item.searchCount || 0}
-                          </span>
-                        </div>
-                        
-                      </List.Item>
+                        <List.Item 
+                          className="panel-item"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleOpenInCurrentPage(item.id)}
+                        >
+                          <div className="item-content">
+                            <span className="item-number">{index + 1}</span>
+                            <span className="item-title">{item.name}</span>
+                            <span className="item-meta">
+                              <EyeOutlined /> {item.searchCount || 0}
+                            </span>
+                          </div>
+                          
+                        </List.Item>
+                      </Dropdown>
                     )}
                   />
                 )}
@@ -477,20 +509,40 @@ const Home = observer(() => {
                     className="panel-list"
                     dataSource={latestKnowledgeData}
                     renderItem={(item, index) => (
-                      <List.Item 
-                        className="panel-item"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/knowledge-detail/${item.id}`)}
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              key: 'current',
+                              label: '在当前页面打开',
+                              icon: <GlobalOutlined />,
+                              onClick: () => handleOpenInCurrentPage(item.id),
+                            },
+                            {
+                              key: 'new',
+                              label: '在新页面打开',
+                              icon: <ExportOutlined />,
+                              onClick: () => handleOpenInNewPage(item.id),
+                            },
+                          ],
+                        }}
+                        trigger={['contextMenu']}
                       >
-                        <div className="item-content">
-                          <span className="item-number">{index + 1}</span>
-                          <span className="item-title">{item.name}</span>
-                          <span className="item-meta">
-                            <ClockCircleOutlined /> {new Date(item.createdTime).toLocaleDateString()}
-                          </span>
-                        </div>
-                       
-                      </List.Item>
+                        <List.Item 
+                          className="panel-item"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleOpenInCurrentPage(item.id)}
+                        >
+                          <div className="item-content">
+                            <span className="item-number">{index + 1}</span>
+                            <span className="item-title">{item.name}</span>
+                            <span className="item-meta">
+                              <ClockCircleOutlined /> {new Date(item.createdTime).toLocaleDateString()}
+                            </span>
+                          </div>
+                         
+                        </List.Item>
+                      </Dropdown>
                     )}
                   />
                 )}
@@ -518,19 +570,39 @@ const Home = observer(() => {
                     className="panel-list"
                     dataSource={hotDownloads}
                     renderItem={(item, index) => (
-                      <List.Item 
-                        className="panel-item"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/knowledge-detail/${item.id}`)}
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              key: 'current',
+                              label: '在当前页面打开',
+                              icon: <GlobalOutlined />,
+                              onClick: () => handleOpenInCurrentPage(item.id),
+                            },
+                            {
+                              key: 'new',
+                              label: '在新页面打开',
+                              icon: <ExportOutlined />,
+                              onClick: () => handleOpenInNewPage(item.id),
+                            },
+                          ],
+                        }}
+                        trigger={['contextMenu']}
                       >
-                        <div className="item-content">
-                          <span className="item-number">{index + 1}</span>
-                          <span className="item-title">{item.name}</span>
-                          <span className="item-meta">
-                            <FireOutlined /> {item.searchCount || 0}
-                          </span>
-                        </div>
-                      </List.Item>
+                        <List.Item 
+                          className="panel-item"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleOpenInCurrentPage(item.id)}
+                        >
+                          <div className="item-content">
+                            <span className="item-number">{index + 1}</span>
+                            <span className="item-title">{item.name}</span>
+                            <span className="item-meta">
+                              <FireOutlined /> {item.searchCount || 0}
+                            </span>
+                          </div>
+                        </List.Item>
+                      </Dropdown>
                     )}
                   />
                 )}
