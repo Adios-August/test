@@ -85,6 +85,13 @@ const KnowledgeDetail = () => {
   const [feedbackContent, setFeedbackContent] = useState('');
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
+  // 当feedbackTypes加载完成后，自动选中第一条
+  useEffect(() => {
+    if (feedbackTypes && feedbackTypes.length > 0 && !selectedFeedbackType) {
+      setSelectedFeedbackType(feedbackTypes[0].value);
+    }
+  }, [feedbackTypes, selectedFeedbackType]);
+
   // 获取知识详情
   const fetchKnowledgeDetail = async (knowledgeId) => {
     if (!knowledgeId) return;

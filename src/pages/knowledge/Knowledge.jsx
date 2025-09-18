@@ -1089,6 +1089,7 @@ const Knowledge = observer(() => {
                   <div className="message-content">
                     <p>{aiAnswer.answer}</p>
                     <div className="message-actions">
+                      <span style={{color:'#db0011'}}>Learn More</span>
                       {aiAnswer.references && aiAnswer.references.length > 0 && (
                         <Button type="link" size="small" icon={<FilePdfOutlined />}>
                           {aiAnswer.references[0].sourceFile}

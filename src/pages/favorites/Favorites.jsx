@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Table, Button, message, Modal, Space } from 'antd';
 import {
-  EyeOutlined, DeleteOutlined, ExportOutlined
+  DeleteOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
@@ -183,70 +183,27 @@ const Favorites = () => {
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 100,
       align: 'center',
       render: (_, record) => (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => handleView(record)}
-            className="view-button"
-            style={{ 
-              color: '#1890ff',
-              padding: '4px 8px',
-              height: 'auto',
-              fontSize: '12px',
-              border: 'none',
-              background: 'transparent',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            查看
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<ExportOutlined />}
-            onClick={() => handleOpenInNewPage(record)}
-            className="open-new-button"
-            style={{ 
-              color: '#52c41a',
-              padding: '4px 8px',
-              height: 'auto',
-              fontSize: '12px',
-              border: 'none',
-              background: 'transparent',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            新页面
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
-            className="delete-button"
-            style={{ 
-              color: '#ff4d4f',
-              padding: '4px 8px',
-              height: 'auto',
-              fontSize: '12px',
-              border: 'none',
-              background: 'transparent',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            删除
-          </Button>
-        </div>
+        <Button
+          type="link"
+          size="small"
+          icon={<DeleteOutlined />}
+          onClick={() => handleDelete(record)}
+          className="delete-button"
+          style={{ 
+            color: '#ff4d4f',
+            padding: '4px 8px',
+            height: 'auto',
+            fontSize: '12px',
+            border: 'none',
+            background: 'transparent',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          删除
+        </Button>
       )
     }
   ];

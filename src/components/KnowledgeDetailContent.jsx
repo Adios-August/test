@@ -26,6 +26,13 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
   const [feedbackContent, setFeedbackContent] = useState('');
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
+  // 当feedbackTypes加载完成后，自动选中第一条
+  useEffect(() => {
+    if (feedbackTypes && feedbackTypes.length > 0 && !selectedFeedbackType) {
+      setSelectedFeedbackType(feedbackTypes[0].value);
+    }
+  }, [feedbackTypes, selectedFeedbackType]);
+
   // 处理收藏状态变化
   const handleFavoriteStatusChange = (isFavorited) => {
     // 可以在这里处理收藏状态变化的回调 

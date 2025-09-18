@@ -59,7 +59,30 @@ const FeedbackManagement = () => {
       dataIndex: 'feedbackType', 
       width: 120,
       render: (type) => (
-        <Tag color={type === 'POSITIVE' ? 'green' : type === 'NEGATIVE' ? 'red' : 'blue'}>
+        <Tag 
+          style={{ 
+            background: 'linear-gradient(135deg, var(--ant-primary-color), #ff4757)',
+            borderColor: 'var(--ant-primary-color)',
+            color: '#fff',
+            fontWeight: '500',
+            borderRadius: '16px',
+            padding: '4px 12px',
+            border: 'none',
+            boxShadow: '0 2px 8px rgba(219, 0, 17, 0.2)',
+            fontSize: '12px',
+            textAlign: 'center',
+            transition: 'all 0.3s ease',
+            cursor: 'default'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'translateY(-1px)';
+            e.target.style.boxShadow = '0 4px 12px rgba(219, 0, 17, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'translateY(0)';
+            e.target.style.boxShadow = '0 2px 8px rgba(219, 0, 17, 0.2)';
+          }}
+        >
           {getFeedbackTypeLabel(type)}
         </Tag>
       )
@@ -69,7 +92,18 @@ const FeedbackManagement = () => {
       title: '操作', width: 120, render: (_, r) => (
         <Space>
           <Popconfirm title="确定删除该反馈吗？" onConfirm={() => handleDelete(r.id)}>
-            <a>删除</a>
+            <Button 
+              type="link" 
+              danger 
+              size="small"
+              style={{ 
+                color: 'var(--ant-primary-color)',
+                padding: '0',
+                height: 'auto'
+              }}
+            >
+              删除
+            </Button>
           </Popconfirm>
         </Space>
       )

@@ -496,7 +496,8 @@ const KnowledgeQA = () => {
                       sessionId: aiMsg.sessionId || "",
                       messageId: aiMsg.messageId || "",
                       isLiked: aiMsg.isLiked || false,
-                      isDisliked: aiMsg.isDisliked || false
+                      isDisliked: aiMsg.isDisliked || false,
+                      isRegenerating: false // 清除重新生成状态
                     };
                   } else {
                     console.warn('SSE message事件：未找到AI消息，无法更新内容');
@@ -1353,11 +1354,6 @@ const KnowledgeQA = () => {
                             <Spin size="small" />
                             <span>AI正在思考中...</span>
                           </div>
-                        ) : message.isRegenerating ? (
-                          <div className="thinking-indicator">
-                            <Spin size="small" />
-                            <span>正在重新生成...</span>
-                          </div>
                         ) : (
                           <span />
                         )}
@@ -1373,14 +1369,13 @@ const KnowledgeQA = () => {
                                 className="reference-item"
                                 onClick={() => {
                                   if (ref.downloadUrl) {
-                                    fetch(ref.downloadUrl)
-                                      .then((r) => r.blob())
-                                      .then((b) => {
-                                        const url = URL.createObjectURL(b);
-                                        setPreviewFileUrl(url);
-                                        setPreviewPage(ref.pageNum || 1);
-                                        setPreviewBboxes(ref.bbox_union || ref.bboxUnion ? [ref.bbox_union || ref.bboxUnion] : []);
-                                      });
+                                    // 下载文件
+                                    const link = document.createElement('a');
+                                    link.href = ref.downloadUrl;
+                                    link.download = ref.knowledge_name || ref.knowledgeName || ref.sourceFile || '文档';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
                                   }
                                 }}
                               >
@@ -1388,17 +1383,6 @@ const KnowledgeQA = () => {
                                 <span style={{ cursor: "pointer" }}>
                                   {ref.knowledge_name || ref.knowledgeName || ref.sourceFile || ref.sourceFile || "引用文档"}（第{ref.page_num || ref.pageNum || 1}页）
                                 </span>
-                                {ref.downloadUrl && (
-                                  <a
-                                    href={ref.downloadUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{ marginLeft: 8 }}
-                                  >
-                                    下载
-                                  </a>
-                                )}
                               </div>
                             ))}
                           </div>
