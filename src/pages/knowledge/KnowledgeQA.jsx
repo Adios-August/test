@@ -1622,6 +1622,7 @@ const KnowledgeQA = () => {
                               <SourceExpandedDetail 
                                 knowledgeDetail={expandedRelatedTextData[reference.knowledge_id || reference.knowledgeId]} 
                                 loading={false} 
+                                bboxes={reference.bbox_union || reference.bboxUnion ? [reference.bbox_union || reference.bboxUnion] : []}
                                 />
                             ) : (
                               <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>

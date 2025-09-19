@@ -204,16 +204,42 @@
               padding-top: 12px;
               width: 100%;
               max-width: 100%;
-              overflow: hidden;
+              max-height: 600px;
+              overflow-y: auto;
+              overflow-x: hidden;
 
               // 自定义PDF预览组件样式
               .pdf-preview {
                 border: 1px solid #e8e8e8;
                 border-radius: 6px;
-                overflow: hidden;
+                overflow: visible;
                 background: white;
                 max-width: 100%;
                 width: 100%;
+                
+                // PDF页面容器 - 更精确的选择器
+                .react-pdf__Document {
+                  width: 100% !important;
+                  
+                  // react-pdf Page 组件
+                  .react-pdf__Page {
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    
+                    // PDF canvas
+                    .react-pdf__Page__canvas {
+                      width: 100% !important;
+                      height: auto !important;
+                      max-width: 100% !important;
+                    }
+                    
+                    // PDF文本层
+                    .react-pdf__Page__textContent {
+                      width: 100% !important;
+                      max-width: 100% !important;
+                    }
+                  }
+                }
 
                 button {
                   background: #f5f5f5;
@@ -455,4 +481,4 @@
       padding: 16px;
     }
   }
-} 
+}

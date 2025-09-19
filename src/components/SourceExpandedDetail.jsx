@@ -11,7 +11,7 @@ import PdfPreview from './PdfPreview';
 import KnowledgeTable from './KnowledgeTable';
 import './SourceExpandedDetail.scss';
 
-const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
+const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [] }) => {
   // 处理收藏状态变化
   const handleFavoriteStatusChange = (isFavorited) => {
     // 可以在这里处理收藏状态变化的回调 
@@ -108,7 +108,7 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
                       <PdfPreview 
                         fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
                         pageNum={1}
-                        bboxes={[]}
+                        bboxes={bboxes}
                       />
                     </div>
                   )}
@@ -138,4 +138,4 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false }) => {
   );
 };
 
-export default SourceExpandedDetail; 
+export default SourceExpandedDetail;
