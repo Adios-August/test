@@ -35,6 +35,7 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
   // 同步外部页码
   useEffect(() => {
     if (pageNum && pageNum !== currentPage) setCurrentPage(pageNum);
+    console.log('PdfPreview: pageNum changed', pageNum);
   }, [pageNum]);
 
   // 获取PDF文件

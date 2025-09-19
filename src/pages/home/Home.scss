@@ -308,6 +308,13 @@
         padding: 12px; // 减少内边距
         flex: 1;
       }
+        .ant-list-items{
+    height: 390px !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+   
+}
 
       &:hover {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -455,13 +462,7 @@
     }
   }
 }
-  .ant-list-items{
-    height: 390px !important;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-   
-}
+
 @media (max-width: 768px) {
   .home-page {
     .search-section {
