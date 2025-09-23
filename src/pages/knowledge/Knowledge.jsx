@@ -166,10 +166,6 @@ const Knowledge = observer(() => {
   const [expandedSources, setExpandedSources] = useState({});
   const [expandedSourceData, setExpandedSourceData] = useState({});
   const [expandedSourceLoading, setExpandedSourceLoading] = useState({});
-  // 针对某个 knowledgeId 的页面与高亮覆盖
-  const [expandedSourceOverride, setExpandedSourceOverride] = useState({});
-  // 针对某个 knowledgeId 记录优先显示的附件（文件名）
-  const [expandedSourcePreferredAttachment, setExpandedSourcePreferredAttachment] = useState({});
 
   // 防止重复搜索的ref
   const hasSearchedFromHome = useRef(false);
@@ -635,51 +631,9 @@ const Knowledge = observer(() => {
               tags: ref.tags,
               effectiveTime: ref.effectiveTime,
               attachments: ref.attachments,
-              sourceFile: ref.sourceFile || ref.attachments?.[0] || '未知文件',
-              pageNum: ref.pageNum,
-              bboxUnion: ref.bboxUnion,
-              downloadUrl: ref.downloadUrl
+              sourceFile: ref.sourceFile || ref.attachments?.[0] || '未知文件'
             }));
-            setReferences(formattedReferences);
-            
-            // 自动展开并定位首条引用
-            if (formattedReferences.length > 0) {
-              const first = formattedReferences[0];
-              const kId = first.knowledgeId;
-              if (kId) {
-                setExpandedSources((prev) => ({ ...prev, [kId]: true }));
-                setExpandedSourceOverride((prev) => ({
-                  ...prev,
-                  [kId]: {
-                    pageNum: typeof first.pageNum === 'number' ? first.pageNum : 1,
-                    bboxes: first.bboxUnion ? [first.bboxUnion] : [],
-                  },
-                }));
-                const preferred = first.sourceFile || (Array.isArray(first.attachments) ? first.attachments[0] : undefined);
-                if (preferred) {
-                  setExpandedSourcePreferredAttachment((prev) => ({ ...prev, [kId]: preferred }));
-                }
-                if (!expandedSourceData[kId] && !expandedSourceLoading[kId]) {
-                  (async () => {
-                    try {
-                      setExpandedSourceLoading((prev) => ({ ...prev, [kId]: true }));
-                      const resp = await knowledgeAPI.getKnowledgeDetail(kId);
-                      if (resp.code === 200) {
-                        setExpandedSourceData((prev) => ({ ...prev, [kId]: resp.data }));
-                      } else {
-                        message.error(resp.message || '获取知识详情失败');
-                      }
-                    } catch (e) {
-                      console.error('获取知识详情失败:', e);
-                      message.error('获取知识详情失败，请稍后重试');
-                    } finally {
-                      setExpandedSourceLoading((prev) => ({ ...prev, [kId]: false }));
-                    }
-                  })();
-                }
-              }
-            }
-            
+            setReferences(formattedReferences); 
             // 设置引用数据后立即清除Sources loading状态
             setSourcesLoading(false);
           }
@@ -997,52 +951,11 @@ const Knowledge = observer(() => {
 
 
 
-  // 处理引用点击：展开右侧、设置页码/坐标覆盖并保证详情加载
-  const handleReferenceClick = async (reference) => {
-    const knowledgeId = reference.knowledgeId;
-    if (!knowledgeId) {
-      console.warn('引用缺少knowledgeId:', reference);
-      return;
-    }
-
-    const pg = reference.pageNum;
-    const bb = reference.bboxUnion;
-    const preferred = reference.sourceFile || (Array.isArray(reference.attachments) ? reference.attachments[0] : undefined);
-
-    // 设置展开状态和覆盖参数
-    setExpandedSources((prev) => ({ ...prev, [knowledgeId]: true }));
-    setExpandedSourceOverride((prev) => ({
-      ...prev,
-      [knowledgeId]: { pageNum: typeof pg === 'number' ? pg : 1, bboxes: bb ? [bb] : [] }
-    }));
-    if (preferred) {
-      setExpandedSourcePreferredAttachment((prev) => ({ ...prev, [knowledgeId]: preferred }));
-    }
-
-    // 如果知识详情未加载，则加载
-    if (!expandedSourceData[knowledgeId] && !expandedSourceLoading[knowledgeId]) {
-      try {
-        setExpandedSourceLoading((prev) => ({ ...prev, [knowledgeId]: true }));
-        const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
-        if (response.code === 200) {
-          setExpandedSourceData((prev) => ({ ...prev, [knowledgeId]: response.data }));
-        } else {
-          message.error(response.message || '获取知识详情失败');
-        }
-      } catch (e) {
-        console.error('获取知识详情失败:', e);
-        message.error('获取知识详情失败，请稍后重试');
-      } finally {
-        setExpandedSourceLoading((prev) => ({ ...prev, [knowledgeId]: false }));
-      }
-    }
-  };
-
   // 切换Sources展开状态
   const handleToggleSourceExpansion = async (reference) => {
     const knowledgeId = reference.knowledgeId;
     const isCurrentlyExpanded = expandedSources[knowledgeId];
-    
+
     if (isCurrentlyExpanded) {
       // 收起
       setExpandedSources(prev => ({ ...prev, [knowledgeId]: false }));
@@ -1056,19 +969,24 @@ const Knowledge = observer(() => {
         delete newLoading[knowledgeId];
         return newLoading;
       });
-      setExpandedSourceOverride(prev => {
-        const newOverride = { ...prev };
-        delete newOverride[knowledgeId];
-        return newOverride;
-      });
-      setExpandedSourcePreferredAttachment(prev => {
-        const newPreferred = { ...prev };
-        delete newPreferred[knowledgeId];
-        return newPreferred;
-      });
     } else {
-      // 展开时调用引用点击处理
-      handleReferenceClick(reference);
+      // 展开
+      setExpandedSources(prev => ({ ...prev, [knowledgeId]: true }));
+      setExpandedSourceLoading(prev => ({ ...prev, [knowledgeId]: true }));
+
+      try {
+        const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+        if (response.code === 200) {
+          setExpandedSourceData(prev => ({ ...prev, [knowledgeId]: response.data }));
+        } else {
+          message.error(response.message || '获取知识详情失败');
+        }
+      } catch (error) {
+        console.error('获取知识详情失败:', error);
+        message.error('获取知识详情失败，请稍后重试');
+      } finally {
+        setExpandedSourceLoading(prev => ({ ...prev, [knowledgeId]: false }));
+      }
     }
   };
 
@@ -1694,21 +1612,6 @@ const Knowledge = observer(() => {
                             <SourceExpandedDetail
                               knowledgeDetail={expandedSourceData[reference.knowledgeId]}
                               loading={false}
-                              preferredAttachmentName={expandedSourcePreferredAttachment[reference.knowledgeId]}
-                              bboxes={(() => {
-                                const kId = reference.knowledgeId;
-                                const override = expandedSourceOverride[kId] || {};
-                                return Array.isArray(override.bboxes) && override.bboxes.length > 0
-                                  ? override.bboxes
-                                  : (reference.bboxUnion ? [reference.bboxUnion] : []);
-                              })()}
-                              pageNum={(() => {
-                                const kId = reference.knowledgeId;
-                                const override = expandedSourceOverride[kId] || {};
-                                return (typeof override.pageNum === 'number')
-                                  ? override.pageNum
-                                  : (typeof reference.pageNum === 'number' ? reference.pageNum : 1);
-                              })()}
                             />
                           ) : (
                             <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>

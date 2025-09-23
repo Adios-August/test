@@ -22,8 +22,8 @@ const FormContent = ({
 }) => {
   return (
     <div className="content-body">
-      {/* Node type selector - always show when category is selected (since we only show folders) */}
-      {formData.category && (
+      {/* Node type selector - 仅当选择了非根类目时显示（避免 0 被渲染） */}
+      {(formData.category !== null && formData.category !== undefined && formData.category !== 0 && formData.category !== '') && (
         <div className="node-type-selector">
           <div className="selector-label">创建类型：</div>
           <Radio.Group 

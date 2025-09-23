@@ -60,6 +60,18 @@ const AddKnowledge = ({ mode = 'add' }) => {
     setFormData(prev => ({ ...prev, category: value }));
   };
 
+  // 当从“一级菜单”入口进入（parentId=0 且 nodeType=folder）时，初始化为根目录并隐藏类目选择
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const parentId = params.get('parentId');
+    const nodeTypeParam = params.get('nodeType');
+    const isRootFolderCreation = (parentId === '0') && (nodeTypeParam === 'folder');
+    if (isRootFolderCreation) {
+      setNodeTypeToCreate('folder');
+      setFormData(prev => ({ ...prev, category: 0 }));
+    }
+  }, []);
+
   // Handle publish with node type
   const handlePublishWithNodeType = (isUploading) => {
     handlePublish(isUploading, nodeTypeToCreate);
@@ -116,13 +128,22 @@ const AddKnowledge = ({ mode = 'add' }) => {
 
   return (
     <div className="knowledge-management-layout">
-      {/* Left category tree */}
-      <CategorySidebar 
-        selectedCategory={formData.category}
-        onCategoryChange={handleCategoryChange}
-        onLeafNodeCheck={setIsCurrentCategoryLeafNode}
-        onFolderNodeCheck={setIsCurrentCategoryFolderNode}
-      />
+      {/* Left category tree - 创建一级类目时隐藏 */}
+      {(() => {
+        const params = new URLSearchParams(window.location.search);
+        const parentId = params.get('parentId');
+        const nodeTypeParam = params.get('nodeType');
+        const hideSidebar = parentId === '0' && nodeTypeParam === 'folder';
+        if (hideSidebar) return null;
+        return (
+          <CategorySidebar 
+            selectedCategory={formData.category}
+            onCategoryChange={handleCategoryChange}
+            onLeafNodeCheck={setIsCurrentCategoryLeafNode}
+            onFolderNodeCheck={setIsCurrentCategoryFolderNode}
+          />
+        );
+      })()}
 
       {/* Main content area */}
       <div className="knowledge-management-content">

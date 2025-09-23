@@ -66,14 +66,16 @@ export const convertToTreeData = (categories) => {
 };
 
 // Form validation
-export const validateKnowledgeForm = (formData, contentHtml) => {
+// 允许通过 options 控制是否跳过“必须选择分类”的校验，例如创建一级类目(parentId=0)
+export const validateKnowledgeForm = (formData, contentHtml, options = {}) => {
+  const { allowNoCategory = false } = options;
   const errors = [];
   // Title validation
   if (!formData.title.trim()) {
     errors.push({ field: 'title', message: '请输入标题' });
   }
   // Category validation
-  if (!formData.category) {
+  if (!allowNoCategory && (formData.category === null || formData.category === undefined || formData.category === '')) {
     errors.push({ field: 'category', message: '请选择分类' });
   }
   // Content validation

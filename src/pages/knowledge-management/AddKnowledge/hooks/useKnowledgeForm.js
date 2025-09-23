@@ -159,7 +159,13 @@ export const useKnowledgeForm = (mode = 'add') => {
 
   // Handle publish/save
   const handlePublish = async (isUploading, nodeType = 'doc') => {
-    const errors = validateKnowledgeForm(formData, contentHtml);
+    // URL 中 parentId=0 且 nodeType=folder 视为创建一级类目，允许不选择分类
+    const searchParams = new URLSearchParams(window.location.search);
+    const parentIdParam = searchParams.get('parentId');
+    const nodeTypeParam = searchParams.get('nodeType');
+    const isCreatingRootFolder = (parentIdParam === '0' || parentIdParam === 0) && (nodeTypeParam === 'folder' || nodeType === 'folder');
+
+    const errors = validateKnowledgeForm(formData, contentHtml, { allowNoCategory: isCreatingRootFolder });
     if (errors.length > 0) {
       message.error(errors[0].message);
       return;
