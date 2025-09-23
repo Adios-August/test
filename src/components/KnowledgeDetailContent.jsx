@@ -188,7 +188,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
                       <PdfPreview 
                         fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
                         pageNum={1}
-                        bboxes={[]}
+                        bboxes={knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion ? [knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion] : []}
                       />
                     </div>
                   )}

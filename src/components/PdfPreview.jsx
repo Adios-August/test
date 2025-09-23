@@ -9,8 +9,8 @@ const containerStyle = { position: "relative", width: "100%" };
 
 const highlightStyleBase = {
   position: "absolute",
-  border: "2px solid rgba(255, 0, 0, 0.8)",
-  background: "rgba(255, 0, 0, 0.15)",
+  border: "2px solid rgba(0, 162, 255, 0.8)",
+  background: "rgba(195, 239, 245, 0.19)",
   pointerEvents: "none",
   boxSizing: "border-box",
 };

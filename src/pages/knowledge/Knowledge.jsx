@@ -1520,7 +1520,7 @@ const Knowledge = observer(() => {
 
         {/* 右侧Sources侧边栏 - 只在显示source模块时显示 */}
         {showAISourceModules && (
-          <Sider className="sources-sider" width={420}>
+          <Sider className="sources-sider" width={650}>
             <div className="sources-header">
               <h3>Sources</h3>
             </div>
@@ -1610,7 +1610,11 @@ const Knowledge = observer(() => {
                             </div>
                           ) : expandedSourceData[reference.knowledgeId] ? (
                             <SourceExpandedDetail
-                              knowledgeDetail={expandedSourceData[reference.knowledgeId]}
+                              knowledgeDetail={{
+                                ...expandedSourceData[reference.knowledgeId],
+                                bbox_union: reference.bbox_union,
+                                bboxUnion: reference.bboxUnion
+                              }}
                               loading={false}
                             />
                           ) : (
