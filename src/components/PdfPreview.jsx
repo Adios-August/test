@@ -40,6 +40,8 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
 
   // 获取PDF文件
   useEffect(() => {
+    let currentBlobUrl = null;
+    
     if (!fileUrl) {
       setBlobUrl(null);
       setError(null);
@@ -74,6 +76,7 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
         
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
+        currentBlobUrl = url;
         setBlobUrl(url);
         
       } catch (err) {
@@ -87,22 +90,13 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
 
     fetchPdf();
 
-    // 清理函数
+    // 清理函数：只清理当前 effect 创建的 blob URL
     return () => {
-      if (blobUrl && blobUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(blobUrl);
+      if (currentBlobUrl && currentBlobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(currentBlobUrl);
       }
     };
   }, [fileUrl]);
-
-  // 清理blob URL
-  useEffect(() => {
-    return () => {
-      if (blobUrl && blobUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    };
-  }, [blobUrl]);
 
   const onDocumentLoadSuccess = ({ numPages }) => setNumPages(numPages);
 
@@ -147,6 +141,11 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
         );
       });
   }, [bboxes, pageSize]);
+
+  const shouldShowHighlights = useMemo(() => {
+    const target = Math.max(1, pageNum || 1);
+    return (currentPage || 1) === target;
+  }, [currentPage, pageNum]);
 
   // 显示错误状态
   if (error) {
@@ -195,7 +194,7 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
             onRenderSuccess={onPageRenderSuccess}
           />
         </Document>
-        {highlightRects}
+        {shouldShowHighlights ? highlightRects : null}
       </div>
     </div>
   );
