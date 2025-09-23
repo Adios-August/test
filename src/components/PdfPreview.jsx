@@ -40,8 +40,6 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
 
   // 获取PDF文件
   useEffect(() => {
-    let currentBlobUrl = null;
-    
     if (!fileUrl) {
       setBlobUrl(null);
       setError(null);
@@ -76,7 +74,6 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
         
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        currentBlobUrl = url;
         setBlobUrl(url);
         
       } catch (err) {
@@ -90,13 +87,22 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
 
     fetchPdf();
 
-    // 清理函数：只清理当前 effect 创建的 blob URL
+    // 清理函数
     return () => {
-      if (currentBlobUrl && currentBlobUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(currentBlobUrl);
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrl);
       }
     };
   }, [fileUrl]);
+
+  // 清理blob URL
+  useEffect(() => {
+    return () => {
+      if (blobUrl && blobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
 
   const onDocumentLoadSuccess = ({ numPages }) => setNumPages(numPages);
 
