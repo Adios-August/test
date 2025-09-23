@@ -631,7 +631,9 @@ const Knowledge = observer(() => {
               tags: ref.tags,
               effectiveTime: ref.effectiveTime,
               attachments: ref.attachments,
-              sourceFile: ref.sourceFile || ref.attachments?.[0] || '未知文件'
+              sourceFile: ref.sourceFile || ref.attachments?.[0] || '未知文件',
+              bbox_union: ref.bbox_union,
+              bboxUnion: ref.bboxUnion
             }));
             setReferences(formattedReferences); 
             // 设置引用数据后立即清除Sources loading状态
@@ -1520,7 +1522,7 @@ const Knowledge = observer(() => {
 
         {/* 右侧Sources侧边栏 - 只在显示source模块时显示 */}
         {showAISourceModules && (
-          <Sider className="sources-sider" width={420}>
+          <Sider className="sources-sider" width={650}>
             <div className="sources-header">
               <h3>Sources</h3>
             </div>
@@ -1610,7 +1612,11 @@ const Knowledge = observer(() => {
                             </div>
                           ) : expandedSourceData[reference.knowledgeId] ? (
                             <SourceExpandedDetail
-                              knowledgeDetail={expandedSourceData[reference.knowledgeId]}
+                              knowledgeDetail={{
+                                ...expandedSourceData[reference.knowledgeId],
+                                bbox_union: reference.bbox_union,
+                                bboxUnion: reference.bboxUnion
+                              }}
                               loading={false}
                             />
                           ) : (

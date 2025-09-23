@@ -108,7 +108,7 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [] })
                       <PdfPreview 
                         fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
                         pageNum={1}
-                        bboxes={bboxes}
+                        bboxes={knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion ? [knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion] : bboxes}
                       />
                     </div>
                   )}

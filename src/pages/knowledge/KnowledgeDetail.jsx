@@ -653,7 +653,7 @@ const KnowledgeDetail = () => {
                                     <PdfPreview 
                                       fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
                                       pageNum={1}
-                                      bboxes={[]}
+                                      bboxes={tab.content?.bbox_union || tab.content?.bboxUnion ? [tab.content.bbox_union || tab.content.bboxUnion] : []}
                                     />
                                   </div>
                                 )}
