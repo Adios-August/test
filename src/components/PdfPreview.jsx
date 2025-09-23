@@ -148,6 +148,11 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
       });
   }, [bboxes, pageSize]);
 
+  const shouldShowHighlights = useMemo(() => {
+    const target = Math.max(1, pageNum || 1);
+    return (currentPage || 1) === target;
+  }, [currentPage, pageNum]);
+
   // 显示错误状态
   if (error) {
     return (
@@ -195,7 +200,7 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
             onRenderSuccess={onPageRenderSuccess}
           />
         </Document>
-        {highlightRects}
+        {shouldShowHighlights ? highlightRects : null}
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import PdfPreview from './PdfPreview';
 import KnowledgeTable from './KnowledgeTable';
 import './SourceExpandedDetail.scss';
 
-const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [] }) => {
+const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], pageNum = 1, preferredAttachmentName }) => {
   // 处理收藏状态变化
   const handleFavoriteStatusChange = (isFavorited) => {
     // 可以在这里处理收藏状态变化的回调 
@@ -105,11 +105,12 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [] })
                     (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
                     <div className="pdf-preview-embedded">
                       <h4>PDF预览 - {attachment.fileName || attachment.name}</h4>
+                      {(preferredAttachmentName && (attachment.fileName !== preferredAttachmentName && attachment.name !== preferredAttachmentName)) ? null : (
                       <PdfPreview 
                         fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
-                        pageNum={1}
-                        bboxes={knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion ? [knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion] : bboxes}
-                      />
+                        pageNum={pageNum || 1}
+                        bboxes={bboxes}
+                      />)}
                     </div>
                   )}
                   

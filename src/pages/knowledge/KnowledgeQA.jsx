@@ -70,6 +70,71 @@ const KnowledgeQA = () => {
   const [expandedRelatedText, setExpandedRelatedText] = useState({});
   const [expandedRelatedTextData, setExpandedRelatedTextData] = useState({});
   const [expandedRelatedTextLoading, setExpandedRelatedTextLoading] = useState({});
+  // 针对某个 knowledgeId 的页面与高亮覆盖
+  const [expandedRelatedTextOverride, setExpandedRelatedTextOverride] = useState({});
+  // 针对某个 knowledgeId 记录优先显示的附件（文件名）
+  const [expandedRelatedTextPreferredAttachment, setExpandedRelatedTextPreferredAttachment] = useState({});
+  // 当前选中的引用消息，用于右侧面板显示
+  const [selectedReferenceMessage, setSelectedReferenceMessage] = useState(null);
+
+  // 处理引用点击：展开右侧、设置页码/坐标覆盖并保证详情加载
+  const handleReferenceClick = async (ref, message) => {
+    console.log('点击引用:', ref);
+    console.log('所属消息:', message);
+    
+    const url = ref.download_url || ref.downloadUrl;
+    if (url) setPreviewFileUrl(url);
+    const pg = ref.page_num ?? ref.pageNum;
+    setPreviewPage(typeof pg === 'number' ? pg : 1);
+    const bb = ref.bbox_union || ref.bboxUnion;
+    setPreviewBboxes(bb ? [bb] : []);
+
+    const knowledgeId = ref.knowledgeId || ref.knowledge_id;
+    console.log('提取的knowledgeId:', knowledgeId);
+    
+    if (!knowledgeId) {
+      console.warn('引用缺少knowledgeId:', ref);
+      return;
+    }
+
+    // 设置当前选中的引用消息，用于右侧面板显示
+    if (message) {
+      setSelectedReferenceMessage(message);
+    }
+
+    const preferred = ref.sourceFile || ref.source_file || (Array.isArray(ref.attachments) ? ref.attachments[0] : undefined);
+    console.log('设置展开状态，knowledgeId:', knowledgeId);
+    
+    setExpandedRelatedText(prev => ({ ...prev, [knowledgeId]: true }));
+    setExpandedRelatedTextOverride(prev => ({
+      ...prev,
+      [knowledgeId]: { pageNum: typeof pg === 'number' ? pg : 1, bboxes: bb ? [bb] : [] }
+    }));
+    if (preferred) {
+      setExpandedRelatedTextPreferredAttachment(prev => ({ ...prev, [knowledgeId]: preferred }));
+    }
+
+    if (!expandedRelatedTextData[knowledgeId] && !expandedRelatedTextLoading[knowledgeId]) {
+      console.log('开始加载知识详情，knowledgeId:', knowledgeId);
+      try {
+        setExpandedRelatedTextLoading(prev => ({ ...prev, [knowledgeId]: true }));
+        const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+        if (response.code === 200) {
+          setExpandedRelatedTextData(prev => ({ ...prev, [knowledgeId]: response.data }));
+          console.log('知识详情加载成功');
+        } else {
+          message.error(response.message || '获取知识详情失败');
+        }
+      } catch (e) {
+        console.error('获取知识详情失败:', e);
+        message.error('获取知识详情失败，请稍后重试');
+      } finally {
+        setExpandedRelatedTextLoading(prev => ({ ...prev, [knowledgeId]: false }));
+      }
+    } else {
+      console.log('知识详情已存在或正在加载中');
+    }
+  };
 
   // 调试信息：显示用户状态
 
@@ -526,18 +591,56 @@ const KnowledgeQA = () => {
                 charEnd: ref.char_end,
                 downloadUrl: ref.download_url,
               }));
-              // 自动加载首条引用到右侧预览
-              if (references.length && references[0].downloadUrl) {
-                try {
-                  authenticatedFetch(references[0].downloadUrl)
-                    .then((r) => r.blob())
-                    .then((b) => {
-                      const url = URL.createObjectURL(b);
-                      setPreviewFileUrl(url);
-                      setPreviewPage(references[0].pageNum || 1);
-                      setPreviewBboxes(references[0].bboxUnion ? [references[0].bboxUnion] : []);
-                    });
-                } catch {}
+              // 自动展开并定位首条引用（无需点击）
+              if (references.length) {
+                const first = references[0];
+                // 中间预览
+                if (first.downloadUrl) {
+                  try {
+                    authenticatedFetch(first.downloadUrl)
+                      .then((r) => r.blob())
+                      .then((b) => {
+                        const url = URL.createObjectURL(b);
+                        setPreviewFileUrl(url);
+                        setPreviewPage(typeof first.pageNum === 'number' ? first.pageNum : 1);
+                        setPreviewBboxes(first.bboxUnion ? [first.bboxUnion] : []);
+                      });
+                  } catch {}
+                }
+                // 右侧展开与覆盖
+                const kId = first.knowledgeId;
+                if (kId) {
+                  setExpandedRelatedText((prev) => ({ ...prev, [kId]: true }));
+                  setExpandedRelatedTextOverride((prev) => ({
+                    ...prev,
+                    [kId]: {
+                      pageNum: typeof first.pageNum === 'number' ? first.pageNum : 1,
+                      bboxes: first.bboxUnion ? [first.bboxUnion] : [],
+                    },
+                  }));
+                  const preferred = first.sourceFile || (Array.isArray(first.attachments) ? first.attachments[0] : undefined);
+                  if (preferred) {
+                    setExpandedRelatedTextPreferredAttachment((prev) => ({ ...prev, [kId]: preferred }));
+                  }
+                  if (!expandedRelatedTextData[kId] && !expandedRelatedTextLoading[kId]) {
+                    (async () => {
+                      try {
+                        setExpandedRelatedTextLoading((prev) => ({ ...prev, [kId]: true }));
+                        const resp = await knowledgeAPI.getKnowledgeDetail(kId);
+                        if (resp.code === 200) {
+                          setExpandedRelatedTextData((prev) => ({ ...prev, [kId]: resp.data }));
+                        } else {
+                          message.error(resp.message || '获取知识详情失败');
+                        }
+                      } catch (e) {
+                        console.error('获取知识详情失败:', e);
+                        message.error('获取知识详情失败，请稍后重试');
+                      } finally {
+                        setExpandedRelatedTextLoading((prev) => ({ ...prev, [kId]: false }));
+                      }
+                    })();
+                  }
+                }
               }
               setMessages((prev) => {
                 const newMessages = [...prev];
@@ -1341,7 +1444,10 @@ const KnowledgeQA = () => {
                                       .then((b) => {
                                         const url = URL.createObjectURL(b);
                                         setPreviewFileUrl(url);
-                                        setPreviewPage(ref.pageNum || 1);
+                                        {
+                                          const pg = ref.page_num ?? ref.pageNum;
+                                          setPreviewPage(typeof pg === 'number' ? pg : 1);
+                                        }
                                         setPreviewBboxes(ref.bbox_union || ref.bboxUnion ? [ref.bbox_union || ref.bboxUnion] : []);
                                       });
                                   }
@@ -1367,16 +1473,11 @@ const KnowledgeQA = () => {
                               <div
                                 key={`${message.id}-ref-${index}`}
                                 className="reference-item"
-                                onClick={() => {
-                                  if (ref.downloadUrl) {
-                                    // 下载文件
-                                    const link = document.createElement('a');
-                                    link.href = ref.downloadUrl;
-                                    link.download = ref.knowledge_name || ref.knowledgeName || ref.sourceFile || '文档';
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                  }
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  console.log('引用点击事件触发');
+                                  handleReferenceClick(ref, message);
                                 }}
                               >
                                 <FilePdfOutlined className="pdf-icon" />
@@ -1502,7 +1603,10 @@ const KnowledgeQA = () => {
             // 根据当前会话ID获取对应的AI回答消息
             let targetMessage = null;
             
-            if (currentConversation) {
+            // 优先使用选中的引用消息，否则使用最新消息
+            if (selectedReferenceMessage) {
+              targetMessage = selectedReferenceMessage;
+            } else if (currentConversation) {
               // 如果有当前会话，查找该会话中最新且有引用的AI消息
               targetMessage = messages
                 .filter(msg => msg.type === 'ai' && msg.references && msg.references.length > 0)
@@ -1622,8 +1726,22 @@ const KnowledgeQA = () => {
                               <SourceExpandedDetail 
                                 knowledgeDetail={expandedRelatedTextData[reference.knowledge_id || reference.knowledgeId]} 
                                 loading={false} 
-                                bboxes={reference.bbox_union || reference.bboxUnion ? [reference.bbox_union || reference.bboxUnion] : []}
-                                />
+                                preferredAttachmentName={expandedRelatedTextPreferredAttachment[reference.knowledge_id || reference.knowledgeId]}
+                                bboxes={(() => {
+                                  const knowledgeId = reference.knowledge_id || reference.knowledgeId;
+                                  const override = expandedRelatedTextOverride[knowledgeId] || {};
+                                  return Array.isArray(override.bboxes) && override.bboxes.length > 0
+                                    ? override.bboxes
+                                    : (reference.bbox_union || reference.bboxUnion ? [reference.bbox_union || reference.bboxUnion] : []);
+                                })()}
+                                pageNum={(() => {
+                                  const knowledgeId = reference.knowledge_id || reference.knowledgeId;
+                                  const override = expandedRelatedTextOverride[knowledgeId] || {};
+                                  return (typeof override.pageNum === 'number')
+                                    ? override.pageNum
+                                    : (typeof (reference.page_num ?? reference.pageNum) === 'number' ? (reference.page_num ?? reference.pageNum) : 1);
+                                })()}
+                              />
                             ) : (
                               <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
                                 加载失败，请重试
