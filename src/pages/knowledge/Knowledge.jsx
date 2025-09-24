@@ -623,15 +623,18 @@ const Knowledge = observer(() => {
 
           // 设置引用数据
           if (ragResult.references && Array.isArray(ragResult.references)) {
-            // 转换数据格式以匹配Sources模块期望的格式
+            // 转换数据格式以匹配Sources模块期望的格式，兼容后端下划线/驼峰
             const formattedReferences = ragResult.references.map(ref => ({
-              knowledgeId: ref.knowledgeId,
-              knowledgeName: ref.knowledgeName,
+              knowledgeId: ref.knowledgeId ?? ref.knowledge_id,
+              knowledgeName: ref.knowledgeName ?? ref.knowledge_name,
               description: ref.description,
               tags: ref.tags,
-              effectiveTime: ref.effectiveTime,
+              effectiveTime: ref.effectiveTime ?? ref.effective_time,
               attachments: ref.attachments,
-              sourceFile: ref.sourceFile || ref.attachments?.[0] || '未知文件'
+              sourceFile: (ref.sourceFile ?? ref.source_file) || ref.attachments?.[0] || '未知文件',
+              pageNum: ref.pageNum ?? ref.page_num,
+              bboxUnion: ref.bboxUnion ?? ref.bbox_union,
+              downloadUrl: ref.downloadUrl ?? ref.download_url
             }));
             setReferences(formattedReferences); 
             // 设置引用数据后立即清除Sources loading状态
@@ -1610,12 +1613,11 @@ const Knowledge = observer(() => {
                             </div>
                           ) : expandedSourceData[reference.knowledgeId] ? (
                             <SourceExpandedDetail
-                              knowledgeDetail={{
-                                ...expandedSourceData[reference.knowledgeId],
-                                bbox_union: reference.bbox_union,
-                                bboxUnion: reference.bboxUnion
-                              }}
+                              knowledgeDetail={expandedSourceData[reference.knowledgeId]}
                               loading={false}
+                              preferredAttachmentName={(reference.sourceFile) || (reference.attachments && reference.attachments[0])}
+                              bboxes={(reference.bboxUnion || reference.bbox_union) ? [reference.bboxUnion || reference.bbox_union] : []}
+                              pageNum={typeof (reference.pageNum ?? reference.page_num) === 'number' ? (reference.pageNum ?? reference.page_num) : 1}
                             />
                           ) : (
                             <div style={{ padding: '16px', textAlign: 'center', color: '#999' }}>
