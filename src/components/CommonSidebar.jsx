@@ -88,6 +88,9 @@ const CommonSidebar = ({
   const loadChildNodes = async (parentId) => {
     console.log(`Loading child nodes for parent ID: ${parentId}`);
     try {
+      // 在加载子节点前，保存当前的展开状态
+      const currentOpenKeys = [...openKeys];
+      
       const response = await knowledgeAPI.getChildren(parentId, { page: 1, size: 100 });
       
       if (response.code === 200) {
@@ -129,10 +132,22 @@ const CommonSidebar = ({
           return updateTreeNodes(prevTree);
         });
         
+        // 数据加载完成后，确保展开状态不变，并添加新展开的节点
+        setTimeout(() => {
+          // 确保当前点击的节点保持展开
+          if (!currentOpenKeys.includes(parentId.toString())) {
+            setOpenKeys([...currentOpenKeys, parentId.toString()]);
+          } else {
+            setOpenKeys(currentOpenKeys);
+          }
+        }, 100);
+        
         return true;
       } else {
         console.error('Failed to load child nodes:', response);
         message.error('加载子节点失败');
+        // 失败时仍然保持原来的展开状态
+        setOpenKeys(currentOpenKeys);
         return false;
       }
     } catch (error) {
@@ -469,8 +484,46 @@ const CommonSidebar = ({
   };
 
   const handleMenuOpenChange = (keys) => {
-
-    setOpenKeys(keys);
+    // 不是直接替换，而是保留已展开的类目
+    // 检查是否有新增的key
+    const addedKeys = keys.filter(key => !openKeys.includes(key));
+    // 检查是否有移除的key
+    const removedKeys = openKeys.filter(key => !keys.includes(key));
+    
+    // 如果是展开操作，直接添加新的key
+    if (addedKeys.length > 0) {
+      setOpenKeys(keys);
+    } 
+    // 如果是收缩操作，只收缩当前点击的key，保留其他已展开的key
+    else if (removedKeys.length > 0) {
+      // 只收缩当前点击的key
+      const currentKey = removedKeys[0];
+      // 找到当前key的所有子key，也需要一起收缩
+      const findChildKeys = (tree, parentKey, result = []) => {
+        for (const node of tree) {
+          if (node.id.toString() === parentKey) {
+            if (node.children) {
+              for (const child of node.children) {
+                result.push(child.id.toString());
+                if (child.children) {
+                  findChildKeys([child], child.id.toString(), result);
+                }
+              }
+            }
+            break;
+          }
+          if (node.children) {
+            findChildKeys(node.children, parentKey, result);
+          }
+        }
+        return result;
+      };
+      
+      const childKeys = findChildKeys(categoryTree, currentKey);
+      // 移除当前key和所有子key
+      const newOpenKeys = openKeys.filter(key => key !== currentKey && !childKeys.includes(key));
+      setOpenKeys(newOpenKeys);
+    }
   };
 
   const handleSubMenuTitleClick = ({ key }) => {
