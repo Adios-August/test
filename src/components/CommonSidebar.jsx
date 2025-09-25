@@ -47,8 +47,8 @@ const CommonSidebar = ({
         setTimeout(() => reject(new Error('API call timeout after 10 seconds')), 10000);
       });
       
-      // 使用新的API调用，只获取顶层目录
-      const apiPromise = knowledgeAPI.getKnowledgeList({ page: 1, size: 100 });
+      // 使用新的API调用，只获取顶层目录的folder类型
+      const apiPromise = knowledgeAPI.getKnowledgeList({ page: 1, size: 20, nodeType: 'folder' });
       
       console.log('Waiting for API response...');
       const response = await Promise.race([apiPromise, timeoutPromise]);

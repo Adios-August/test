@@ -255,12 +255,23 @@ const Home = observer(() => {
 
   // 组件挂载时获取数据
   useEffect(() => {
-    fetchPopularKnowledge();
-    fetchLatestKnowledge();
-    fetchHotDownloads();
-    fetchRecommendedQuestions(); // 添加获取推荐问题的调用
-    fetchHistoryQuestions(); // 添加获取历史问题的调用
-  }, []);
+    // 添加状态检查，避免重复请求
+    if (popularKnowledge.length === 0) {
+      fetchPopularKnowledge();
+    }
+    if (latestKnowledgeData.length === 0) {
+      fetchLatestKnowledge();
+    }
+    if (hotDownloads.length === 0) {
+      fetchHotDownloads();
+    }
+    if (recommendedQuestions.length === 0) {
+      fetchRecommendedQuestions(); // 添加获取推荐问题的调用
+    }
+    if (historyQuestions.length === 0) {
+      fetchHistoryQuestions(); // 添加获取历史问题的调用
+    }
+  }, [popularKnowledge.length, latestKnowledgeData.length, hotDownloads.length, recommendedQuestions.length, historyQuestions.length]);
 
 
 

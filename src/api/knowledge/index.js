@@ -4,7 +4,9 @@ import { http } from "../../utils/request";
 export const knowledgeAPI = {
   // 获取知识库列表（现在只返回顶层目录）
   getKnowledgeList: (params) => {
-    return http.get("/knowledge", params);
+    // 默认只获取folder类型的节点
+    const defaultParams = { nodeType: 'folder', ...params };
+    return http.get("/knowledge", defaultParams);
   },
 
   // 获取父知识下的子节点（用于懒加载子目录）
