@@ -34,13 +34,12 @@ const CommonSidebar = ({
   console.log('CommonSidebar - categoryTree length:', categoryTree.length);
   console.log('CommonSidebar - hasInitialized.current:', hasInitialized.current);
 
-  // 获取知识树数据（根节点 children）
+  // 获取顶层目录数据
   const fetchCategoryTree = async () => {
     console.log('fetchCategoryTree called');
-    console.log('About to call homeAPI.getKnowledgeFullTree()');
     setLoading(true);
     try {
-      console.log('Making API call to /categories/tree...');
+      console.log('Making API call to get top-level categories...');
       console.log('Current timestamp:', new Date().toISOString());
       
       // 添加超时处理
@@ -48,55 +47,98 @@ const CommonSidebar = ({
         setTimeout(() => reject(new Error('API call timeout after 10 seconds')), 10000);
       });
       
-      const apiPromise = homeAPI.getKnowledgeFullTree();
+      // 使用新的API调用，只获取顶层目录
+      const apiPromise = knowledgeAPI.getKnowledgeList({ page: 1, size: 100 });
       
       console.log('Waiting for API response...');
       const response = await Promise.race([apiPromise, timeoutPromise]);
       
       console.log('API call completed at:', new Date().toISOString());
-      console.log('getKnowledgeFullTree response:', response);
-      console.log('Response type:', typeof response);
-      console.log('Response keys:', response ? Object.keys(response) : 'null response');
       if (response.code === 200) {
-        const records = response.data || [];
-        console.log('Raw tree data:', records);
-        console.log('Records type:', typeof records);
-        console.log('Records is array:', Array.isArray(records));
-        console.log('Records length:', records.length);
-        // 递归映射为通用树结构
-        const mapTree = (nodes) => (nodes || []).map(n => ({
-          id: n.id,
-          name: n.name,
-          children: mapTree(n.children)
+        const records = response.data?.records || [];
+        console.log('Top level categories:', records);
+        
+        // 转换为树形结构，标记为可能有子节点但尚未加载
+        const topLevelNodes = records.map(item => ({
+          id: item.id,
+          name: item.name,
+          nodeType: item.nodeType,
+          isLeaf: item.nodeType !== 'folder', // 如果不是文件夹，则为叶子节点
+          children: item.nodeType === 'folder' ? [] : undefined, // 文件夹可能有子节点，初始为空数组
+          childrenLoaded: false // 标记子节点尚未加载
         }));
-        const data = mapTree(records);
-        console.log('Mapped tree data:', data);
-        console.log('Mapped data length:', data.length);
-        console.log('About to call setCategoryTree with data:', data);
-        setCategoryTree(data);
-        console.log('setCategoryTree called successfully');
-        // 不在这里设置默认展开，让后续的useEffect来处理
+        
+        console.log('Mapped top level nodes:', topLevelNodes);
+        setCategoryTree(topLevelNodes);
       } else {
         console.error('API response error:', response);
-        console.log('Response code:', response.code);
-        console.log('Response message:', response.message);
         message.error(response.message || '获取知识树失败');
-        // 如果API失败，设置空数组避免显示错误
-        console.log('Setting categoryTree to empty array due to API error');
         setCategoryTree([]);
       }
     } catch (error) {
       console.error('获取知识树失败:', error);
-      console.log('Error type:', typeof error);
-      console.log('Error message:', error.message);
-      console.log('Error stack:', error.stack);
       message.error('获取知识树失败，请稍后重试');
-      // 如果API失败，设置空数组避免显示错误
-      console.log('Setting categoryTree to empty array due to catch error');
       setCategoryTree([]);
     } finally {
-      console.log('fetchCategoryTree finally block - setting loading to false');
       setLoading(false);
+    }
+  };
+  
+  // 按需加载子节点
+  const loadChildNodes = async (parentId) => {
+    console.log(`Loading child nodes for parent ID: ${parentId}`);
+    try {
+      const response = await knowledgeAPI.getChildren(parentId, { page: 1, size: 100 });
+      
+      if (response.code === 200) {
+        const childNodes = response.data?.records || [];
+        console.log(`Child nodes for parent ${parentId}:`, childNodes);
+        
+        // 转换为树节点格式
+        const mappedChildren = childNodes.map(item => ({
+          id: item.id,
+          name: item.name,
+          nodeType: item.nodeType,
+          isLeaf: item.nodeType !== 'folder',
+          children: item.nodeType === 'folder' ? [] : undefined,
+          childrenLoaded: false
+        }));
+        
+        // 更新树状态，将子节点添加到对应的父节点下
+        setCategoryTree(prevTree => {
+          const updateTreeNodes = (nodes) => {
+            return nodes.map(node => {
+              if (node.id === parentId) {
+                // 找到目标父节点，更新其子节点并标记为已加载
+                return {
+                  ...node,
+                  children: mappedChildren,
+                  childrenLoaded: true
+                };
+              } else if (node.children && node.children.length > 0) {
+                // 递归处理子节点
+                return {
+                  ...node,
+                  children: updateTreeNodes(node.children)
+                };
+              }
+              return node;
+            });
+          };
+          
+          return updateTreeNodes(prevTree);
+        });
+        
+        return true;
+      } else {
+        console.error('Failed to load child nodes:', response);
+        message.error('加载子节点失败');
+        return false;
+      }
+    } catch (error) {
+      console.error('加载子节点失败:', error);
+      message.error('加载子节点失败，请稍后重试');
+      return false;
     }
   };
 
@@ -339,7 +381,7 @@ const CommonSidebar = ({
     return null;
   };
 
-  // 将API数据转换为菜单项格式
+  // 将API数据转换为菜单项格式，支持懒加载
   const convertToMenuItems = (categories, isTopLevel = true) => {
     return categories.map(category => ({
       key: category.id.toString(),
@@ -361,7 +403,6 @@ const CommonSidebar = ({
               onCategoryClick(category, isTopLevel);
             } else if (enableNavigation) {
               // 否则使用原有的导航逻辑
-          
               navigate(`/knowledge?parent=${category.id}`);
             }
           }}
@@ -370,9 +411,18 @@ const CommonSidebar = ({
           {category.name}
         </div>
       ),
-      children: category.children && category.children.length > 0 
-        ? convertToMenuItems(category.children, false) 
-        : undefined
+      // 如果是文件夹且没有加载过子节点，则显示为可展开但未加载
+      children: category.children 
+        ? (category.children.length > 0 
+          ? convertToMenuItems(category.children, false) 
+          : category.childrenLoaded ? undefined : [{ key: `loading-${category.id}`, label: '加载中...', disabled: true }])
+        : undefined,
+      // 当展开时，如果子节点未加载，则触发加载
+      onTitleClick: ({ key }) => {
+        if (category.children && category.children.length === 0 && !category.childrenLoaded) {
+          loadChildNodes(category.id);
+        }
+      }
     }));
   };
 

@@ -2,12 +2,12 @@ import { http } from "../../utils/request";
 
 // 知识库相关API
 export const knowledgeAPI = {
-  // 获取知识库列表
+  // 获取知识库列表（现在只返回顶层目录）
   getKnowledgeList: (params) => {
-    return http.get("/knowledge/list", params);
+    return http.get("/knowledge", params);
   },
 
-  // 获取父知识下的子节点
+  // 获取父知识下的子节点（用于懒加载子目录）
   getChildren: (parentId, params) => {
     return http.get(`/knowledge/${parentId}/children`, params);
   },
