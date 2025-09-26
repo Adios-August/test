@@ -43,6 +43,53 @@ const KnowledgeQA = () => {
   // 获取当前用户ID
   const currentUserId = authStore.user?.id || authStore.user?.userId;
 
+  // 合并同一个文件的引用
+  const mergeReferencesByFile = (references) => {
+    const mergedMap = new Map();
+    
+    references.forEach(ref => {
+      const key = `${ref.knowledgeId}-${ref.sourceFile}`;
+      
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        
+        // 合并bbox信息
+        const existingBboxes = Array.isArray(existing.bboxUnion) ? existing.bboxUnion : 
+                              existing.bboxUnion ? [existing.bboxUnion] : [];
+        const newBboxes = Array.isArray(ref.bboxUnion) ? ref.bboxUnion : 
+                         ref.bboxUnion ? [ref.bboxUnion] : [];
+        
+        // 合并所有bbox
+        const allBboxes = [...existingBboxes, ...newBboxes];
+        
+        // 选择最小的页码（如果不同页面）
+        const minPageNum = Math.min(
+          existing.pageNum || 1, 
+          ref.pageNum || 1
+        );
+        
+        // 更新合并后的引用
+        mergedMap.set(key, {
+          ...existing,
+          pageNum: minPageNum,
+          bboxUnion: allBboxes,
+          // 添加引用计数信息
+          referenceCount: (existing.referenceCount || 1) + 1,
+          allPageNums: [...(existing.allPageNums || [existing.pageNum || 1]), ref.pageNum || 1].sort((a, b) => a - b)
+        });
+      } else {
+        // 首次遇到这个文件
+        mergedMap.set(key, {
+          ...ref,
+          referenceCount: 1,
+          allPageNums: [ref.pageNum || 1]
+        });
+      }
+    });
+    
+    return Array.from(mergedMap.values());
+  };
+
   // 状态变量定义
   const [inputValue, setInputValue] = useState("");
   const [conversations, setConversations] = useState([]); // 初始为空数组，等待API加载
@@ -575,7 +622,7 @@ const KnowledgeQA = () => {
             } else if (eventName === "references") {
               // 仅AI命中的块，后端包含 download_url
               const arr = Array.isArray(parsed) ? parsed : [];
-              references = arr.map((ref) => ({
+              const formattedReferences = arr.map((ref) => ({
                 knowledgeId: ref.knowledge_id,
                 knowledgeName: ref.knowledge_name,
                 description: ref.description,
@@ -591,6 +638,9 @@ const KnowledgeQA = () => {
                 charEnd: ref.char_end,
                 downloadUrl: ref.download_url,
               }));
+              
+              // 合并同一个文件的引用
+              references = mergeReferencesByFile(formattedReferences);
               // 自动展开并定位首条引用（无需点击）
               if (references.length) {
                 const first = references[0];
@@ -1482,7 +1532,28 @@ const KnowledgeQA = () => {
                               >
                                 <FilePdfOutlined className="pdf-icon" />
                                 <span style={{ cursor: "pointer" }}>
-                                  {ref.knowledge_name || ref.knowledgeName || ref.sourceFile || ref.sourceFile || "引用文档"}（第{ref.page_num || ref.pageNum || 1}页）
+                                  {ref.knowledge_name || ref.knowledgeName || ref.sourceFile || ref.sourceFile || "引用文档"}
+                                  {ref.referenceCount > 1 && (
+                                    <span style={{ 
+                                      marginLeft: '8px', 
+                                      fontSize: '12px', 
+                                      color: '#666',
+                                      backgroundColor: '#f0f0f0',
+                                      padding: '2px 6px',
+                                      borderRadius: '10px'
+                                    }}>
+                                      {ref.referenceCount}个引用
+                                    </span>
+                                  )}
+                                  {ref.allPageNums && ref.allPageNums.length > 1 ? (
+                                    <span style={{ color: '#999', marginLeft: '4px' }}>
+                                      （第{ref.allPageNums.join('、')}页）
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: '#999', marginLeft: '4px' }}>
+                                      （第{ref.page_num || ref.pageNum || 1}页）
+                                    </span>
+                                  )}
                                 </span>
                               </div>
                             ))}
@@ -1657,6 +1728,25 @@ const KnowledgeQA = () => {
                           <div className="knowledge-info">
                             <div className="knowledge-name">
                               {reference.knowledge_name || reference.knowledgeName || reference.sourceFile || "引用文档"}
+                              {reference.referenceCount > 1 && (
+                                <span style={{ 
+                                  marginLeft: '8px', 
+                                  fontSize: '12px', 
+                                  color: '#666',
+                                  backgroundColor: '#f0f0f0',
+                                  padding: '2px 6px',
+                                  borderRadius: '10px'
+                                }}>
+                                  {reference.referenceCount}个引用
+                                </span>
+                              )}
+                            </div>
+                            <div className="page-info" style={{ fontSize: '12px', color: '#999', marginTop: '2px' }}>
+                              {reference.allPageNums && reference.allPageNums.length > 1 ? (
+                                `第${reference.allPageNums.join('、')}页`
+                              ) : (
+                                `第${reference.page_num || reference.pageNum || 1}页`
+                              )}
                             </div>
                           </div>
                           <div className="related-text-actions">

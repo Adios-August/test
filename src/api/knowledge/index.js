@@ -19,9 +19,14 @@ export const knowledgeAPI = {
     return http.get("/knowledge/search", params);
   },
 
-  // 搜索知识（使用新的搜索接口）
+  // AI智能搜索（使用大模型）
   searchKnowledgeByQuery: (data) => {
     return http.post("/search", data);
+  },
+
+  // ES快速搜索（纯ES检索）
+  esSearchKnowledge: (data) => {
+    return http.post("/search/es", data);
   },
 
   // 获取知识详情

@@ -75,7 +75,7 @@ const CategoryManagement = () => {
   const loadChildNodes = async (parentId, key) => {
     setLoadingKeys(prev => [...prev, key]);
     try {
-      const response = await knowledgeAPI.getChildren(parentId, { nodeType: 'folder' });
+      const response = await knowledgeAPI.getChildren(parentId, {});
       if (response.code === 200) {
         const children = response.data?.records || [];
         const childrenData = transformToTableData(children, key, 0);

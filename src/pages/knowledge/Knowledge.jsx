@@ -112,6 +112,7 @@ const Knowledge = observer(() => {
   const [currentCategoryId, setCurrentCategoryId] = useState(null); // 当前选中的分类ID
   const [isCategorySearchMode, setIsCategorySearchMode] = useState(false); // 是否处于分类搜索模式
   const [showAISourceModules, setShowAISourceModules] = useState(true); // 是否显示AI和source模块
+  // 移除搜索模式状态，同时调用两个接口
 
   // 分类知识列表相关状态
   const [categoryKnowledge, setCategoryKnowledge] = useState([]);
@@ -570,23 +571,22 @@ const Knowledge = observer(() => {
 
 
     setSearchLoading(true);
-    // 搜索时也显示AI模块和Sources模块的loading效果
+    // 显示AI模块和Sources模块的loading效果
     setAiLoading(true);
     setSourcesLoading(true);
+    
     try {
-      const response = await knowledgeAPI.searchKnowledgeByQuery({
+      // 先调用ES搜索接口（快速返回）
+      const esResponse = await knowledgeAPI.esSearchKnowledge({
         query: query.trim(),
         page: page,
         size: size,
         userId: currentUserId
       });
-
-
-
-      if (response.code === 200) {
-
-        // 处理搜索结果，如果name为空则使用description的前50个字符作为标题
-        const processedResults = (response.data.esResults || []).map(item => ({
+      
+      // ES搜索返回后立即停止加载并显示结果
+      if (esResponse.code === 200) {
+        const processedResults = (esResponse.data.esResults || []).map(item => ({
           ...item,
           name: item.name || item.description?.substring(0, 50) + '...' || '无标题',
           displayName: item.name || item.description?.substring(0, 50) + '...' || '无标题'
@@ -599,13 +599,50 @@ const Knowledge = observer(() => {
         setSearchPagination(prev => ({
           ...prev,
           current: page,
-          total: response.data.total || 0,
+          total: esResponse.data.total || 0,
           pageSize: size
         }));
+        
+        // 停止ES加载状态
+        setSourcesLoading(false);
+      } else {
+        message.error(esResponse.message || 'ES搜索失败');
+        setSearchResults([]);
+        setSourcesLoading(false);
+      }
+      
+      // 然后调用AI搜索接口（异步，不阻塞UI）
+      try {
+        const aiResponse = await knowledgeAPI.searchKnowledgeByQuery({
+          query: query.trim(),
+          page: page,
+          size: size,
+          userId: currentUserId
+        });
+        
+        if (aiResponse.code === 200) {
+          // 如果AI搜索有更好的ES结果，更新显示
+          if (aiResponse.data.esResults && aiResponse.data.esResults.length > 0) {
+            const processedResults = (aiResponse.data.esResults || []).map(item => ({
+              ...item,
+              name: item.name || item.description?.substring(0, 50) + '...' || '无标题',
+              displayName: item.name || item.description?.substring(0, 50) + '...' || '无标题'
+            }));
 
+            knowledgeStore.setKnowledgeList(processedResults);
+            setSearchResults(processedResults);
+            setSearchPagination(prev => ({
+              ...prev,
+              current: page,
+              total: aiResponse.data.total || 0,
+              pageSize: size
+            }));
+          }
+        }
+        
         // 处理RAG结果（AI回答和引用）
-        if (response.data.ragResults && response.data.ragResults.length > 0) {
-          const ragResult = response.data.ragResults[0];
+        if (aiResponse.data.ragResults && aiResponse.data.ragResults.length > 0) {
+          const ragResult = aiResponse.data.ragResults[0];
 
           // 设置AI回答
           if (ragResult.answer) {
@@ -637,7 +674,22 @@ const Knowledge = observer(() => {
               bboxUnion: ref.bboxUnion ?? ref.bbox_union,
               downloadUrl: ref.downloadUrl ?? ref.download_url
             }));
-            setReferences(formattedReferences); 
+            
+            // 合并同一个文件的引用
+            const mergedReferences = mergeReferencesByFile(formattedReferences);
+            setReferences(mergedReferences); 
+            
+            // 自动展开第一个引用文档
+            if (formattedReferences.length > 0) {
+              const firstReference = formattedReferences[0];
+              setExpandedSources(prev => ({ ...prev, [firstReference.knowledgeId]: true }));
+              
+              // 自动加载第一个引用的详情
+              if (firstReference.knowledgeId) {
+                handleLoadSourceDetail(firstReference);
+              }
+            }
+            
             // 设置引用数据后立即清除Sources loading状态
             setSourcesLoading(false);
           }
@@ -647,14 +699,12 @@ const Knowledge = observer(() => {
         } else {
           // 如果没有RAG结果，也要清除loading状态
           setAiLoading(false);
-          setSourcesLoading(false);
         }
- 
-
-      } else {
-        message.error(response.message || '获取知识列表失败');
-        setSearchResults([]); // 清空搜索结果
-        console.error('搜索API错误:', response.message);
+        
+      } catch (aiError) {
+        console.error('AI搜索失败:', aiError);
+        // AI搜索失败不影响ES结果显示
+        setAiLoading(false);
       }
     } catch (error) {
       console.error('获取知识列表失败:', error);
@@ -987,6 +1037,75 @@ const Knowledge = observer(() => {
 
 
 
+  // 合并同一个文件的引用
+  const mergeReferencesByFile = (references) => {
+    const mergedMap = new Map();
+    
+    references.forEach(ref => {
+      const key = `${ref.knowledgeId}-${ref.sourceFile}`;
+      
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key);
+        
+        // 合并bbox信息
+        const existingBboxes = Array.isArray(existing.bboxUnion) ? existing.bboxUnion : 
+                              existing.bboxUnion ? [existing.bboxUnion] : [];
+        const newBboxes = Array.isArray(ref.bboxUnion) ? ref.bboxUnion : 
+                         ref.bboxUnion ? [ref.bboxUnion] : [];
+        
+        // 合并所有bbox
+        const allBboxes = [...existingBboxes, ...newBboxes];
+        
+        // 选择最小的页码（如果不同页面）
+        const minPageNum = Math.min(
+          existing.pageNum || 1, 
+          ref.pageNum || 1
+        );
+        
+        // 更新合并后的引用
+        mergedMap.set(key, {
+          ...existing,
+          pageNum: minPageNum,
+          bboxUnion: allBboxes,
+          // 添加引用计数信息
+          referenceCount: (existing.referenceCount || 1) + 1,
+          allPageNums: [...(existing.allPageNums || [existing.pageNum || 1]), ref.pageNum || 1].sort((a, b) => a - b)
+        });
+      } else {
+        // 首次遇到这个文件
+        mergedMap.set(key, {
+          ...ref,
+          referenceCount: 1,
+          allPageNums: [ref.pageNum || 1]
+        });
+      }
+    });
+    
+    return Array.from(mergedMap.values());
+  };
+
+  // 加载引用详情（不切换展开状态）
+  const handleLoadSourceDetail = async (reference) => {
+    const knowledgeId = reference.knowledgeId;
+    if (!knowledgeId) return;
+    
+    setExpandedSourceLoading(prev => ({ ...prev, [knowledgeId]: true }));
+
+    try {
+      const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+      if (response.code === 200) {
+        setExpandedSourceData(prev => ({ ...prev, [knowledgeId]: response.data }));
+      } else {
+        message.error(response.message || '获取知识详情失败');
+      }
+    } catch (error) {
+      console.error('获取知识详情失败:', error);
+      message.error('获取知识详情失败');
+    } finally {
+      setExpandedSourceLoading(prev => ({ ...prev, [knowledgeId]: false }));
+    }
+  };
+
   // 切换Sources展开状态
   const handleToggleSourceExpansion = async (reference) => {
     const knowledgeId = reference.knowledgeId;
@@ -1125,11 +1244,13 @@ const Knowledge = observer(() => {
                   <div className="message-content">
                     <p>{aiAnswer.answer}</p>
                     <div className="message-actions">
-                      <span style={{color:'#db0011'}}>Learn More</span>
                       {aiAnswer.references && aiAnswer.references.length > 0 && (
-                        <Button type="link" size="small" icon={<FilePdfOutlined />}>
-                          {aiAnswer.references[0].sourceFile}
-                        </Button>
+                        <>
+                          <span style={{color:'#db0011'}}>Learn More</span>
+                          <Button type="link" size="small" icon={<FilePdfOutlined />}>
+                            {aiAnswer.references[0].sourceFile}
+                          </Button>
+                        </>
                       )}
                       <Tooltip title={aiAnswer?.isLiked ? "取消点赞" : "点赞回答"}>
                         <Button
@@ -1579,7 +1700,28 @@ const Knowledge = observer(() => {
                       <div className="source-knowledge">
                         <FileTextOutlined className="file-icon" style={{ color: '#1890ff', marginRight: '8px' }} />
                         <div className="knowledge-info">
-                          <div className="knowledge-name">{reference.knowledgeName}</div>
+                          <div className="knowledge-name">
+                            {reference.knowledgeName}
+                            {reference.referenceCount > 1 && (
+                              <span style={{ 
+                                marginLeft: '8px', 
+                                fontSize: '12px', 
+                                color: '#666',
+                                backgroundColor: '#f0f0f0',
+                                padding: '2px 6px',
+                                borderRadius: '10px'
+                              }}>
+                                {reference.referenceCount}个引用
+                              </span>
+                            )}
+                          </div>
+                          <div className="page-info" style={{ fontSize: '12px', color: '#999', marginTop: '2px' }}>
+                            {reference.allPageNums && reference.allPageNums.length > 1 ? (
+                              `第${reference.allPageNums.join('、')}页`
+                            ) : (
+                              `第${reference.pageNum || 1}页`
+                            )}
+                          </div>
                         </div>
                         <div className="source-actions">
                           <Tooltip title="在当前页面打开">
@@ -1649,7 +1791,8 @@ const Knowledge = observer(() => {
                               knowledgeDetail={expandedSourceData[reference.knowledgeId]}
                               loading={false}
                               preferredAttachmentName={(reference.sourceFile) || (reference.attachments && reference.attachments[0])}
-                              bboxes={(reference.bboxUnion || reference.bbox_union) ? [reference.bboxUnion || reference.bbox_union] : []}
+                              bboxes={Array.isArray(reference.bboxUnion) ? reference.bboxUnion : 
+                                     (reference.bboxUnion ? [reference.bboxUnion] : [])}
                               pageNum={typeof (reference.pageNum ?? reference.page_num) === 'number' ? (reference.pageNum ?? reference.page_num) : 1}
                             />
                           ) : (
