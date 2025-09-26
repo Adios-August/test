@@ -526,7 +526,8 @@ const Knowledge = observer(() => {
     try {
       const response = await knowledgeAPI.getChildren(categoryId, {
         page,
-        size
+        size,
+        nodeType: null  // 传递null，让后端不过滤nodeType
       });
 
       if (response.code === 200) {
@@ -706,7 +707,9 @@ const Knowledge = observer(() => {
 
   // 当categoryId变化时获取分类知识列表和详情
   useEffect(() => {
+    console.log('Knowledge useEffect triggered, categoryId:', categoryId);
     if (categoryId) {
+      console.log('categoryId存在，开始处理分类逻辑');
       // 切换到路由分类时退出分类搜索模式，回到分类展示
       setIsCategorySearchMode(false);
       setSearchResults([]);
@@ -715,12 +718,16 @@ const Knowledge = observer(() => {
         setSearchValue(''); // 清空搜索框
       }
       setCurrentCategoryId(categoryId);
+      console.log('调用fetchCategoryKnowledge，categoryId:', categoryId);
       fetchCategoryKnowledge(categoryId, 1, 10); // 从第一页开始加载
       // 获取分类详情
+      console.log('调用fetchSelectedKnowledgeDetail，categoryId:', categoryId);
       fetchSelectedKnowledgeDetail(categoryId);
       // 隐藏AI和sourceModules
       setShowAISourceModules(false);
       shouldKeepAIModule.current = false; // 切换分类时，确保AI模块不保持显示
+    } else {
+      console.log('categoryId不存在，跳过分类处理');
     }
     // 移除else分支，避免在categoryId为null时执行不必要的逻辑
   }, [categoryId]); // 移除fetchCategoryKnowledge依赖，避免无限循环
@@ -904,14 +911,40 @@ const Knowledge = observer(() => {
 
     setSelectedKnowledgeLoading(true);
     try {
-      const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
- 
-
-      if (response.code === 200) {
-        setSelectedKnowledgeDetail(response.data);
+      console.log('获取知识详情，ID:', knowledgeId, 'categoryId:', categoryId);
+      
+      // 检查是否是分类ID（通过parent参数传入的）
+      if (categoryId && categoryId === knowledgeId.toString()) {
+        console.log('识别为分类ID，获取分类详情');
+        // 如果是分类ID，获取分类详情
+        const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+        console.log('分类详情API响应:', response);
+        if (response.code === 200) {
+          setSelectedKnowledgeDetail(response.data);
+          console.log('设置分类详情:', response.data);
+        } else {
+          console.log('获取分类详情失败，尝试作为普通知识ID处理');
+          // 如果获取分类详情失败，尝试作为普通知识ID处理
+          const knowledgeResponse = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+          if (knowledgeResponse.code === 200) {
+            setSelectedKnowledgeDetail(knowledgeResponse.data);
+          } else {
+            message.error(knowledgeResponse.message || '获取知识详情失败');
+            setSelectedKnowledgeDetail(null);
+          }
+        }
       } else {
-        message.error(response.message || '获取知识详情失败');
-        setSelectedKnowledgeDetail(null);
+        console.log('普通知识ID处理');
+        // 普通知识ID处理
+        const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+        console.log('知识详情API响应:', response);
+        if (response.code === 200) {
+          setSelectedKnowledgeDetail(response.data);
+          console.log('设置知识详情:', response.data);
+        } else {
+          message.error(response.message || '获取知识详情失败');
+          setSelectedKnowledgeDetail(null);
+        }
       }
     } catch (error) {
       console.error('获取知识详情失败:', error);
