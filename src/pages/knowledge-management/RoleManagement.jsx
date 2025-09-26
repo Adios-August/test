@@ -176,7 +176,7 @@ const RoleManagement = () => {
         </span>
       )
     },
-    { title: 'User Name', dataIndex: 'username', width: 180 },
+    { title: 'User Name', dataIndex: 'displayName', width: 180 },
     { title: 'Staff Role', dataIndex: 'staffRole', width: 140 },
     { 
       title: 'System Role', 
