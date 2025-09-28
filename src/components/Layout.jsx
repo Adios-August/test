@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { Layout, Menu, Button, Avatar, Space, Dropdown, message, Tooltip } from "antd";
+import React, { useState, useMemo, useEffect } from "react";
+import { Layout, Menu, Button, Avatar, Space, Dropdown, message, Tooltip, Spin } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { UserOutlined, MessageOutlined, StarOutlined, LogoutOutlined, SettingOutlined } from "@ant-design/icons";
 import { observer } from "mobx-react-lite";
 import { useAuthStore } from "../stores";
+import rootStore from "../stores/rootStore";
 import "./Layout.scss";
 
 const { Header, Content } = Layout;
@@ -59,6 +60,13 @@ const LayoutComponent = observer(() => {
 
   return (
     <Layout className="layout-container">
+      {/* 全局加载指示器 */}
+      {rootStore.appLoading && (
+        <div className="global-loading-mask">
+          <Spin size="large" tip="正在加载数据..." />
+        </div>
+      )}
+
       <Header className="header">
         <div className="header-content">
           <div className="header-title">
@@ -83,7 +91,26 @@ const LayoutComponent = observer(() => {
                   onClick={() => navigate('/favorites')}
                 />
               </Tooltip>
-              <div   className="wpd-button">{authStore.user?.staffRole}</div>
+              <Dropdown
+                menu={{
+                  items: authStore.user?.workspace?.split(',').map(w => ({
+                    key: w,
+                    label: w,
+                    onClick: () => {
+                          // 设置当前工作区
+                          authStore.setCurrentWorkspace(w);
+                          message.success(`已切换到工作区：${w}`);
+                        }
+                  })) || []
+                }}
+                placement="bottomRight"
+                trigger={['click']}
+              >
+                <div className="wpd-button" style={{ cursor: 'pointer' }}>
+                  {authStore.currentWorkspace || authStore.user?.workspace?.split(',')[0] || '未设置workspace'}
+                </div>
+              </Dropdown>
+               <span className="wpd-button">{authStore.user?.displayName ||   ''}</span>
               <Dropdown
                 menu={{ items: userMenuItems }}
                 placement="bottomRight"

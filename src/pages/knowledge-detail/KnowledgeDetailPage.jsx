@@ -3,6 +3,7 @@ import { Layout, message, Spin } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
 import { knowledgeAPI } from '../../api/knowledge';
 import KnowledgeDetailContent from '../../components/KnowledgeDetailContent';
+import { useAuthStore } from '../../stores';
 import './KnowledgeDetailPage.scss';
 
 const { Content } = Layout;
@@ -10,6 +11,7 @@ const { Content } = Layout;
 const KnowledgeDetailPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const authStore = useAuthStore();
   
   // 知识详情数据状态
   const [knowledgeDetail, setKnowledgeDetail] = useState(null);
@@ -41,6 +43,13 @@ const KnowledgeDetailPage = () => {
       fetchKnowledgeDetail(id);
     }
   }, [id]);
+
+  // 监听工作区变化，重新加载当前知识详情
+  useEffect(() => {
+    if (id && authStore.currentWorkspace) {
+      fetchKnowledgeDetail(id);
+    }
+  }, [authStore.currentWorkspace, id]);
 
   const handleBack = () => {
     navigate(-1);

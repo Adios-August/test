@@ -4,12 +4,14 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, ArrowUpOutl
 import { useNavigate } from 'react-router-dom';
 import { homeAPI } from '../../api/home';
 import { knowledgeAPI } from '../../api/knowledge';
+import { useAuthStore } from '../../stores';
 import '../knowledge-management/KnowledgeManagement.scss';
 
 const { Option } = Select;
 
 const CategoryManagement = () => {
   const navigate = useNavigate();
+  const authStore = useAuthStore();
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -70,6 +72,13 @@ const CategoryManagement = () => {
   useEffect(() => {
     fetchCategoryTree();
   }, []);
+
+  // 监听工作区变化，重新加载数据
+  useEffect(() => {
+    if (authStore.currentWorkspace) {
+      fetchCategoryTree();
+    }
+  }, [authStore.currentWorkspace]);
 
   // 加载子节点
   const loadChildNodes = async (parentId, key) => {
@@ -384,4 +393,4 @@ const CategoryManagement = () => {
   );
 };
 
-export default CategoryManagement; 
+export default CategoryManagement;

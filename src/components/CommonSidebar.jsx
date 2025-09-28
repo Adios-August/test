@@ -4,6 +4,7 @@ import { ReloadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { homeAPI } from '../api/home';
 import { knowledgeAPI } from '../api/knowledge';
+import { useAuthStore } from '../stores';
 import './CommonSidebar.scss';
 
 const { Sider } = Layout;
@@ -27,6 +28,8 @@ const CommonSidebar = ({
   const [categoryTree, setCategoryTree] = useState([]);
   const [loading, setLoading] = useState(false);
   const hasInitialized = useRef(false);
+  const authStore = useAuthStore();
+  const currentWorkspace = authStore.currentWorkspace;
 
   // 调试信息
   console.log('CommonSidebar - received selectedKnowledgeId:', selectedKnowledgeId);
@@ -157,17 +160,11 @@ const CommonSidebar = ({
     }
   };
 
-  // 组件挂载时获取分类树
+  // 组件挂载时获取分类树，并在工作区变化时重新获取
   useEffect(() => {
-    console.log('fetchCategoryTree useEffect triggered, hasInitialized.current:', hasInitialized.current);
-    if (!hasInitialized.current) {
-      console.log('Initializing and calling fetchCategoryTree');
-      hasInitialized.current = true;
-      fetchCategoryTree();
-    } else {
-      console.log('Already initialized, skipping fetchCategoryTree');
-    }
-  }, []);
+    console.log('fetchCategoryTree useEffect triggered');
+    fetchCategoryTree();
+  }, [currentWorkspace]); // 当工作区变化时重新获取分类数据
 
   // 处理默认展开状态（默认不展开任何分类）
   useEffect(() => {

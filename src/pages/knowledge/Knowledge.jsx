@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import {
-  Layout,
-  Input,
-  Button,
-  Card,
-  Row,
-  Col,
-  List,
-  Badge,
-  Pagination,
-  message,
-  Spin,
-  Tag,
-  Avatar,
-  Space,
-  Tooltip,
-  Modal,
-  Select,
+import { 
+  Layout, 
+  Input, 
+  Button, 
+  Card, 
+  Row, 
+  Col, 
+  List, 
+  Badge, 
+  Pagination, 
+  message, 
+  Spin, 
+  Tag, 
+  Avatar, 
+  Space, 
+  Tooltip, 
+  Modal, 
+  Select, 
 } from "antd";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import {
@@ -51,7 +51,7 @@ import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
 import { feedbackAPI } from "../../api/feedback";
 import { homeAPI } from "../../api/home";
-import { useKnowledgeStore, useAuthStore } from "../../stores";
+import { useKnowledgeStore, useAuthStore, useStore } from "../../stores";
 import { addSearchHistory } from "../../utils/searchHistoryAPI";
 
 import "./Knowledge.scss";
@@ -98,6 +98,7 @@ const Knowledge = observer(() => {
   const [searchParams] = useSearchParams();
   const knowledgeStore = useKnowledgeStore();
   const authStore = useAuthStore();
+  const rootStore = useStore();
   const categoryId = searchParams.get('parent');
 
   // 获取当前用户ID
@@ -111,7 +112,7 @@ const Knowledge = observer(() => {
   const [searchValue, setSearchValue] = useState(""); // 搜索输入值
   const [currentCategoryId, setCurrentCategoryId] = useState(null); // 当前选中的分类ID
   const [isCategorySearchMode, setIsCategorySearchMode] = useState(false); // 是否处于分类搜索模式
-  const [showAISourceModules, setShowAISourceModules] = useState(true); // 是否显示AI和source模块
+  const [showAISourceModules, setShowAISourceModules] = useState(false); // 是否显示AI和source模块，默认不显示
   // 移除搜索模式状态，同时调用两个接口
 
   // 分类知识列表相关状态

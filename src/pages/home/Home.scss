@@ -307,9 +307,10 @@
         height: 100%;
         padding: 12px; // 减少内边距
         flex: 1;
+         height: 390px !important;
       }
         .ant-list-items{
-    height: 390px !important;
+   
     display: flex;
     flex-direction: column;
     justify-content: space-between;

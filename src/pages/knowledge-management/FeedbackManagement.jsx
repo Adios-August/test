@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Table, Space, Input, Button, Popconfirm, message, Tag } from 'antd';
 import { http } from '../../utils/request';
 import { getKnowledgeFeedbackOptions } from '../../constants/feedbackTypes';
+import { useAuthStore } from '../../stores';
  
 import '../knowledge-management/KnowledgeManagement.scss';
 
 const FeedbackManagement = () => {
+  const authStore = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
@@ -31,7 +33,17 @@ const FeedbackManagement = () => {
     }
   };
 
-  useEffect(() => { fetchData(1, size); }, []);
+  // 组件挂载时加载数据
+  useEffect(() => { 
+    fetchData(1, size); 
+  }, []);
+
+  // 监听工作区变化，重新加载数据
+  useEffect(() => {
+    if (authStore.currentWorkspace) {
+      fetchData(1, size);
+    }
+  }, [authStore.currentWorkspace]);
 
   const handleDelete = async (id) => {
     try {

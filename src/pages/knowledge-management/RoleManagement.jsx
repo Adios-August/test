@@ -3,10 +3,12 @@ import { Table, Space, Select, message, Input, Button, Modal, Form, Dropdown, Me
 import { PlusOutlined, EditOutlined, DeleteOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { http } from '../../utils/request';
 import { workspaceAPI } from '../../api/workspace';
+import { useAuthStore } from '../../stores';
  
 import '../knowledge-management/KnowledgeManagement.scss';
 
 const RoleManagement = () => {
+  const authStore = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -54,7 +56,19 @@ const RoleManagement = () => {
     }
   };
 
-  useEffect(() => { fetchDept(); fetchData(); }, []);
+  // 组件挂载时加载数据
+  useEffect(() => { 
+    fetchDept(); 
+    fetchData(); 
+  }, []);
+
+  // 监听工作区变化，重新加载数据
+  useEffect(() => {
+    if (authStore.currentWorkspace) {
+      fetchDept();
+      fetchData();
+    }
+  }, [authStore.currentWorkspace]);
 
   const handleRoleChange = async (id, systemRole) => {
     try {

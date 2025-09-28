@@ -7,6 +7,7 @@ class AuthStore {
   user = null;
   isAuthenticated = false;
   loading = false;
+  currentWorkspace = null;
 
   constructor() {
     makeAutoObservable(this);
@@ -14,7 +15,7 @@ class AuthStore {
     // 配置持久化
     makePersistable(this, {
       name: "authStore",
-      properties: ["token", "user", "isAuthenticated"],
+      properties: ["token", "user", "isAuthenticated", "currentWorkspace"],
       storage: window.localStorage,
     });
   }
@@ -28,6 +29,26 @@ class AuthStore {
   // 设置用户信息
   setUser(user) {
     this.user = user;
+    // 如果用户有工作区信息且还没有设置当前工作区，则默认选择第一个
+    if (user?.workspace && !this.currentWorkspace) {
+      this.currentWorkspace = user.workspace.split(',')[0];
+    }
+  }
+
+  // 设置当前工作区
+  setCurrentWorkspace(workspace) {
+    const oldWorkspace = this.currentWorkspace;
+    this.currentWorkspace = workspace;
+    // 触发工作区变更事件
+    if (oldWorkspace !== workspace) {
+      this.onWorkspaceChanged(workspace, oldWorkspace);
+    }
+  }
+
+  // 工作区变更事件处理函数
+  onWorkspaceChanged = (newWorkspace, oldWorkspace) => {
+    // 这里可以添加全局通知逻辑，或者让各个组件监听此事件
+    console.log(`工作区已从 ${oldWorkspace} 切换到 ${newWorkspace}`);
   }
 
   // 登录

@@ -1,4 +1,5 @@
-import { http } from "../../utils/request";
+import { http } from '../../utils/request';
+import authStore from '../../stores/authStore';
 
 // 首页相关API
 export const homeAPI = {
@@ -9,17 +10,26 @@ export const homeAPI = {
 
   // 获取热门知识
   getPopularKnowledge: (limit) => {
-    return http.get("/knowledge/popular", { limit });
+    return http.get("/knowledge/popular", { 
+      limit, 
+      workspace: authStore.currentWorkspace 
+    });
   },
 
   // 获取最新知识
   getLatestKnowledge: (limit) => {
-    return http.get("/knowledge/latest", { limit });
+    return http.get("/knowledge/latest", { 
+      limit, 
+      workspace: authStore.currentWorkspace 
+    });
   },
 
   // 获取最热资料
   getHotDownloads: (limit) => {
-    return http.get("/knowledge/hot-downloads", { limit });
+    return http.get("/knowledge/hot-downloads", { 
+      limit, 
+      workspace: authStore.currentWorkspace 
+    });
   },
 
   // 获取推荐问题

@@ -111,6 +111,12 @@ const Favorites = () => {
     fetchFavorites();
   }, []);
 
+  // 监听工作区变化，重新加载数据
+  useEffect(() => {
+    console.log('检测到工作区变化，重新加载收藏数据:', authStore.currentWorkspace);
+    fetchFavorites();
+  }, [authStore.currentWorkspace]);
+
   // 表格列定义
   const columns = [
     {

@@ -49,11 +49,19 @@ const QueriesManagement = () => {
     }
   };
 
+  // 组件挂载时加载数据
   useEffect(() => {
     if (currentUserId) {
       fetchData(1, size);
     }
   }, [currentUserId]);
+
+  // 监听工作区变化，重新加载数据
+  useEffect(() => {
+    if (authStore.currentWorkspace && currentUserId) {
+      fetchData(1, size);
+    }
+  }, [authStore.currentWorkspace, currentUserId]);
 
   const handleDelete = async (id) => {
     try {

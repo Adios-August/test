@@ -1,32 +1,49 @@
-import { http } from "../../utils/request";
+import { http } from '../../utils/request';
+import authStore from '../../stores/authStore';
 
 // 知识库相关API
 export const knowledgeAPI = {
   // 获取知识库列表（现在只返回顶层目录）
   getKnowledgeList: (params) => {
     // 默认只获取folder类型的节点
-    const defaultParams = { nodeType: 'folder', ...params };
+    const defaultParams = { 
+      nodeType: 'folder', 
+      workspace: authStore.currentWorkspace, 
+      ...params 
+    };
     return http.get("/knowledge", defaultParams);
   },
 
   // 获取父知识下的子节点（用于懒加载子目录）
   getChildren: (parentId, params) => {
-    return http.get(`/knowledge/${parentId}/children`, params);
+    return http.get(`/knowledge/${parentId}/children`, {
+      workspace: authStore.currentWorkspace, 
+      ...params 
+    });
   },
 
   // 搜索知识列表
   searchKnowledge: (params) => {
-    return http.get("/knowledge/search", params);
+    return http.get("/knowledge/search", {
+      workspace: authStore.currentWorkspace, 
+      ...params 
+    });
   },
 
   // AI智能搜索（使用大模型）
   searchKnowledgeByQuery: (data) => {
-    return http.post("/search", data);
+    return http.post("/search", {
+      workspace: authStore.currentWorkspace, 
+      ...data 
+    });
   },
 
   // ES快速搜索（纯ES检索）
   esSearchKnowledge: (data) => {
-    return http.post("/search/es", data);
+    return http.post("/search/es", {
+      workspace: authStore.currentWorkspace, 
+      ...data 
+    });
   },
 
   // 获取知识详情

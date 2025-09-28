@@ -16,6 +16,7 @@ import { homeAPI } from "../../api/home";
 import { http } from "../../utils/request";
 import { addSearchHistory } from "../../utils/searchHistoryAPI";
 import homeBanner from "../../assets/image/home_banner.png";
+import { useAuthStore } from "../../stores";
 import "./Home.scss";
 
 const { Content } = Layout;
@@ -35,6 +36,22 @@ const Home = observer(() => {
   const [recommendedLoading, setRecommendedLoading] = useState(false);
   const [historyQuestions, setHistoryQuestions] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const authStore = useAuthStore();
+
+  // 加载所有数据的函数
+  const loadAllData = async () => {
+    try {
+      await Promise.all([
+        fetchPopularKnowledge(),
+        fetchLatestKnowledge(),
+        fetchHotDownloads(),
+        fetchRecommendedQuestions(),
+        fetchHistoryQuestions()
+      ]);
+    } catch (error) {
+      console.error('加载数据失败:', error);
+    }
+  }
 
   const hotTags = [
     { name: "热门标签" },
@@ -253,25 +270,16 @@ const Home = observer(() => {
 
 
 
-  // 组件挂载时获取数据
+  // 组件挂载时加载数据
   useEffect(() => {
-    // 添加状态检查，避免重复请求
-    if (popularKnowledge.length === 0) {
-      fetchPopularKnowledge();
-    }
-    if (latestKnowledgeData.length === 0) {
-      fetchLatestKnowledge();
-    }
-    if (hotDownloads.length === 0) {
-      fetchHotDownloads();
-    }
-    if (recommendedQuestions.length === 0) {
-      fetchRecommendedQuestions(); // 添加获取推荐问题的调用
-    }
-    if (historyQuestions.length === 0) {
-      fetchHistoryQuestions(); // 添加获取历史问题的调用
-    }
-  }, [popularKnowledge.length, latestKnowledgeData.length, hotDownloads.length, recommendedQuestions.length, historyQuestions.length]);
+    loadAllData();
+  }, []);
+
+  // 监听工作区变化，重新加载数据
+  useEffect(() => {
+    console.log('检测到工作区变化，重新加载数据:', authStore.currentWorkspace);
+    loadAllData();
+  }, [authStore.currentWorkspace]);
 
 
 
