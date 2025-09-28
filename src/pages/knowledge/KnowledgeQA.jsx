@@ -48,16 +48,15 @@ const KnowledgeQA = () => {
     const mergedMap = new Map();
     
     references.forEach(ref => {
+      // 使用knowledgeId和sourceFile作为key，合并同一文件的所有引用
       const key = `${ref.knowledgeId}-${ref.sourceFile}`;
       
       if (mergedMap.has(key)) {
         const existing = mergedMap.get(key);
         
-        // 合并bbox信息
-        const existingBboxes = Array.isArray(existing.bboxUnion) ? existing.bboxUnion : 
-                              existing.bboxUnion ? [existing.bboxUnion] : [];
-        const newBboxes = Array.isArray(ref.bboxUnion) ? ref.bboxUnion : 
-                         ref.bboxUnion ? [ref.bboxUnion] : [];
+        // 合并bbox信息 - 现在bboxUnion是二维数组
+        const existingBboxes = Array.isArray(existing.bboxUnion) ? existing.bboxUnion : [];
+        const newBboxes = Array.isArray(ref.bboxUnion) ? ref.bboxUnion : [];
         
         // 合并所有bbox
         const allBboxes = [...existingBboxes, ...newBboxes];
