@@ -70,7 +70,7 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], p
 
         <div className="document-content">
           {/* 数据表格区域 */}
-          {knowledgeDetail.tableData && (
+          {knowledgeDetail.tableData && knowledgeDetail.tableData.rows.length > 0 && knowledgeDetail.tableData.columns.length > 0 (
             <div className="content-section">
               <KnowledgeTable tableData={knowledgeDetail.tableData} />
             </div>

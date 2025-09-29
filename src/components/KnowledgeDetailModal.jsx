@@ -106,7 +106,7 @@ const KnowledgeDetailModal = ({
             </div>
             
             {/* 数据表格区域 */}
-            {knowledge.tableData && (
+            {knowledge.tableData && knowledge.tableData.rows.length > 0 && knowledge.tableData.columns.length > 0 (
               <div className="knowledge-table-section">
                 <h4>数据表格</h4>
                 <KnowledgeTable tableData={knowledge.tableData} />

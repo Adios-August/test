@@ -1299,25 +1299,13 @@ const Knowledge = observer(() => {
                       </Button>
                     ))}
                   </div>
-                ) : (
+                ) : aiLoading ? (
                   <div className="suggested-questions">
-                    <Button
-                      type="default"
-                      size="small"
-                      onClick={() => handleRecommendedQuestionClick("请告诉我更多相关信息")}
-                      disabled={aiLoading}
-                    >
-                      请告诉我更多相关信息
-                    </Button>
-                    <Button
-                      type="default"
-                      size="small"
-                      onClick={() => handleRecommendedQuestionClick("还有其他问题吗？")}
-                      disabled={aiLoading}
-                    >
-                      还有其他问题吗？
-                    </Button>
+                    <Spin size="small" />
+                    <span style={{ marginLeft: 8 }}>正在获取推荐问题...</span>
                   </div>
+                ) : (
+                  null
                 )}
                 <div className="input-section">
                   <div className="textarea-container">

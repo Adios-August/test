@@ -4,7 +4,8 @@ import { LinkOutlined, FileOutlined } from '@ant-design/icons';
 import './KnowledgeTable.scss';
 
 const KnowledgeTable = ({ tableData }) => {
-  if (!tableData || !tableData.columns || !tableData.rows) {
+  // 只有当表格数据存在且有行数据时才渲染表格
+  if (!tableData || !tableData.columns || !tableData.rows  ) {
     return null;
   }
 
@@ -113,4 +114,4 @@ const KnowledgeTable = ({ tableData }) => {
   );
 };
 
-export default KnowledgeTable; 
+export default KnowledgeTable;
