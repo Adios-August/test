@@ -48,6 +48,8 @@ const stripHtmlTags = (htmlString) => {
   }
 };
 
+
+
 const { Content } = Layout;
 const { TabPane } = Tabs;
 
@@ -613,8 +615,8 @@ const KnowledgeDetail = () => {
                       </div>
 
                       <div className="document-content">
-                        {/* 数据表格区域 */}
-                        {tab.content?.tableData && (
+                        {/* 数据表格区域 - 只有当tableData存在且包含有效数据时才显示 */}
+                        {tab.content?.tableData && tab.content.tableData.columns && tab.content.tableData.rows && tab.content.tableData.rows.length > 0 && (
                           <div className="content-section">
                             <KnowledgeTable tableData={tab.content.tableData} />
                           </div>

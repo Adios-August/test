@@ -784,21 +784,21 @@ const Knowledge = observer(() => {
   }, [categoryId]); // 移除fetchCategoryKnowledge依赖，避免无限循环
 
   // 组件初始化时清空搜索结果并获取默认内容
-  useEffect(() => {
+  // useEffect(() => {
     
-    setSearchResults([]);
-    setSearchValue('');
-    setCurrentCategoryId(null);
+  //   setSearchResults([]);
+  //   setSearchValue('');
+  //   setCurrentCategoryId(null);
     
-    if (!location.state?.searchKeyword && !shouldKeepAIModule.current) { 
-      setShowAISourceModules(false);
-    }
+  //   if (!location.state?.searchKeyword && !shouldKeepAIModule.current) { 
+  //     setShowAISourceModules(false);
+  //   }
     
-    // 如果没有分类ID且没有搜索关键词，获取默认的知识详情
-    if (!categoryId && !location.state?.searchKeyword) {
-      fetchDefaultKnowledgeDetail();
-    }
-  }, [location.state?.searchKeyword]);
+  //   // 如果没有分类ID且没有搜索关键词，获取默认的知识详情
+  //   // if (!categoryId && !location.state?.searchKeyword) {
+  //   //   fetchDefaultKnowledgeDetail();
+  //   // }
+  // }, [location.state?.searchKeyword]);
   
   // 获取默认知识详情和列表（模拟侧边栏分类点击的行为）
   const fetchDefaultKnowledgeDetail = async () => {
