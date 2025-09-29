@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { authenticatedFetch } from "../utils/request";
 
@@ -185,9 +185,11 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
     <div style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div>
-          <button disabled={!blobUrl || currentPage <= 1} onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}>上一页</button>
-          <button style={{ marginLeft: 8 }} disabled={!blobUrl || (numPages && currentPage >= numPages)} onClick={() => setCurrentPage(Math.min(numPages || currentPage + 1, (numPages || currentPage + 1)))}>下一页</button>
-        </div>
+            <button disabled={!blobUrl || currentPage <= 1} onClick={() => setCurrentPage(1)}>首页</button>
+            <button style={{ marginLeft: 8 }} disabled={!blobUrl || currentPage <= 1} onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}>上一页</button>
+            <button style={{ marginLeft: 8 }} disabled={!blobUrl || (numPages && currentPage >= numPages)} onClick={() => setCurrentPage(currentPage + 1)}>下一页</button>
+            <button style={{ marginLeft: 8 }} disabled={!blobUrl || !numPages || currentPage >= numPages} onClick={() => setCurrentPage(numPages)}>最后一页</button>
+          </div>
         <div>{currentPage}{numPages ? ` / ${numPages}` : ""}</div>
       </div>
       <div ref={pageWrapRef} style={containerStyle}>
