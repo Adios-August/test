@@ -156,7 +156,7 @@ const Knowledge = observer(() => {
   const [selectedKnowledgeDetail, setSelectedKnowledgeDetail] = useState(null);
   const [selectedKnowledgeLoading, setSelectedKnowledgeLoading] = useState(false);
 
-  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+ 
   const [feedbackPosition, setFeedbackPosition] = useState({ x: 0, y: 0 });
 
   // Sources弹窗相关状态
@@ -174,140 +174,10 @@ const Knowledge = observer(() => {
   // 防止AI模块被重复隐藏的ref
   const shouldKeepAIModule = useRef(false);
 
-  // 生成sessionId
-  const generateSessionId = () => {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  };
+ 
+ 
 
-  // 获取AI回答（用于搜索时）
-  const fetchAIAnswer = async (question) => {
-    setAiLoading(true);
-    setAiAnswer(null);
-    setReferences([]); // 清空之前的引用数据
-
-    try {
-      // 准备请求数据
-      const requestData = {
-        question: question,
-        userId: currentUserId, // 从用户状态获取
-        sessionId: generateSessionId(),
-        knowledgeIds: [], // 搜索时不限制特定知识ID
-        stream: true
-      };
-
-      await handleStreamResponse(requestData);
-    } catch (error) {
-      console.error('获取AI回答失败:', error);
-      message.error('获取AI回答失败，请稍后重试');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  // 处理流式AI响应
-  const handleStreamResponse = async (requestData) => { 
-    const response = await fetch('/api/chat/stream', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}` // 从localStorage获取token
-      },
-      body: JSON.stringify(requestData)
-    });
-
-    if (response.ok) { 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let answer = '';
-      let references = [];
-      let buffer = '';
-      let currentEvent = '';
-      let currentData = '';
-      let aiMessageId = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-
-        // 保留最后一行，因为它可能不完整
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.trim() === '') continue;
-
-          if (line.startsWith('event: ')) {
-            currentEvent = line.slice(7);
-            currentData = ''; // 重置数据 
-          } else if (line.startsWith('data: ')) {
-            currentData = line.slice(6);
-
-            // 尝试解析JSON，如果失败则等待更多数据
-            try {
-              const parsed = JSON.parse(currentData);
-
-              // 根据事件类型处理数据
-              if (currentEvent === 'start') { 
-              } else if (currentEvent === 'message') {
-                if (parsed.content) {
-                  answer += parsed.content; 
-                  setAiAnswer({
-                    answer: answer,
-                    references: references,
-                    recommendedQuestions: [],
-                    isLiked: false,
-                    isDisliked: false
-                  });
-                  // 清除loading状态，显示内容
-                  setAiLoading(false);
-                }
-              } else if (currentEvent === 'references') {
-                // 转换数据格式以匹配Sources模块期望的格式，包含所有可用字段
-                const formattedReferences = parsed.map(ref => ({
-                  knowledgeId: ref.knowledge_id,
-                  knowledgeName: ref.knowledge_name,
-                  description: ref.description,
-                  tags: ref.tags,
-                  effectiveTime: ref.effective_time,
-                  attachments: ref.attachments,
-                  sourceFile: ref.source_file || ref.attachments?.[0] || '未知文件',
-                  relevance: ref.relevance,
-                  pageNum: ref.page_num,
-                  chunkIndex: ref.chunk_index,
-                  chunkType: ref.chunk_type,
-                  bboxUnion: ref.bbox_union,
-                  charStart: ref.char_start,
-                  charEnd: ref.char_end
-                }));
-                references = formattedReferences; 
-                setReferences(formattedReferences);
-              } else if (currentEvent === 'end') { 
-                if (parsed.sessionId) {
-                  window.__ragSessionId = parsed.sessionId;
-                }
-                if (parsed.messageId) {
-                  aiMessageId = parsed.messageId;
-                  window.__ragAnswerMessageId = parsed.messageId;
-                }
-                setAiLoading(false);
-                return true;
-              }
-            } catch (e) {
-               
-            }
-          }
-        }
-      }
-
-      return true;
-    } else {
-      console.error('流式响应失败:', response.status);
-      message.error('AI回答失败');
-      return false;
-    }
-  };
+ 
 
   // 处理问题提交
   const handleQuestionSubmit = () => {
@@ -594,7 +464,7 @@ const Knowledge = observer(() => {
         }));
 
         // 将搜索结果存储到store中
-        knowledgeStore.setKnowledgeList(processedResults);
+        // knowledgeStore.setKnowledgeList(processedResults);
 
         setSearchResults(processedResults);
         setSearchPagination(prev => ({
@@ -605,11 +475,15 @@ const Knowledge = observer(() => {
         }));
         
         // 停止ES加载状态
-        setSourcesLoading(false);
+       
+        // 关键修改：ES搜索返回后立即停止列表的loading状态，让用户尽快看到结果
+        setSearchLoading(false);
       } else {
         message.error(esResponse.message || 'ES搜索失败');
         setSearchResults([]);
         setSourcesLoading(false);
+        // 搜索失败也需要停止loading
+        setSearchLoading(false);
       }
       
       // 然后调用AI搜索接口（异步，不阻塞UI）
@@ -621,34 +495,16 @@ const Knowledge = observer(() => {
           userId: currentUserId
         });
         
-        if (aiResponse.code === 200) {
-          // 如果AI搜索有更好的ES结果，更新显示
-          if (aiResponse.data.esResults && aiResponse.data.esResults.length > 0) {
-            const processedResults = (aiResponse.data.esResults || []).map(item => ({
-              ...item,
-              name: item.name || item.description?.substring(0, 50) + '...' || '无标题',
-              displayName: item.name || item.description?.substring(0, 50) + '...' || '无标题'
-            }));
-
-            knowledgeStore.setKnowledgeList(processedResults);
-            setSearchResults(processedResults);
-            setSearchPagination(prev => ({
-              ...prev,
-              current: page,
-              total: aiResponse.data.total || 0,
-              pageSize: size
-            }));
-          }
-        }
+       console.log("aiResponse,",aiResponse)
         
         // 处理RAG结果（AI回答和引用）
         if (aiResponse.data.ragResults && aiResponse.data.ragResults.length > 0) {
           const ragResult = aiResponse.data.ragResults[0];
 
           // 设置AI回答
-          if (ragResult.answer) {
+          if (ragResult.answer || ragResult.answer == "") {
             setAiAnswer({
-              answer: ragResult.answer,
+              answer: ragResult.answer || "暂无内容",
               references: ragResult.references || [],
               recommendedQuestions: ragResult.recommendedQuestions || [],
               sessionId: ragResult.sessionId,
@@ -720,7 +576,7 @@ const Knowledge = observer(() => {
 
   // 处理搜索
   const handleSearch = (value) => { 
-
+   
     setSearchValue(value);
     // 清空之前的搜索结果
     setSearchResults([]);
@@ -1285,7 +1141,12 @@ const Knowledge = observer(() => {
               {/* 继续解答区域 */}
               <div className="continue-section">
                 <h4>继续为你解答</h4>
-                {aiAnswer && aiAnswer.recommendedQuestions && aiAnswer.recommendedQuestions.length > 0 ? (
+                {  aiLoading ? (
+                  <div className="suggested-questions">
+                    <Spin size="small" />
+                    <span style={{ marginLeft: 8 }}>正在获取推荐问题...</span>
+                  </div>
+                ) :  aiAnswer && aiAnswer.recommendedQuestions && aiAnswer.recommendedQuestions.length > 0 ? (
                   <div className="suggested-questions">
                     {aiAnswer.recommendedQuestions.map((question, index) => (
                       <Button
@@ -1299,12 +1160,7 @@ const Knowledge = observer(() => {
                       </Button>
                     ))}
                   </div>
-                ) : aiLoading ? (
-                  <div className="suggested-questions">
-                    <Spin size="small" />
-                    <span style={{ marginLeft: 8 }}>正在获取推荐问题...</span>
-                  </div>
-                ) : (
+                ) :(
                   null
                 )}
                 <div className="input-section">
@@ -1331,7 +1187,7 @@ const Knowledge = observer(() => {
                       loading={aiLoading}
                       disabled={aiLoading}
                     >
-                      {aiLoading ? '发送中...' : '发送'}
+                      {aiLoading ? '请稍后...' : '发送'}
                     </Button>
                   </div>
                 </div>

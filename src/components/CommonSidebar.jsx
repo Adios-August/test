@@ -21,7 +21,7 @@ const CommonSidebar = ({
   collapsed = false,
   selectedKnowledgeId = null
 }) => {
-  console.log('CommonSidebar component rendered');
+ 
   const navigate = useNavigate();
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [openKeys, setOpenKeys] = useState([]);
@@ -31,19 +31,13 @@ const CommonSidebar = ({
   const authStore = useAuthStore();
   const currentWorkspace = authStore.currentWorkspace;
 
-  // 调试信息
-  console.log('CommonSidebar - received selectedKnowledgeId:', selectedKnowledgeId);
-  console.log('CommonSidebar - received filterCategoryId:', filterCategoryId);
-  console.log('CommonSidebar - categoryTree length:', categoryTree.length);
-  console.log('CommonSidebar - hasInitialized.current:', hasInitialized.current);
-
+ 
   // 获取顶层目录数据
   const fetchCategoryTree = async () => {
-    console.log('fetchCategoryTree called');
+  
     setLoading(true);
     try {
-      console.log('Making API call to get top-level categories...');
-      console.log('Current timestamp:', new Date().toISOString());
+     
       
       // 添加超时处理
       const timeoutPromise = new Promise((_, reject) => {
@@ -53,13 +47,13 @@ const CommonSidebar = ({
       // 使用新的API调用，只获取顶层目录的folder类型
       const apiPromise = knowledgeAPI.getKnowledgeList({ page: 1, size: 20, nodeType: 'folder' });
       
-      console.log('Waiting for API response...');
+   
       const response = await Promise.race([apiPromise, timeoutPromise]);
       
-      console.log('API call completed at:', new Date().toISOString());
+     
       if (response.code === 200) {
         const records = response.data?.records || [];
-        console.log('Top level categories:', records);
+       
         
         // 转换为树形结构，标记为可能有子节点但尚未加载
         const topLevelNodes = records.map(item => ({
@@ -71,7 +65,7 @@ const CommonSidebar = ({
           childrenLoaded: false // 标记子节点尚未加载
         }));
         
-        console.log('Mapped top level nodes:', topLevelNodes);
+        
         setCategoryTree(topLevelNodes);
       } else {
         console.error('API response error:', response);
@@ -89,7 +83,7 @@ const CommonSidebar = ({
   
   // 按需加载子节点
   const loadChildNodes = async (parentId) => {
-    console.log(`Loading child nodes for parent ID: ${parentId}`);
+ 
     try {
       // 在加载子节点前，保存当前的展开状态
       const currentOpenKeys = [...openKeys];
@@ -98,7 +92,7 @@ const CommonSidebar = ({
       
       if (response.code === 200) {
         const childNodes = response.data?.records || [];
-        console.log(`Child nodes for parent ${parentId}:`, childNodes);
+        
         
         // 转换为树节点格式
         const mappedChildren = childNodes.map(item => ({
@@ -162,13 +156,13 @@ const CommonSidebar = ({
 
   // 组件挂载时获取分类树，并在工作区变化时重新获取
   useEffect(() => {
-    console.log('fetchCategoryTree useEffect triggered');
+   
     fetchCategoryTree();
   }, [currentWorkspace]); // 当工作区变化时重新获取分类数据
 
   // 处理默认展开状态（默认不展开任何分类）
   useEffect(() => {
-    console.log('Default expand useEffect - categoryTree length:', categoryTree.length);
+  
     if (categoryTree.length === 0) return;
     
     // 检查是否有特定的目标分类
@@ -180,36 +174,27 @@ const CommonSidebar = ({
     }
   }, [categoryTree, filterCategoryId]);
 
-  // 当有selectedKnowledgeId时，需要查找该知识所属的分类并设置选中状态
-  // 添加一个强制触发的 useEffect 来测试
-  useEffect(() => {
-    console.log('=== FORCE TRIGGER useEffect ===');
-    console.log('This useEffect should always trigger on every render');
-  });
+ 
 
   useEffect(() => {
-    console.log('=== selectedKnowledgeId useEffect START ===');
-    console.log('selectedKnowledgeId value check:', selectedKnowledgeId);
-    console.log('categoryTree length check:', categoryTree?.length);
-    console.log('useEffect triggered with dependencies:', { selectedKnowledgeId, categoryTreeLength: categoryTree?.length });
+ 
     
     if (selectedKnowledgeId && categoryTree?.length > 0) {
-      console.log('selectedKnowledgeId changed:', selectedKnowledgeId);
-      console.log('categoryTree:', categoryTree);
+     
       
       // 通过API获取知识详情来获取分类信息
       const fetchKnowledgeAndSetCategory = async () => {
         try {
           const response = await knowledgeAPI.getKnowledgeDetail(selectedKnowledgeId);
-          console.log('Knowledge detail response:', response);
+       
           
           if (response.code === 200 && response.data) {
             const knowledgeData = response.data;
-            console.log('Knowledge data:', knowledgeData);
+            
             
             // 尝试从知识数据中获取分类ID
             const categoryId = knowledgeData.categoryId || knowledgeData.category_id || knowledgeData.category?.id;
-            console.log('Found categoryId:', categoryId);
+          
             
             if (categoryId) {
               // 查找分类在树中的位置并设置选中状态
@@ -227,11 +212,11 @@ const CommonSidebar = ({
               };
               
               const targetCategory = findCategoryInTree(categoryTree, categoryId);
-              console.log('Found target category:', targetCategory);
+         
               
               if (targetCategory) {
                 const keyToSelect = targetCategory.key || targetCategory.id;
-                console.log('Setting selected key:', keyToSelect);
+              
                 setSelectedKeys([keyToSelect]);
                 
                 // 展开父级分类
@@ -250,16 +235,16 @@ const CommonSidebar = ({
                 };
                 
                 const parentKeys = expandParents(categoryTree, categoryId);
-                console.log('Parent keys to expand:', parentKeys);
+             
                 
                 if (parentKeys && parentKeys.length > 0) {
                   setOpenKeys(prev => [...new Set([...prev, ...parentKeys])]);
                 }
               } else {
-                console.log('Target category not found in tree');
+                
               }
             } else {
-              console.log('No categoryId found in knowledge data');
+              
             }
           }
         } catch (error) {

@@ -152,40 +152,40 @@ const Home = observer(() => {
 
   // 获取历史问题
   const fetchHistoryQuestions = async () => {
-    console.log('=== fetchHistoryQuestions 开始执行 ===');
+   
     setHistoryLoading(true);
     try {
       // 从localStorage获取用户信息（使用authStore的存储key）
       const authStoreStr = localStorage.getItem('authStore');
-      console.log('localStorage authStore:', authStoreStr);
+       
       
       const authStore = JSON.parse(authStoreStr || '{}');
-      console.log('解析后的 authStore:', authStore);
+      
       
       const userId = authStore.user?.id;
-      console.log('提取的 userId:', userId);
+      
       
       if (!userId) {
-        console.log('userId 为空，设置空数组');
+       
         setHistoryQuestions([]);
         return;
       }
       
-      console.log('准备调用 homeAPI.getHistoryQuestions，userId:', userId);
+      
       const response = await homeAPI.getHistoryQuestions(userId);
-      console.log('API 响应:', response);
+     
       
       if (response.code === 200) {
-        console.log('API 调用成功，数据:', response.data);
+       
         // 将字符串数组转换为对象数组，以适配渲染逻辑
         const formattedData = (response.data || []).map((query, index) => ({
           id: index,
           query: query
         }));
-        console.log('格式化后的数据:', formattedData);
+        
         setHistoryQuestions(formattedData);
       } else {
-        console.log('API 调用失败，错误信息:', response.message);
+        
         message.error(response.message || '获取历史问题失败');
         setHistoryQuestions([]);
       }
@@ -193,7 +193,7 @@ const Home = observer(() => {
       console.error('获取历史问题异常:', error);
       setHistoryQuestions([]);
     } finally {
-      console.log('=== fetchHistoryQuestions 执行结束 ===');
+    
       setHistoryLoading(false);
     }
   };
@@ -277,7 +277,7 @@ const Home = observer(() => {
 
   // 监听工作区变化，重新加载数据
   useEffect(() => {
-    console.log('检测到工作区变化，重新加载数据:', authStore.currentWorkspace);
+    
     loadAllData();
   }, [authStore.currentWorkspace]);
 

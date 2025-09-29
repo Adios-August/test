@@ -110,7 +110,7 @@ const LayoutComponent = observer(() => {
                   {authStore.currentWorkspace || authStore.user?.workspace?.split(',')[0] || '未设置workspace'}
                 </div>
               </Dropdown>
-               <span className="wpd-button">{authStore.user?.displayName ||   ''}</span>
+               <span className="wpd-button">欢迎您，{authStore.user?.displayName ||   ''}</span>
               <Dropdown
                 menu={{ items: userMenuItems }}
                 placement="bottomRight"
