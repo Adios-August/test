@@ -22,21 +22,31 @@ const CategorySidebar = ({
     const parentId = searchParams.get('parentId');
     const nodeType = searchParams.get('nodeType');
     
-    // 如果URL中有parentId且不为0，并且当前没有选中的分类，则自动选中该分类
-    if (parentId && parentId !== '0' && !selectedCategory && categoryTree?.length > 0) {
-      const parentIdNum = parseInt(parentId, 10);
-      
-      // 调用回调函数通知父组件
-      onCategoryChange?.(parentIdNum);
-      onLeafNodeCheck?.(isLeafNode(parentIdNum));
-      onFolderNodeCheck?.(isFolderNode(parentIdNum));
-       
+    if (!selectedCategory && categoryTree?.length >= 0) {
+      if (parentId === '0' || parentId === null || !parentId) {
+        // 选中根目录
+        onCategoryChange?.(0);
+        onLeafNodeCheck?.(false);
+        onFolderNodeCheck?.(true); // 根目录被视为文件夹节点
+      } else if (parentId && parentId !== '0') {
+        // 选中具体的分类
+        const parentIdNum = parseInt(parentId, 10);
+        onCategoryChange?.(parentIdNum);
+        onLeafNodeCheck?.(isLeafNode(parentIdNum));
+        onFolderNodeCheck?.(isFolderNode(parentIdNum));
+      }
     }
   }, [searchParams, selectedCategory, categoryTree, onCategoryChange, onLeafNodeCheck, onFolderNodeCheck, isLeafNode, isFolderNode]);
 
   // —— 选中态同步 —— //
   useEffect(() => {
-    setSelectedKeys(selectedCategory ? [String(selectedCategory)] : []);
+    if (selectedCategory === 0) {
+      setSelectedKeys(['root']);
+    } else if (selectedCategory) {
+      setSelectedKeys([String(selectedCategory)]);
+    } else {
+      setSelectedKeys([]);
+    }
   }, [selectedCategory]);
 
   // —— 展开态联动（选中项或树更新时） —— //
@@ -71,11 +81,18 @@ const CategorySidebar = ({
   // —— 事件 —— //
   const handleMenuSelect = useCallback(
     ({ key }) => {
-      const id = Number(key);
-      setSelectedKeys([key]);
-      onCategoryChange?.(id);
-      onLeafNodeCheck?.(isLeafNode(id));
-      onFolderNodeCheck?.(isFolderNode(id));
+      if (key === 'root') {
+        setSelectedKeys([key]);
+        onCategoryChange?.(0);
+        onLeafNodeCheck?.(false);
+        onFolderNodeCheck?.(true); // 根目录被视为文件夹节点
+      } else {
+        const id = Number(key);
+        setSelectedKeys([key]);
+        onCategoryChange?.(id);
+        onLeafNodeCheck?.(isLeafNode(id));
+        onFolderNodeCheck?.(isFolderNode(id));
+      }
     },
     [onCategoryChange, onLeafNodeCheck, onFolderNodeCheck, isLeafNode, isFolderNode]
   );
@@ -152,7 +169,7 @@ const CategorySidebar = ({
             <Spin size="large" />
             <p>加载中...</p>
           </div>
-        ) : (categoryTree?.length ?? 0) > 0 ? (
+        ) : (categoryTree?.length ?? 0) >= 0 ? (
           <Menu
             className="category-tree"
             mode="inline"
@@ -163,6 +180,14 @@ const CategorySidebar = ({
             inlineIndent={16}
             style={{ borderRight: 'none', backgroundColor: 'transparent' }}
           >
+            {/* Root level option */}
+            <Menu.Item key="root" style={{ 
+              fontWeight: selectedKeys[0] === 'root' ? 'bold' : 'normal',
+              backgroundColor: selectedKeys[0] === 'root' ? '#f0f0f0' : 'transparent'
+            }}>
+              Root
+            </Menu.Item>
+            <Menu.Divider />
             {renderMenu(categoryTree)}
           </Menu>
         ) : (

@@ -22,8 +22,8 @@ const FormContent = ({
 }) => {
   return (
     <div className="content-body">
-      {/* Node type selector - 仅当选择了非根类目时显示（避免 0 被渲染） */}
-      {(formData.category !== null && formData.category !== undefined && formData.category !== 0 && formData.category !== '') && (
+      {/* Node type selector - always show when category is selected (including root) */}
+      {(formData.category !== null && formData.category !== undefined) && (
         <div className="node-type-selector">
           <div className="selector-label">创建类型：</div>
           <Radio.Group 
@@ -41,7 +41,7 @@ const FormContent = ({
       <div className="title-section">
         <Input
           className="title-input"
-          placeholder={nodeTypeToCreate === 'folder' ? "请输入文件夹名称" : "请输入标题"}
+          placeholder={nodeTypeToCreate === 'folder' ? "请输入Category名称" : "请输入标题"}
           value={formData.title}
           onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
           maxLength={200}
