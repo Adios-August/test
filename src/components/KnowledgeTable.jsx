@@ -93,7 +93,8 @@ const KnowledgeTable = ({ tableData }) => {
   const dataSource = tableData.rows.map((row, index) => {
     const rowData = { key: row.id || index };
     tableData.columns.forEach(col => {
-      rowData[col.id] = row.data[col.id];
+      // 增加防御性编程，防止访问undefined的属性
+      rowData[col.id] = row && row.data && row.data[col.id] !== undefined ? row.data[col.id] : '-';
     });
     return rowData;
   });
