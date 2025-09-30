@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { homeAPI } from '../../api/home';
 import { knowledgeAPI } from '../../api/knowledge';
 import { useAuthStore } from '../../stores';
+import RoleProtectedComponent from '../../components/RoleProtectedComponent';
 import '../knowledge-management/KnowledgeManagement.scss';
 
 const { Option } = Select;
@@ -254,20 +255,24 @@ const CategoryManagement = () => {
       <div className="content-header">
           <div></div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={() => handleAddKnowledge(null, 'folder')}
-          >
-            一级菜单
-          </Button>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={() => handleAddKnowledge(null, 'doc')}
-          >
-            新增知识
-          </Button>
+          <RoleProtectedComponent permission="canManageCategories">
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={() => handleAddKnowledge(null, 'folder')}
+            >
+              一级菜单
+            </Button>
+          </RoleProtectedComponent>
+          <RoleProtectedComponent permission="canAddKnowledge">
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              onClick={() => handleAddKnowledge(null, 'doc')}
+            >
+              新增知识
+            </Button>
+          </RoleProtectedComponent>
         </div>
       </div>
 

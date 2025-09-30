@@ -4,11 +4,14 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, CaretUpOutlined, CaretDownO
 import { http } from '../../utils/request';
 import { workspaceAPI } from '../../api/workspace';
 import { useAuthStore } from '../../stores';
+import { hasPermission, getUserRole } from '../../constants/roles';
  
 import '../knowledge-management/KnowledgeManagement.scss';
 
 const RoleManagement = () => {
   const authStore = useAuthStore();
+  const currentUserRole = getUserRole(authStore.user);
+  const canManageWorkspace = hasPermission(currentUserRole, 'canManageWorkspace');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -215,10 +218,12 @@ const RoleManagement = () => {
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>{valueArr.join(', ')}</span>
-            <EditOutlined 
-              style={{ color: '#1890ff', cursor: 'pointer', fontSize: '14px' }}
-              onClick={() => handleEdit(r, 'workspace')}
-            />
+            {canManageWorkspace && (
+              <EditOutlined 
+                style={{ color: '#1890ff', cursor: 'pointer', fontSize: '14px' }}
+                onClick={() => handleEdit(r, 'workspace')}
+              />
+            )}
           </div>
         );
       }

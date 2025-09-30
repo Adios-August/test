@@ -5,14 +5,20 @@ import { UserOutlined, MessageOutlined, StarOutlined, LogoutOutlined, SettingOut
 import { observer } from "mobx-react-lite";
 import { useAuthStore } from "../stores";
 import rootStore from "../stores/rootStore";
+import { canAccessKnowledgeManagement } from "../constants/roles";
 import "./Layout.scss";
 
 const { Header, Content } = Layout;
 import Logo from "../assets/image/logo.png";
 
-const headerMenuItems = [
+// Base menu items that are available to all users
+const baseMenuItems = [
   { key: "/", label: "首页" },
   { key: "/knowledge", label: "知识库" },
+];
+
+// Additional menu items that require specific permissions
+const adminMenuItems = [
   { key: "/knowledge-admin", label: "知识库管理" },
   // { key: "/stats", label: "数据统计" }, // 暂时隐藏数据统计模块
 ];
@@ -22,6 +28,18 @@ const LayoutComponent = observer(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const authStore = useAuthStore();
+
+  // Compute menu items based on user role
+  const headerMenuItems = useMemo(() => {
+    const menuItems = [...baseMenuItems];
+    
+    // Check if user can access knowledge management
+    if (canAccessKnowledgeManagement(authStore.user)) {
+      menuItems.push(...adminMenuItems);
+    }
+    
+    return menuItems;
+  }, [authStore.user]);
 
   // 根据当前路径同步header选中状态
   useEffect(() => {

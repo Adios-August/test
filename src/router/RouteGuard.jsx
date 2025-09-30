@@ -3,6 +3,7 @@ import { observer } from 'mobx-react-lite';
 import { useLocation, Navigate, Outlet } from 'react-router-dom';
 import { Spin, message } from 'antd';
 import { useAuthStore } from '../stores';
+import { canAccessKnowledgeManagement, hasPermission, getUserRole } from '../constants/roles';
 
 const RouteGuard = observer(() => {
   const authStore = useAuthStore();
@@ -58,6 +59,26 @@ const RouteGuard = observer(() => {
   // 如果用户已认证且访问登录页面，重定向到首页
   if (authStore.isAuthenticated && location.pathname === '/login') {
     return <Navigate to="/" replace />;
+  }
+
+  // 检查用户是否试图访问需要特殊权限的路由
+  if (authStore.isAuthenticated) {
+    // Check knowledge management routes
+    if (location.pathname.startsWith('/knowledge-admin')) {
+      if (!canAccessKnowledgeManagement(authStore.user)) {
+        message.error('您没有权限访问此页面');
+        return <Navigate to="/" replace />;
+      }
+    }
+    
+    // Check add/edit knowledge routes
+    if (location.pathname.startsWith('/add-knowledge') || location.pathname.startsWith('/edit-knowledge')) {
+      const userRole = getUserRole(authStore.user);
+      if (!hasPermission(userRole, 'canAddKnowledge') && !hasPermission(userRole, 'canEditKnowledge')) {
+        message.error('您没有权限访问此页面');
+        return <Navigate to="/" replace />;
+      }
+    }
   }
 
   // 认证通过，渲染子路由
