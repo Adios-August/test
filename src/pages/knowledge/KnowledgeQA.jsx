@@ -132,8 +132,17 @@ const KnowledgeQA = () => {
     if (url) setPreviewFileUrl(url);
     const pg = ref.page_num ?? ref.pageNum;
     setPreviewPage(typeof pg === 'number' ? pg : 1);
-    const bb = ref.bbox_union || ref.bboxUnion;
-    setPreviewBboxes(bb ? [bb] : []);
+    const bb = ref.bbox_union ?? ref.bboxUnion;
+    // 规范化高亮框形状：支持单个 [x1,y1,x2,y2] 或多个 [[...],[...]]
+    let normalizedBboxes = [];
+    if (Array.isArray(bb)) {
+      if (Array.isArray(bb[0])) {
+        normalizedBboxes = bb; // 已是二维数组
+      } else if (bb.length === 4) {
+        normalizedBboxes = [bb]; // 单个bbox
+      }
+    }
+    setPreviewBboxes(normalizedBboxes);
 
     const knowledgeId = ref.knowledgeId || ref.knowledge_id;
     console.log('提取的knowledgeId:', knowledgeId);
@@ -154,7 +163,7 @@ const KnowledgeQA = () => {
     setExpandedRelatedText(prev => ({ ...prev, [knowledgeId]: true }));
     setExpandedRelatedTextOverride(prev => ({
       ...prev,
-      [knowledgeId]: { pageNum: typeof pg === 'number' ? pg : 1, bboxes: bb ? [bb] : [] }
+      [knowledgeId]: { pageNum: typeof pg === 'number' ? pg : 1, bboxes: normalizedBboxes }
     }));
     if (preferred) {
       setExpandedRelatedTextPreferredAttachment(prev => ({ ...prev, [knowledgeId]: preferred }));
@@ -652,7 +661,17 @@ const KnowledgeQA = () => {
                         const url = URL.createObjectURL(b);
                         setPreviewFileUrl(url);
                         setPreviewPage(typeof first.pageNum === 'number' ? first.pageNum : 1);
-                        setPreviewBboxes(first.bboxUnion ? [first.bboxUnion] : []);
+                        // 规范化 bboxes：first.bboxUnion 可能是单个 [x1,y1,x2,y2] 或多个 [[...],[...]]
+                        const bb = first.bboxUnion;
+                        let normalizedBboxes = [];
+                        if (Array.isArray(bb)) {
+                          if (Array.isArray(bb[0])) {
+                            normalizedBboxes = bb;
+                          } else if (bb.length === 4) {
+                            normalizedBboxes = [bb];
+                          }
+                        }
+                        setPreviewBboxes(normalizedBboxes);
                       });
                   } catch {}
                 }
@@ -660,11 +679,21 @@ const KnowledgeQA = () => {
                 const kId = first.knowledgeId;
                 if (kId) {
                   setExpandedRelatedText((prev) => ({ ...prev, [kId]: true }));
+                  // 规范化覆盖用的 bboxes
+                  const bbForOverride = first.bboxUnion;
+                  let normalizedOverride = [];
+                  if (Array.isArray(bbForOverride)) {
+                    if (Array.isArray(bbForOverride[0])) {
+                      normalizedOverride = bbForOverride;
+                    } else if (bbForOverride.length === 4) {
+                      normalizedOverride = [bbForOverride];
+                    }
+                  }
                   setExpandedRelatedTextOverride((prev) => ({
                     ...prev,
                     [kId]: {
                       pageNum: typeof first.pageNum === 'number' ? first.pageNum : 1,
-                      bboxes: first.bboxUnion ? [first.bboxUnion] : [],
+                      bboxes: normalizedOverride,
                     },
                   }));
                   const preferred = first.sourceFile || (Array.isArray(first.attachments) ? first.attachments[0] : undefined);
@@ -1819,9 +1848,13 @@ const KnowledgeQA = () => {
                                 bboxes={(() => {
                                   const knowledgeId = reference.knowledge_id || reference.knowledgeId;
                                   const override = expandedRelatedTextOverride[knowledgeId] || {};
-                                  return Array.isArray(override.bboxes) && override.bboxes.length > 0
-                                    ? override.bboxes
-                                    : (reference.bbox_union || reference.bboxUnion ? [reference.bbox_union || reference.bboxUnion] : []);
+                                  if (Array.isArray(override.bboxes) && override.bboxes.length > 0) return override.bboxes;
+                                  const bb = reference.bbox_union ?? reference.bboxUnion;
+                                  if (Array.isArray(bb)) {
+                                    if (Array.isArray(bb[0])) return bb;
+                                    if (bb.length === 4) return [bb];
+                                  }
+                                  return [];
                                 })()}
                                 pageNum={(() => {
                                   const knowledgeId = reference.knowledge_id || reference.knowledgeId;

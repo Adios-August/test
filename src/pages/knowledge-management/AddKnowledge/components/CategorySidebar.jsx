@@ -21,8 +21,10 @@ const CategorySidebar = ({
   useEffect(() => {
     const parentId = searchParams.get('parentId');
     const nodeType = searchParams.get('nodeType');
-    
-    if (!selectedCategory && categoryTree?.length >= 0) {
+
+    // 仅在“尚未设置选中分类”（null/undefined）时进行初始化。
+    const hasSelectedCategory = selectedCategory !== null && selectedCategory !== undefined;
+    if (!hasSelectedCategory && categoryTree?.length >= 0) {
       if (parentId === '0' || parentId === null || !parentId) {
         // 选中根目录
         onCategoryChange?.(0);

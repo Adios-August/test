@@ -182,7 +182,7 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
   }
 
   return (
-    <div style={{ width: "100%" }}>
+    <div className="pdf-preview" style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div>
             <button disabled={!blobUrl || currentPage <= 1} onClick={() => setCurrentPage(1)}>首页</button>

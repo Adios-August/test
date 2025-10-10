@@ -1,8 +1,8 @@
 // System roles constants
 export const ROLES = {
-  ADMIN: 'ADMIN',
-  REVIEWER: 'REVIEWER', 
-  BLOCKER: 'BLOCKED' // Note: using 'BLOCKED' to match the existing RoleManagement component
+  ADMIN: "Admin",
+  REVIEWER: "REVIEWER",
+  BLOCKER: "BLOCKED", // Note: using 'BLOCKED' to match the existing RoleManagement component
 };
 
 // Role permissions configuration
@@ -18,7 +18,7 @@ export const ROLE_PERMISSIONS = {
     canEditKnowledge: true,
     canDeleteKnowledge: true,
     canViewKnowledge: true,
-    canManageWorkspace: true // Only admin can change workspace
+    canManageWorkspace: true, // Only admin can change workspace
   },
   [ROLES.REVIEWER]: {
     // Reviewer has limited access to knowledge management
@@ -31,7 +31,7 @@ export const ROLE_PERMISSIONS = {
     canEditKnowledge: true,
     canDeleteKnowledge: false, // Reviewers can't delete
     canViewKnowledge: true,
-    canManageWorkspace: false // Reviewers cannot change workspace
+    canManageWorkspace: false, // Reviewers cannot change workspace
   },
   [ROLES.BLOCKER]: {
     // Blocker has very limited access - essentially read-only for knowledge
@@ -44,8 +44,8 @@ export const ROLE_PERMISSIONS = {
     canEditKnowledge: false,
     canDeleteKnowledge: false,
     canViewKnowledge: true, // Can still view knowledge content
-    canManageWorkspace: false // Blockers cannot change workspace
-  }
+    canManageWorkspace: false, // Blockers cannot change workspace
+  },
 };
 
 // Helper function to check if user has a specific permission
@@ -64,5 +64,5 @@ export const getUserRole = (user) => {
 // Helper function to check if user can access knowledge management
 export const canAccessKnowledgeManagement = (user) => {
   const role = getUserRole(user);
-  return hasPermission(role, 'canAccessKnowledgeManagement');
+  return hasPermission(role, "canAccessKnowledgeManagement");
 };

@@ -15,7 +15,7 @@ export const useKnowledgeForm = (mode = 'add') => {
   const [formData, setFormData] = useState({
     title: '',
     category: null,
-    privateToRoles: ['ALL'],
+    privateToRoles: [],
     tags: [],
     effectiveTime: [null, null],
     attachments: [],
@@ -77,7 +77,7 @@ export const useKnowledgeForm = (mode = 'add') => {
         setFormData({
           title: data.name || data.title || '',
           category: data.parentId || data.category_id || null,
-          privateToRoles: data.workspaces || data.audience_roles || ['ALL'],
+          privateToRoles: data.workspaces || data.audience_roles || [],
           tags: data.tags || [],
           effectiveTime: effectiveTime,
           attachments: processedAttachments,
@@ -103,22 +103,7 @@ export const useKnowledgeForm = (mode = 'add') => {
 
   // Handle visibility scope selection
   const handlePrivateToChange = (value) => {
-    // If user selects ALL, clear other options and keep only ALL
-    if (value.includes('ALL') && !formData.privateToRoles.includes('ALL')) {
-      setFormData(prev => ({ ...prev, privateToRoles: ['ALL'] }));
-    } 
-    // If user selects other options while ALL is already selected, remove ALL
-    else if (formData.privateToRoles.includes('ALL') && value.length > 1) {
-      setFormData(prev => ({ ...prev, privateToRoles: value.filter(v => v !== 'ALL') }));
-    }
-    // If user deselects ALL manually, keep other selections
-    else if (!value.includes('ALL') && formData.privateToRoles.includes('ALL')) {
-      setFormData(prev => ({ ...prev, privateToRoles: value }));
-    }
-    // Normal multi-select for non-ALL options
-    else {
-      setFormData(prev => ({ ...prev, privateToRoles: value }));
-    }
+    setFormData(prev => ({ ...prev, privateToRoles: value }));
   };
 
   // Add tag

@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Select, 
   Typography,
   Card
 } from 'antd';
+import { message } from 'antd';
+import { workspaceAPI } from '../../../../api/workspace';
 
 const { Text } = Typography;
 
@@ -15,6 +17,33 @@ const VisibilityPopup = ({
   anchorEl
 }) => {
   if (!visible) return null;
+
+  const [options, setOptions] = useState([]);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchWorkspaces = async () => {
+      try {
+        const res = await workspaceAPI.getWorkspaces();
+        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const wsNames = list.map((ws) => ws?.name ?? ws?.code ?? (typeof ws === 'string' ? ws : ''))
+                            .filter(Boolean);
+        const dynamicOptions = wsNames.map((name) => ({ label: name, value: name }));
+        if (mounted) {
+          setOptions(dynamicOptions);
+        }
+      } catch (e) {
+        console.error('获取工作空间列表失败:', e);
+        message.warning('获取工作空间失败，使用默认选项');
+        const fallback = ['WPB', 'GPB', 'IWS', 'FCCS', 'CCSS'];
+        if (mounted) {
+          setOptions(fallback.map((n) => ({ label: n, value: n })));
+        }
+      }
+    };
+    fetchWorkspaces();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <>
@@ -52,12 +81,7 @@ const VisibilityPopup = ({
             placeholder="选择可见范围"
             value={formData.privateToRoles}
             onChange={handlePrivateToChange}
-            options={[
-              { label: 'All', value: 'ALL' },
-              { label: 'WPB', value: 'WPB' },
-              { label: 'GPB', value: 'GPB' },
-              { label: 'CCSS', value: 'CCSS' }
-            ]}
+            options={options}
           />
         </div>
       </Card>
