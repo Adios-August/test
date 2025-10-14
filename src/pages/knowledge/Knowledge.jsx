@@ -46,6 +46,7 @@ import CommonSidebar from "../../components/CommonSidebar";
 import KnowledgeDetailModal from "../../components/KnowledgeDetailModal";
 import KnowledgeDetailContent from "../../components/KnowledgeDetailContent";
 import SourceExpandedDetail from "../../components/SourceExpandedDetail";
+import StreamingMarkdownRenderer from "../../components/StreamingMarkdownRenderer";
 import { knowledgeAPI } from "../../api/knowledge";
 import { engagementAPI } from "../../api/engagement";
 import { chatAPI } from "../../api/chat";
@@ -1098,7 +1099,10 @@ const Knowledge = observer(() => {
                     <Avatar icon={<RobotOutlined />} className="ai-avatar" />
                   </div>
                   <div className="message-content">
-                    <p>{aiAnswer.answer}</p>
+                    <StreamingMarkdownRenderer
+                      content={aiAnswer.answer}
+                      isStreaming={false}
+                    />
                     <div className="message-actions">
                       {aiAnswer.references && aiAnswer.references.length > 0 && (
                         <>
