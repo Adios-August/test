@@ -1521,7 +1521,7 @@ const Knowledge = observer(() => {
 
         {/* 右侧Sources侧边栏 - 只在显示source模块时显示 */}
         {showAISourceModules && (
-          <Sider className="sources-sider" width={650}>
+          <Sider className="sources-sider" width={505}>
             <div className="sources-header">
               <h3>Sources</h3>
             </div>
