@@ -440,7 +440,7 @@ const Home = observer(() => {
               
               {/* 左下角图片 */}
               <div className="search-banner">
-                <img src={homeBanner} alt="首页横幅" />
+                <img className="banner-img" src={homeBanner} alt="首页横幅" />
               </div>
 
 

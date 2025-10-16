@@ -51,6 +51,11 @@ export const knowledgeAPI = {
     return http.get(`/knowledge/${id}`);
   },
 
+  // 获取知识版本列表
+  getKnowledgeVersions: (knowledgeId) => {
+    return http.get(`/knowledge/${knowledgeId}/versions`);
+  },
+
   // 创建知识
   createKnowledge: (data) => {
     return http.post("/knowledge", data);
@@ -110,6 +115,11 @@ export const knowledgeAPI = {
   // 获取收藏列表
   getFavorites: (params) => {
     return http.get("/engagement/favorites", params);
+  },
+
+  // 获取版本差异
+  getKnowledgeDiff: (knowledgeId, from, to) => {
+    return http.get(`/knowledge/${knowledgeId}/diff`, { from, to });
   },
 };
 

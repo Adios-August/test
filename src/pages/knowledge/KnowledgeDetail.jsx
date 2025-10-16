@@ -10,6 +10,8 @@ import CommonSidebar from '../../components/CommonSidebar';
 import PdfPreview from '../../components/PdfPreview';
 import FeedbackMailButton from '../../components/FeedbackMailButton';
 import KnowledgeTable from '../../components/KnowledgeTable';
+import KnowledgeHistory from '../../components/KnowledgeHistory';
+import KnowledgeDiff from '../../components/KnowledgeDiff';
 import { knowledgeAPI } from '../../api/knowledge';
 import { feedbackAPI } from '../../api/feedback';
 import { engagementAPI } from '../../api/engagement';
@@ -73,6 +75,12 @@ const KnowledgeDetail = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [favoriteStatusLoading, setFavoriteStatusLoading] = useState(true);
+
+  // 历史视图相关状态
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyVersions, setHistoryVersions] = useState([]);
+  const [showDiff, setShowDiff] = useState(false);
+  const [diffData, setDiffData] = useState({ fromVersion: '', toVersion: '', fromContent: '', toContent: '' });
   
   // 获取knowledgeStore和authStore
   const knowledgeStore = useKnowledgeStore();
@@ -201,6 +209,97 @@ const KnowledgeDetail = () => {
     } finally {
       setFavoriteLoading(false);
     }
+  };
+
+  // 打开历史记录（占位实现）
+  const handleOpenHistory = (content) => {
+    const knowledgeId = content?.id || knowledgeDetail?.id || id;
+    if (!knowledgeId) {
+      message.info('暂无可用历史记录');
+      return;
+    }
+
+    // 从后端拉取版本列表（兼容多种返回结构）
+    knowledgeAPI.getKnowledgeVersions(knowledgeId)
+      .then((response) => {
+        let list = [];
+        if (Array.isArray(response)) {
+          list = response;
+        } else if (Array.isArray(response?.versions)) {
+          list = response.versions;
+        } else if (Array.isArray(response?.data?.versions)) {
+          list = response.data.versions;
+        } else if (Array.isArray(response?.data)) {
+          list = response.data;
+        } else if (Array.isArray(response?.records)) {
+          list = response.records;
+        } else if (response?.code === 200 && Array.isArray(response?.data)) {
+          list = response.data;
+        }
+
+        // 如果列表为空，直接显示“无历史记录”
+        if (!list || list.length === 0) {
+          setHistoryVersions([]);
+          setShowHistory(true);
+          return;
+        }
+
+        const mapped = list.map((item, idx) => ({
+          version: item.version ?? item.versionNo ?? item.version_no ?? item.no ?? (list.length - idx),
+          editor: item.editor ?? item.updatedBy ?? item.lastEditor ?? content?.createdBy ?? '未知',
+          date: item.date ?? item.updatedTime ?? item.updatedAt ?? item.createdTime ?? '',
+          content: item.content ?? item.description ?? '',
+        }));
+        setHistoryVersions(mapped);
+        setShowHistory(true);
+      })
+      .catch((err) => {
+        console.error('获取版本列表失败:', err);
+        message.error('获取版本列表失败');
+      });
+  };
+
+  const handleCloseHistory = () => {
+    setShowHistory(false);
+    setShowDiff(false);
+  };
+
+  const handleCompareVersions = (fromVersion, toVersion) => {
+    const knowledgeId = knowledgeDetail?.id || tabs.find(t => t.key === activeTabKey)?.content?.id || id;
+    if (!knowledgeId) {
+      message.warning('缺少知识ID，无法获取差异');
+      return;
+    }
+
+    knowledgeAPI.getKnowledgeDiff(knowledgeId, String(fromVersion), String(toVersion))
+      .then((resp) => {
+        // 兼容多种返回结构
+        const data = resp?.data || resp;
+        const htmlDiff = data?.htmlDiff || data?.html_diff || '';
+        const summary = data?.summary || '';
+
+        // 如果后端不返回内容，使用本地版本列表的内容作为回退
+        const from = historyVersions.find(v => String(v.version) === String(fromVersion));
+        const to = historyVersions.find(v => String(v.version) === String(toVersion));
+
+        setDiffData({
+          fromVersion,
+          toVersion,
+          fromContent: from?.content || '',
+          toContent: to?.content || '',
+          htmlDiff,
+          summary,
+        });
+        setShowDiff(true);
+      })
+      .catch((err) => {
+        console.error('获取版本差异失败:', err);
+        message.error('获取版本差异失败');
+      });
+  };
+
+  const handleCloseDiff = () => {
+    setShowDiff(false);
   };
 
   // 处理feedback提交
@@ -562,7 +661,8 @@ const KnowledgeDetail = () => {
             </div>
           ) : (
             <div className="detail-tabs">
-              <Tabs
+              {!showHistory ? (
+                <Tabs
               hideAdd
                 activeKey={activeTabKey}
                 onChange={setActiveTabKey}
@@ -611,7 +711,20 @@ const KnowledgeDetail = () => {
                             ))}
                           </div>
                         </div>
-                       
+                        <div className="header-right">
+                          <Tooltip title="历史记录">
+                            <Button
+                              type="default"
+                              icon={<HistoryOutlined />}
+                              size="large"
+                              onClick={() => handleOpenHistory(tab.content)}
+                              style={{ fontSize: '16px' }}
+                            >
+                              History
+                            </Button>
+                          </Tooltip>
+                        </div>
+                        
                       </div>
 
                       <div className="document-content">
@@ -706,7 +819,7 @@ const KnowledgeDetail = () => {
                                 loading={feedbackSubmitting}
                                 disabled={!selectedFeedbackType || !feedbackContent.trim() || !currentUserId}
                               >
-                               
+                                
                               </Button>
 
                               
@@ -719,6 +832,29 @@ const KnowledgeDetail = () => {
                   )
                 }))}
               />
+              ) : (
+                !showDiff ? (
+                  <KnowledgeHistory
+                    documentTitle={knowledgeDetail?.name || knowledgeDetail?.title || tabs.find(t => t.key === activeTabKey)?.label || tabs[0]?.label}
+                    versions={historyVersions}
+                    currentVersion={historyVersions[0]?.version}
+                    onCompare={handleCompareVersions}
+                    onClose={handleCloseHistory}
+                  />
+                ) : (
+                  <KnowledgeDiff
+                    documentTitle={knowledgeDetail?.name || knowledgeDetail?.title}
+                    fromVersion={diffData.fromVersion}
+                    toVersion={diffData.toVersion}
+                    fromContent={diffData.fromContent}
+                    toContent={diffData.toContent}
+                    htmlDiff={diffData.htmlDiff}
+                    summary={diffData.summary}
+                    attachments={tabs.find(t => t.key === activeTabKey)?.content?.attachments || knowledgeDetail?.attachments || []}
+                    onClose={handleCloseDiff}
+                  />
+                )
+              )}
             </div>
           )}
         </div>
