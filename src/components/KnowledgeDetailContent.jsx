@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Button, Avatar, Select, Input, message, Tooltip, Card } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Button, Avatar, Select, Input, message, Tooltip, Card, Spin } from 'antd';
 import {
   FilePdfOutlined, FileExcelOutlined, TagOutlined,
-  SendOutlined, UserOutlined, ArrowLeftOutlined,
+  SendOutlined, UserOutlined, ArrowLeftOutlined, HistoryOutlined,
 } from '@ant-design/icons';
 import { knowledgeAPI } from '../api/knowledge';
 import { useFeedbackTypes } from '../hooks/useFeedbackTypes';
@@ -16,6 +16,9 @@ import PdfPreview from './PdfPreview';
 import KnowledgeTable from './KnowledgeTable';
 import './KnowledgeDetailContent.scss';
 
+import KnowledgeHistory from './KnowledgeHistory';
+import KnowledgeDiff from './KnowledgeDiff';
+
 const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButton = true, showFeedback = true, showEmailButton = true }) => {
   const { feedbackTypes, loading: feedbackTypesLoading } = useFeedbackTypes();
   const authStore = useAuthStore();
@@ -26,6 +29,15 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
   const [feedbackContent, setFeedbackContent] = useState('');
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
 
+  // 历史与差异视图状态
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyVersions, setHistoryVersions] = useState([]);
+  const [showDiff, setShowDiff] = useState(false);
+  const [diffData, setDiffData] = useState({ fromVersion: '', toVersion: '', fromContent: '', toContent: '', htmlDiff: '', summary: '' });
+  const favoriteStatusInitRef = useRef(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [diffLoading, setDiffLoading] = useState(false);
+
   // 当feedbackTypes加载完成后，自动选中第一条
   useEffect(() => {
     if (feedbackTypes && feedbackTypes.length > 0 && !selectedFeedbackType) {
@@ -33,12 +45,107 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
     }
   }, [feedbackTypes, selectedFeedbackType]);
 
-  // 处理收藏状态变化
-  const handleFavoriteStatusChange = (isFavorited) => {
-    // 可以在这里处理收藏状态变化的回调 
+  // 打开历史记录
+  const handleOpenHistory = () => {
+    const knowledgeId = knowledgeDetail?.id;
+    if (!knowledgeId) {
+      message.info('暂无可用历史记录');
+      return;
+    }
+
+    setHistoryLoading(true);
+    knowledgeAPI.getKnowledgeVersions(knowledgeId)
+      .then((response) => {
+        let list = [];
+        if (Array.isArray(response)) {
+          list = response;
+        } else if (Array.isArray(response?.versions)) {
+          list = response.versions;
+        } else if (Array.isArray(response?.data?.versions)) {
+          list = response.data.versions;
+        } else if (Array.isArray(response?.data)) {
+          list = response.data;
+        } else if (Array.isArray(response?.records)) {
+          list = response.records;
+        } else if (response?.code === 200 && Array.isArray(response?.data)) {
+          list = response.data;
+        }
+
+        if (!list || list.length === 0) {
+          setHistoryVersions([]);
+          setShowHistory(true);
+          return;
+        }
+
+        const mapped = list.map((item, idx) => ({
+          version: item.version ?? item.versionNo ?? item.version_no ?? item.no ?? (list.length - idx),
+          editor: item.editor ?? item.updatedBy ?? item.lastEditor ?? knowledgeDetail?.createdBy ?? '未知',
+          date: item.date ?? item.updatedTime ?? item.updatedAt ?? item.createdTime ?? '',
+          content: item.content ?? item.description ?? '',
+        }));
+        setHistoryVersions(mapped);
+        setShowHistory(true);
+      })
+      .catch((err) => {
+        console.error('获取版本列表失败:', err);
+        message.error('获取版本列表失败');
+      })
+      .finally(() => {
+        setHistoryLoading(false);
+      });
   };
 
-  // 处理feedback提交
+  const handleCloseHistory = () => {
+    setShowHistory(false);
+    setShowDiff(false);
+  };
+
+  const handleCompareVersions = (fromVersion, toVersion) => {
+    const knowledgeId = knowledgeDetail?.id;
+    if (!knowledgeId) {
+      message.warning('缺少知识ID，无法获取差异');
+      return;
+    }
+
+    setDiffLoading(true);
+    knowledgeAPI.getKnowledgeDiff(knowledgeId, String(fromVersion), String(toVersion))
+      .then((resp) => {
+        const data = resp?.data || resp;
+        const htmlDiff = data?.htmlDiff || data?.html_diff || '';
+        const summary = data?.summary || '';
+
+        const from = historyVersions.find(v => String(v.version) === String(fromVersion));
+        const to = historyVersions.find(v => String(v.version) === String(toVersion));
+
+        setDiffData({
+          fromVersion,
+          toVersion,
+          fromContent: from?.content || '',
+          toContent: to?.content || '',
+          htmlDiff,
+          summary,
+        });
+        setShowDiff(true);
+      })
+      .catch((err) => {
+        console.error('获取版本差异失败:', err);
+        message.error('获取版本差异失败');
+      })
+      .finally(() => {
+        setDiffLoading(false);
+      });
+  };
+
+  const handleCloseDiff = () => {
+    setShowDiff(false);
+  };
+
+  // 处理收藏状态变化（页面初始化不弹提示）
+  const handleFavoriteStatusChange = (isFavorited) => {
+     
+  };
+
+  // 处理feedback提交（恢复原有逻辑）
   const handleSubmitFeedback = async () => {
     if (!knowledgeDetail?.id) {
       message.error('知识详情不存在');
@@ -69,17 +176,15 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
         currentUserId
       );
 
-      if (response.code === 200) {
+      if (response?.code === 200 || response?.success) {
         message.success('反馈提交成功');
-        // 清空表单
-        setSelectedFeedbackType('');
         setFeedbackContent('');
       } else {
-        message.error(response.message || '提交失败，请重试');
+        message.error(response?.message || '反馈提交失败');
       }
-    } catch (error) {
-      console.error('提交反馈失败:', error);
-      message.error('提交失败，请重试');
+    } catch (e) {
+      console.error('提交反馈失败:', e);
+      message.error(e?.message || '提交反馈失败，请稍后重试');
     } finally {
       setFeedbackSubmitting(false);
     }
@@ -109,112 +214,148 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
 
   return (
     <div className="knowledge-detail-content">
-      <Card className="document-detail">
-        <div className="document-header">
-          <div className="header-left">
-            <div className="author-info">
-              <Avatar size="small" icon={<UserOutlined />} />
-              <span className="author-name">{knowledgeDetail.createdBy || knowledgeDetail.author || '未知作者'}</span>
-              <span className="date">{knowledgeDetail.createdTime || knowledgeDetail.date || '未知日期'}</span>
-              <FavoriteButton 
-                knowledgeId={knowledgeDetail.id}
-                onStatusChange={handleFavoriteStatusChange}
-                style={{ marginLeft: '16px', fontSize: '16px' }}
-              />
+      <Spin spinning={historyLoading || diffLoading} tip={historyLoading ? '加载历史记录...' : (diffLoading ? '加载差异...' : undefined)}>
+        <Card className="document-detail">
+          <div className="document-header">
+            <div className="header-left">
+              <div className="author-info">
+                <Avatar size="small" icon={<UserOutlined />} />
+                <span className="author-name">{knowledgeDetail.createdBy || knowledgeDetail.author || '未知作者'}</span>
+                <span className="date">{knowledgeDetail.createdTime || knowledgeDetail.date || '未知日期'}</span>
+                <FavoriteButton 
+                  knowledgeId={knowledgeDetail.id}
+                  onStatusChange={handleFavoriteStatusChange}
+                  style={{ marginLeft: '16px', fontSize: '16px' }}
+                />
+              </div>
+              <div className="tags">
+                {(knowledgeDetail.tags || []).map((tag, index) => (
+                  <div key={index} className="custom-tag">
+                    <span className="tag-icon">
+                      <TagOutlined />
+                    </span>
+                    <span className="tag-text">{tag}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="tags">
-              {(knowledgeDetail.tags || []).map((tag, index) => (
-                <div key={index} className="custom-tag">
-                  <span className="tag-icon">
-                    <TagOutlined />
-                  </span>
-                  <span className="tag-text">{tag}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          {showBackButton && (
             <div className="header-right">
+              {showBackButton && (
+                <Button 
+                  type="primary" 
+                  icon={<ArrowLeftOutlined />} 
+                  size="large"
+                  onClick={() => window.history.back()}
+                  style={{ fontSize: '16px' }}
+                >
+                  返回
+                </Button>
+              )}
               <Button 
-                type="primary" 
-                icon={<ArrowLeftOutlined />} 
+                type="default" 
+                icon={<HistoryOutlined />} 
                 size="large"
-                onClick={() => window.history.back()}
-                style={{ fontSize: '16px' }}
+                loading={historyLoading}
+                onClick={handleOpenHistory}
+                style={{ marginLeft: '8px', fontSize: '16px' }}
               >
-                返回
+                History
               </Button>
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="document-content">
-          {/* 数据表格区域 - 当tableData存在且有数据时才显示 */}
-          {knowledgeDetail.tableData  && knowledgeDetail.tableData.rows.length > 0 &&knowledgeDetail.tableData.columns.length > 0 && (
+        {!showHistory ? (
+          <div className="document-content">
+            {/* 数据表格区域 - 当tableData存在且有数据时才显示 */}
+            {knowledgeDetail.tableData  && knowledgeDetail.tableData.rows.length > 0 &&knowledgeDetail.tableData.columns.length > 0 && (
+              <div className="content-section">
+                <KnowledgeTable tableData={knowledgeDetail.tableData} />
+              </div>
+            )}
+
             <div className="content-section">
-              <KnowledgeTable tableData={knowledgeDetail.tableData} />
+              <div 
+                dangerouslySetInnerHTML={{ 
+                  __html: sanitizeHtmlLinks(knowledgeDetail.description) || '暂无内容' 
+                }} 
+              />
             </div>
-          )}
 
-          <div className="content-section">
-            <div 
-              dangerouslySetInnerHTML={{ 
-                __html: sanitizeHtmlLinks(knowledgeDetail.description) || '暂无内容' 
-              }} 
-            />
-          </div>
-
-          <div className="content-section">
-            <h3>Attachments</h3>
-            <div className="attachment-list">
-              {(knowledgeDetail.attachments || []).map((attachment, index) => (
-                <div key={index} className="attachment-item">
-                  <div className="attachment-header">
-                    <span className="attachment-icon">
-                      {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
-                    </span>
-                    <span className="attachment-name">{attachment.fileName || attachment.name}</span>
-                    
-                     
-                  </div>
-                  
-                  {/* PDF预览组件 - 直接嵌入到附件项中 */}
-                  {(attachment.fileType === 'pdf' || 
-                    attachment.fileType === 'application/pdf' ||
-                    (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
-                    (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
-                    <div className="pdf-preview-embedded">
+            <div className="content-section">
+              <h3>Attachments</h3>
+              <div className="attachment-list">
+                {(knowledgeDetail.attachments || []).map((attachment, index) => (
+                  <div key={index} className="attachment-item">
+                    <div className="attachment-header">
+                      <span className="attachment-icon">
+                        {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
+                      </span>
+                      <span className="attachment-name">{attachment.fileName || attachment.name}</span>
                       
-                      <PdfPreview 
-                        fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
-                        pageNum={1}
-                        bboxes={knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion ? [knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion] : []}
-                      />
+                       
                     </div>
-                  )}
-                  
-                  {/* 如果没有PDF预览，显示原因 */}
-                  {!(attachment.fileType === 'pdf' || 
-                     attachment.fileType === 'application/pdf' ||
-                     (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
-                     (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
-                    <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
-                      非PDF文件，无法预览
-                    </div>
-                  )}
-                </div>
-              ))}
+                    
+                    {/* PDF预览组件 - 直接嵌入到附件项中 */}
+                    {(attachment.fileType === 'pdf' || 
+                      attachment.fileType === 'application/pdf' ||
+                      (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
+                      (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
+                      <div className="pdf-preview-embedded">
+                        
+                        <PdfPreview 
+                          fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
+                          pageNum={1}
+                          bboxes={knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion ? [knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion] : []}
+                        />
+                      </div>
+                    )}
+                    
+                    {/* 如果没有PDF预览，显示原因 */}
+                    {!(attachment.fileType === 'pdf' || 
+                       attachment.fileType === 'application/pdf' ||
+                       (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
+                       (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
+                      <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                        非PDF文件，无法预览
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="content-section">
+              <div className="effective-date">
+                <span>生效时间: {knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate || '未知'}</span>
+              </div>
             </div>
           </div>
+        ) : (
+          !showDiff ? (
+            <KnowledgeHistory
+              documentTitle={knowledgeDetail?.name || knowledgeDetail?.title}
+              versions={historyVersions}
+              currentVersion={historyVersions[0]?.version}
+              onCompare={handleCompareVersions}
+              onClose={handleCloseHistory}
+              loading={diffLoading}
+            />
+          ) : (
+            <KnowledgeDiff
+              documentTitle={knowledgeDetail?.name || knowledgeDetail?.title}
+              fromVersion={diffData.fromVersion}
+              toVersion={diffData.toVersion}
+              fromContent={diffData.fromContent}
+              toContent={diffData.toContent}
+              htmlDiff={diffData.htmlDiff}
+              summary={diffData.summary}
+              attachments={knowledgeDetail?.attachments || []}
+              onClose={handleCloseDiff}
+            />
+          )
+        )}
 
-          <div className="content-section">
-            <div className="effective-date">
-              <span>生效时间: {knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate || '未知'}</span>
-            </div>
-          </div>
-        </div>
-
-        {showFeedback && (
+        {showFeedback && !showHistory && (
           <div className="feedback-section">
             <div className="feedback-header">
               <h3>Feedback</h3>
@@ -247,6 +388,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
           </div>
         )}
       </Card>
+      </Spin>
     </div>
   );
 };

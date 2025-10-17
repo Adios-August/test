@@ -10,7 +10,7 @@ import { Button, Select, Table, Space } from 'antd';
  * - onCompare: (fromVersion, toVersion) => void 比较回调
  * - onClose: () => void 关闭历史视图并返回详情tabs
  */
-const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onCompare, onClose }) => {
+const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onCompare, onClose, loading = false }) => {
   const latestVersion = useMemo(() => currentVersion ?? (versions[0]?.version ?? ''), [currentVersion, versions]);
   const [targetVersion, setTargetVersion] = useState(() => {
     // 默认选择次新版
@@ -55,7 +55,7 @@ const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onComp
             options={versions.map(v => ({ label: String(v.version), value: v.version }))}
             onChange={setTargetVersion}
           />
-          <Button type="primary" onClick={handleShowDiff} disabled={!latestVersion || !targetVersion || latestVersion === targetVersion}>显示</Button>
+          <Button type="primary" onClick={handleShowDiff} disabled={!latestVersion || !targetVersion || latestVersion === targetVersion} loading={loading}>显示</Button>
         </div>
       )}
 
