@@ -5,11 +5,13 @@ import dayjs from 'dayjs';
 import { knowledgeAPI } from '../../../../api/knowledge';
 import { validateTag, normalizeTag, validateKnowledgeForm } from '../utils/knowledgeUtils';
 import { createEmptyTable } from '../utils/tableUtils';
+import { useKnowledgeStore } from '../../../../stores';
 
 export const useKnowledgeForm = (mode = 'add') => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = mode === 'edit';
+  const knowledgeStore = useKnowledgeStore();
   
   // Form data state
   const [formData, setFormData] = useState({
@@ -209,11 +211,16 @@ export const useKnowledgeForm = (mode = 'add') => {
         if (response.code !== 200) {
           throw new Error(response.message || '更新失败');
         }
-  
+
+        // Update the knowledge store with the updated data
+        if (response.data) {
+          knowledgeStore.updateKnowledge(response.data);
+        }
+
         message.success('知识更新成功');
-  
+
         // Note: Attachment cleanup removed since we're not tracking original attachments
-  
+
         navigate('/knowledge-admin/category-management');
   
       } catch (error) {
@@ -247,8 +254,14 @@ export const useKnowledgeForm = (mode = 'add') => {
         }
   
         newKnowledgeId = response.data.id;
+        
+        // Add the new knowledge to the store
+        if (response.data) {
+          knowledgeStore.addKnowledge(response.data);
+        }
+        
         const filesToUpload = formData.attachments.filter(a => a.isLocal && a.file);
-  
+
         // 2. If there are attachments, upload them now using the new ID.
         if (filesToUpload.length > 0) {
           message.info('知识已创建，正在上传附件...');
@@ -260,7 +273,7 @@ export const useKnowledgeForm = (mode = 'add') => {
           
           const results = await Promise.all(uploadPromises);
           const failedUploads = results.filter(res => res.error);
-  
+
           if (failedUploads.length > 0) {
             const failedNames = failedUploads.map(f => f.name).join(', ');
             // The document is created, so we show a success message but warn about the failures.
@@ -271,7 +284,7 @@ export const useKnowledgeForm = (mode = 'add') => {
         } else {
           message.success('知识发布成功');
         }
-  
+
         navigate('/knowledge-admin/category-management');
   
       } catch (error) {
