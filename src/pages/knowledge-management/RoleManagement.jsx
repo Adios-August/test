@@ -291,6 +291,44 @@ const RoleManagement = () => {
           />
        
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '14px', color: '#333' }}>Staff ID</span>
+          <Input
+            placeholder="请输入Staff ID"
+            value={keyword}
+            style={{ width: 200 }}
+            onChange={(e) => setKeyword(e.target.value)}
+            onPressEnter={() => { setPage(1); fetchData(1, size); }}
+          />
+          <Button 
+            type="primary"
+            onClick={() => { setPage(1); fetchData(1, size); }}
+          >
+            查询
+          </Button>
+          <Button 
+            onClick={() => {
+              setKeyword('');
+              setWsFilter('ALL');
+              setPage(1);
+              (async () => {
+                setLoading(true);
+                try {
+                  const res = await http.get('/admin/users', { page: 1, size, keyword: '', workspace: 'ALL' });
+                  const records = res?.data?.records || res?.records || [];
+                  setData(records);
+                  setTotal(res?.data?.total || res?.total || records.length);
+                } catch (e) {
+                  message.error('加载失败');
+                } finally {
+                  setLoading(false);
+                }
+              })();
+            }}
+          >
+            重置
+          </Button>
+        </div>
         
       </div>
 

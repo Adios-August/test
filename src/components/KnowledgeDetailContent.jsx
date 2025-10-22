@@ -37,6 +37,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
   const favoriteStatusInitRef = useRef(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   // 当feedbackTypes加载完成后，自动选中第一条
   useEffect(() => {
@@ -107,32 +108,49 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
       return;
     }
 
+    // 初始化diff数据并立即展示视图
+    const from = historyVersions.find(v => String(v.version) === String(fromVersion));
+    const to = historyVersions.find(v => String(v.version) === String(toVersion));
+    setDiffData({
+      fromVersion,
+      toVersion,
+      fromContent: from?.content || '',
+      toContent: to?.content || '',
+      htmlDiff: '',
+      summary: '',
+    });
+    setShowDiff(true);
+
+    // 先加载HTML差异（较快）
     setDiffLoading(true);
-    knowledgeAPI.getKnowledgeDiff(knowledgeId, String(fromVersion), String(toVersion))
+    knowledgeAPI.getKnowledgeDiffHtml(knowledgeId, String(fromVersion), String(toVersion))
       .then((resp) => {
-        const data = resp?.data || resp;
-        const htmlDiff = data?.htmlDiff || data?.html_diff || '';
-        const summary = data?.summary || '';
-
-        const from = historyVersions.find(v => String(v.version) === String(fromVersion));
-        const to = historyVersions.find(v => String(v.version) === String(toVersion));
-
-        setDiffData({
-          fromVersion,
-          toVersion,
-          fromContent: from?.content || '',
-          toContent: to?.content || '',
-          htmlDiff,
-          summary,
-        });
-        setShowDiff(true);
+        const data = resp?.data ?? resp;
+        const htmlDiff = typeof data === 'string' ? data : (data?.htmlDiff || data?.html_diff || data?.html || '');
+        setDiffData(prev => ({ ...prev, htmlDiff }));
       })
       .catch((err) => {
-        console.error('获取版本差异失败:', err);
-        message.error('获取版本差异失败');
+        console.error('获取HTML差异失败:', err);
+        message.error('获取HTML差异失败');
       })
       .finally(() => {
         setDiffLoading(false);
+      });
+
+    // 并行加载AI摘要（较慢，显示loading）
+    setSummaryLoading(true);
+    knowledgeAPI.getKnowledgeDiffSummary(knowledgeId, String(fromVersion), String(toVersion))
+      .then((resp) => {
+        const data = resp?.data ?? resp;
+        const summary = typeof data === 'string' ? data : (data?.summary || data?.text || '');
+        setDiffData(prev => ({ ...prev, summary }));
+      })
+      .catch((err) => {
+        console.error('获取AI摘要失败:', err);
+        // 不阻断用户查看HTML差异，只提示或静默
+      })
+      .finally(() => {
+        setSummaryLoading(false);
       });
   };
 
@@ -239,29 +257,31 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
                 ))}
               </div>
             </div>
-            <div className="header-right">
-              {showBackButton && (
+            {!showHistory && (
+              <div className="header-right">
+                {showBackButton && (
+                  <Button 
+                    type="primary" 
+                    icon={<ArrowLeftOutlined />} 
+                    size="large"
+                    onClick={() => window.history.back()}
+                    style={{ fontSize: '16px' }}
+                  >
+                    返回
+                  </Button>
+                )}
                 <Button 
-                  type="primary" 
-                  icon={<ArrowLeftOutlined />} 
+                  type="default" 
+                  icon={<HistoryOutlined />} 
                   size="large"
-                  onClick={() => window.history.back()}
-                  style={{ fontSize: '16px' }}
+                  loading={historyLoading}
+                  onClick={handleOpenHistory}
+                  style={{ marginLeft: '8px', fontSize: '16px' }}
                 >
-                  返回
+                  History
                 </Button>
-              )}
-              <Button 
-                type="default" 
-                icon={<HistoryOutlined />} 
-                size="large"
-                loading={historyLoading}
-                onClick={handleOpenHistory}
-                style={{ marginLeft: '8px', fontSize: '16px' }}
-              >
-                History
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
 
         {!showHistory ? (
@@ -349,6 +369,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
               toContent={diffData.toContent}
               htmlDiff={diffData.htmlDiff}
               summary={diffData.summary}
+              summaryLoading={summaryLoading}
               attachments={knowledgeDetail?.attachments || []}
               onClose={handleCloseDiff}
             />

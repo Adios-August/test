@@ -117,9 +117,19 @@ export const knowledgeAPI = {
     return http.get("/engagement/favorites", params);
   },
 
-  // 获取版本差异
+  // 获取版本差异（旧：综合接口）
   getKnowledgeDiff: (knowledgeId, from, to) => {
     return http.get(`/knowledge/${knowledgeId}/diff`, { from, to });
+  },
+
+  // 获取HTML差异（新接口）
+  getKnowledgeDiffHtml: (knowledgeId, from, to) => {
+    return http.get(`/knowledge/${knowledgeId}/diff/html`, { from, to });
+  },
+
+  // 获取AI摘要（新接口，可能较慢）
+  getKnowledgeDiffSummary: (knowledgeId, from, to) => {
+    return http.get(`/knowledge/${knowledgeId}/diff/summary`, { from, to });
   },
 };
 

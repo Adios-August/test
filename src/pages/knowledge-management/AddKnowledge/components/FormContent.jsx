@@ -95,7 +95,7 @@ const FormContent = ({
             checked={formData.disclaimer}
             onChange={(e) => setFormData(prev => ({ ...prev, disclaimer: e.target.checked }))}
           >
-            我已知晓Jarvis平台不适用于上传任何restricted data及个人信息（包含但不限于客户及员工信息）
+            我已知晓 SMART SEARCH 平台不适用于上传任何restricted data及个人信息（包含但不限于客户及员工信息）
           </Checkbox>
         </div>
       </div>

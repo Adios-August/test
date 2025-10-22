@@ -1,0 +1,104 @@
+// 搜索建议区域样式
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  max-height: 400px;
+  overflow: hidden;
+  border: 1px solid #e8e8e8;
+}
+
+.search-suggestions .suggestions-content {
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  padding: 0;
+}
+
+.search-suggestions .history-questions,
+.search-suggestions .recommended-questions {
+  padding: 0;
+}
+
+.search-suggestions .section-title {
+  padding: 12px 16px 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: left;
+}
+
+.search-suggestions .question-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  text-align: left;
+  text-indent: 8px;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid #f9f9f9;
+}
+
+.search-suggestions .question-item:hover {
+  background: #f5f5f5;
+  color: var(--ant-primary-color);
+}
+
+.search-suggestions .question-item:last-child {
+  border-bottom: none;
+}
+
+.search-suggestions .show-more-btn {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ant-primary-color);
+  text-align: center;
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.search-suggestions .show-more-btn:hover {
+  background: #f0f0f0;
+  color: var(--ant-primary-color-hover);
+}
+
+.search-suggestions .no-history,
+.search-suggestions .no-recommendations {
+  padding: 20px 16px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.search-suggestions .no-history p,
+.search-suggestions .no-recommendations p {
+  margin: 0;
+}
+
+.search-suggestions .loading-questions {
+  padding: 20px 16px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.search-suggestions .loading-questions span {
+  margin: 0;
+}
+
+.search-suggestions .recommended-questions {
+  border-top: 1px solid #f0f0f0;
+}

@@ -12,6 +12,7 @@ import {
 } from "@ant-design/icons";
 import { observer } from "mobx-react-lite";
 import CommonSidebar from "../../components/CommonSidebar";
+import SearchSuggestions from "../../components/SearchSuggestions";
 import { homeAPI } from "../../api/home";
 import { http } from "../../utils/request";
 import { addSearchHistory } from "../../utils/searchHistoryAPI";
@@ -25,17 +26,11 @@ const Home = observer(() => {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [showAllHistory, setShowAllHistory] = useState(false);
-  const [showAllRecommended, setShowAllRecommended] = useState(false);
   const [popularKnowledge, setPopularKnowledge] = useState([]);
   const [latestKnowledgeData, setLatestKnowledgeData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [latestLoading, setLatestLoading] = useState(false);
   const [hotDownloadsLoading, setHotDownloadsLoading] = useState(false);
-  const [recommendedQuestions, setRecommendedQuestions] = useState([]);
-  const [recommendedLoading, setRecommendedLoading] = useState(false);
-  const [historyQuestions, setHistoryQuestions] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const authStore = useAuthStore();
 
   // 加载所有数据的函数
@@ -44,9 +39,7 @@ const Home = observer(() => {
       await Promise.all([
         fetchPopularKnowledge(),
         fetchLatestKnowledge(),
-        fetchHotDownloads(),
-        fetchRecommendedQuestions(),
-        fetchHistoryQuestions()
+        fetchHotDownloads()
       ]);
     } catch (error) {
       console.error('加载数据失败:', error);
@@ -130,73 +123,7 @@ const Home = observer(() => {
     }
   };
 
-  // 获取推荐问题
-  const fetchRecommendedQuestions = async () => {
-    setRecommendedLoading(true);
-    try {
-      const response = await homeAPI.getRecommendedQuestions(10);
-      if (response.code === 200) {
-        setRecommendedQuestions(response.data || []);
-      } else {
-        message.error(response.message || '获取推荐问题失败');
-        setRecommendedQuestions([]);
-      }
-    } catch (error) {
-      console.error('获取推荐问题失败:', error);
-      message.error('获取推荐问题失败，请稍后重试');
-      setRecommendedQuestions([]);
-    } finally {
-      setRecommendedLoading(false);
-    }
-  };
 
-  // 获取历史问题
-  const fetchHistoryQuestions = async () => {
-   
-    setHistoryLoading(true);
-    try {
-      // 从localStorage获取用户信息（使用authStore的存储key）
-      const authStoreStr = localStorage.getItem('authStore');
-       
-      
-      const authStore = JSON.parse(authStoreStr || '{}');
-      
-      
-      const userId = authStore.user?.id;
-      
-      
-      if (!userId) {
-       
-        setHistoryQuestions([]);
-        return;
-      }
-      
-      
-      const response = await homeAPI.getHistoryQuestions(userId);
-     
-      
-      if (response.code === 200) {
-       
-        // 将字符串数组转换为对象数组，以适配渲染逻辑
-        const formattedData = (response.data || []).map((query, index) => ({
-          id: index,
-          query: query
-        }));
-        
-        setHistoryQuestions(formattedData);
-      } else {
-        
-        message.error(response.message || '获取历史问题失败');
-        setHistoryQuestions([]);
-      }
-    } catch (error) {
-      console.error('获取历史问题异常:', error);
-      setHistoryQuestions([]);
-    } finally {
-    
-      setHistoryLoading(false);
-    }
-  };
 
   // 处理搜索
   const handleSearch = () => {
@@ -223,21 +150,8 @@ const Home = observer(() => {
     }
   };
 
-  // 处理历史问题点击
-  const handleHistoryQuestionClick = (question) => {
-    setSearchValue(question);
-    // 添加搜索历史
-    addSearchHistory(question);
-    // 自动跳转到知识库页面
-    navigate("/knowledge", { 
-      state: { 
-        searchKeyword: question
-      } 
-    });
-  };
-
-  // 处理推荐问题点击
-  const handleRecommendedQuestionClick = (question) => {
+  // 处理搜索建议问题点击
+  const handleSuggestionQuestionClick = (question) => {
     // 如果question是对象，提取问题文本
     const questionText = typeof question === 'string' ? question : question.text || question.title || question;
     setSearchValue(questionText);
@@ -249,12 +163,6 @@ const Home = observer(() => {
         searchKeyword: questionText
       } 
     });
-  };
-
-  // 重置搜索建议状态
-  const resetSearchSuggestions = () => {
-    setShowAllHistory(false);
-    setShowAllRecommended(false);
   };
 
   // 处理标签点击
@@ -330,98 +238,11 @@ const Home = observer(() => {
                   />
 
                   {/* 搜索建议区域 */}
-                  {searchFocused && (
-                    <div 
-                      className="search-suggestions"
-                      onMouseDown={(e) => e.preventDefault()}
-                    >
-                      <div className="suggestions-content">
-                        <div className="history-questions">
-                          <div className="section-title">历史问题</div>
-                          {historyLoading ? (
-                            <div className="loading-questions">
-                              <Spin size="small" />
-                              <span>加载中...</span>
-                            </div>
-                          ) : historyQuestions.length > 0 ? (
-                            <>
-                              {(showAllHistory ? historyQuestions : historyQuestions.slice(0, 2)).map((historyItem) => (
-                                <div 
-                                  key={historyItem.id} 
-                                  className="question-item"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleHistoryQuestionClick(historyItem.query);
-                                  }}
-                                >
-                                  {historyItem.query}
-                                </div>
-                              ))}
-                              {historyQuestions.length > 2 && (
-                                <div 
-                                  className="show-more-btn"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowAllHistory(!showAllHistory);
-                                  }}
-                                >
-                                  {showAllHistory ? '收起' : `查看更多 (${historyQuestions.length - 2})`}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="no-history">
-                              <p>暂无搜索历史</p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="recommended-questions">
-                          <div className="section-title">推荐问题</div>
-                          {recommendedLoading ? (
-                            <div className="loading-questions">
-                              <Spin size="small" />
-                              <span>加载中...</span>
-                            </div>
-                          ) : recommendedQuestions.length > 0 ? (
-                            <>
-                              {(showAllRecommended ? recommendedQuestions : recommendedQuestions.slice(0, 2)).map((question, index) => (
-                                <div 
-                                  key={index} 
-                                  className="question-item"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRecommendedQuestionClick(question);
-                                  }}
-                                >
-                                  {question}
-                                </div>
-                              ))}
-                              {recommendedQuestions.length > 2 && (
-                                <div 
-                                  className="show-more-btn"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setShowAllRecommended(!showAllRecommended);
-                                  }}
-                                >
-                                  {showAllRecommended ? '收起' : `查看更多 (${recommendedQuestions.length - 2})`}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="no-recommendations">
-                              <p>暂无推荐问题</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <SearchSuggestions
+                    visible={searchFocused}
+                    onQuestionClick={handleSuggestionQuestionClick}
+                    onMouseDown={(e) => e.preventDefault()}
+                  />
                 </div>
 
                 <div className="hot-tags-section">

@@ -56,6 +56,7 @@ import { useKnowledgeStore, useAuthStore, useStore } from "../../stores";
 import { addSearchHistory } from "../../utils/searchHistoryAPI";
 
 import "./Knowledge.scss";
+import SearchSuggestions from "../../components/SearchSuggestions";
 
 // HTML标签清理函数
 const stripHtmlTags = (htmlString) => {
@@ -111,6 +112,7 @@ const Knowledge = observer(() => {
   const [searchCurrentPage, setSearchCurrentPage] = useState(1); // 搜索结果分页
   const [questionInput, setQuestionInput] = useState(""); // 问题输入框
   const [searchValue, setSearchValue] = useState(""); // 搜索输入值
+  const [searchFocused, setSearchFocused] = useState(false); // 搜索框焦点状态，用于显示建议
   const [currentCategoryId, setCurrentCategoryId] = useState(null); // 当前选中的分类ID
   const [isCategorySearchMode, setIsCategorySearchMode] = useState(false); // 是否处于分类搜索模式
   const [showAISourceModules, setShowAISourceModules] = useState(false); // 是否显示AI和source模块，默认不显示
@@ -1041,6 +1043,8 @@ const Knowledge = observer(() => {
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onPressEnter={(e) => handleSearch(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
               prefix={<SearchOutlined />}
               suffix={
                 <Button
@@ -1064,6 +1068,11 @@ const Knowledge = observer(() => {
                 borderRadius: "8px",
                 boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
               }}
+            />
+            <SearchSuggestions
+              visible={searchFocused}
+              onQuestionClick={(q) => handleSearch(q)}
+              onMouseDown={(e) => e.preventDefault()}
             />
           </div>
         </div>
