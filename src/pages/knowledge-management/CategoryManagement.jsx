@@ -187,6 +187,12 @@ const CategoryManagement = () => {
     navigate(`/add-knowledge?parentId=${parentId}&nodeType=${nodeType}`);
   };
 
+  // 处理双击编辑操作
+  const handleRowDoubleClick = (record) => {
+    // 导航到编辑知识页面
+    navigate(`/edit-knowledge/${record.id}`);
+  };
+
   // 处理编辑操作
   const handleEdit = (record) => {
     setEditingRecord(record);
@@ -253,8 +259,7 @@ const CategoryManagement = () => {
     
     <div className="management-content">
       <div className="content-header">
-          <div></div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <RoleProtectedComponent permission="canManageCategories">
             <Button 
               type="primary" 
@@ -262,15 +267,6 @@ const CategoryManagement = () => {
               onClick={() => handleAddKnowledge(null, 'folder')}
             >
               一级菜单
-            </Button>
-          </RoleProtectedComponent>
-          <RoleProtectedComponent permission="canAddKnowledge">
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />}
-              onClick={() => handleAddKnowledge(null, 'doc')}
-            >
-              新增知识
             </Button>
           </RoleProtectedComponent>
         </div>
@@ -282,6 +278,10 @@ const CategoryManagement = () => {
           dataSource={dataSource}
           loading={loading}
           pagination={false}
+          onRow={(record) => ({
+            onDoubleClick: () => handleRowDoubleClick(record),
+            style: { cursor: 'pointer' }
+          })}
           expandable={{
             defaultExpandAllRows: false,
             indentSize: 20,
