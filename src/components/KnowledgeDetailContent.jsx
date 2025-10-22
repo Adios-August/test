@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Button, Avatar, Select, Input, message, Tooltip, Card, Spin } from 'antd';
+import { Button, Avatar, Select, Input, message, Tooltip, Card, Spin, Modal } from 'antd';
 import {
   FilePdfOutlined, FileExcelOutlined, TagOutlined,
   SendOutlined, UserOutlined, ArrowLeftOutlined, HistoryOutlined,
@@ -38,6 +38,10 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
   const [historyLoading, setHistoryLoading] = useState(false);
   const [diffLoading, setDiffLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  // 查看指定版本内容的弹窗状态
+  const [versionViewVisible, setVersionViewVisible] = useState(false);
+  const [versionViewLoading, setVersionViewLoading] = useState(false);
+  const [versionViewData, setVersionViewData] = useState({ version: '', content: '', tableData: null, attachments: [], tags: [], editor: '', date: '', effectiveDate: '' });
 
   // 当feedbackTypes加载完成后，自动选中第一条
   useEffect(() => {
@@ -50,7 +54,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
   const handleOpenHistory = () => {
     const knowledgeId = knowledgeDetail?.id;
     if (!knowledgeId) {
-      message.info('暂无可用历史记录');
+      message.info('暂可用历史记录');
       return;
     }
 
@@ -99,6 +103,33 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
   const handleCloseHistory = () => {
     setShowHistory(false);
     setShowDiff(false);
+  };
+
+  const handleViewVersion = async (versionNumber) => {
+    const knowledgeId = knowledgeDetail?.id;
+    if (!knowledgeId) {
+      message.warning('缺少知识ID，无法查看版本内容');
+      return;
+    }
+
+    setVersionViewVisible(true);
+    setVersionViewLoading(true);
+    try {
+      const resp = await knowledgeAPI.getKnowledgeVersion(knowledgeId, String(versionNumber));
+      const data = resp?.data ?? resp;
+      const content = typeof data === 'string' ? data : (data?.content || data?.description || data?.htmlContent || data?.html || '');
+      const versionMeta = historyVersions.find(v => String(v.version) === String(versionNumber));
+      const tableData = data?.tableData || data?.table || null;
+      const attachments = Array.isArray(data?.attachments) ? data.attachments : (knowledgeDetail?.attachments || []);
+      const tags = Array.isArray(data?.tags) ? data.tags : (knowledgeDetail?.tags || []);
+      const effectiveDate = data?.effectiveStartTime || data?.effectiveDate || knowledgeDetail?.effectiveStartTime || knowledgeDetail?.effectiveDate || '';
+      setVersionViewData({ version: versionNumber, content, tableData, attachments, tags, editor: versionMeta?.editor || '', date: versionMeta?.date || '', effectiveDate });
+    } catch (err) {
+      console.error('获取版本内容失败:', err);
+      message.error('获取版本内容失败');
+    } finally {
+      setVersionViewLoading(false);
+    }
   };
 
   const handleCompareVersions = (fromVersion, toVersion) => {
@@ -353,13 +384,14 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
         ) : (
           !showDiff ? (
             <KnowledgeHistory
-              documentTitle={knowledgeDetail?.name || knowledgeDetail?.title}
-              versions={historyVersions}
-              currentVersion={historyVersions[0]?.version}
-              onCompare={handleCompareVersions}
-              onClose={handleCloseHistory}
-              loading={diffLoading}
-            />
+               documentTitle={knowledgeDetail?.name || knowledgeDetail?.title}
+               versions={historyVersions}
+               currentVersion={historyVersions[0]?.version}
+               onCompare={handleCompareVersions}
+               onViewVersion={handleViewVersion}
+               onClose={handleCloseHistory}
+               loading={diffLoading}
+             />
           ) : (
             <KnowledgeDiff
               documentTitle={knowledgeDetail?.name || knowledgeDetail?.title}
@@ -408,6 +440,103 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
             </div>
           </div>
         )}
+        {/* 版本内容查看弹窗 */}
+        <Modal
+          title={`版本内容：${String(versionViewData.version || '')}`}
+          open={versionViewVisible}
+          onCancel={() => setVersionViewVisible(false)}
+          footer={null}
+          width={800}
+          destroyOnClose
+        >
+          {versionViewLoading ? (
+            <div style={{ textAlign: 'center', padding: 24 }}>
+              <Spin />
+            </div>
+          ) : (
+            <div style={{ maxHeight: 540, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Avatar size="small" icon={<UserOutlined />} />
+                  <span style={{ fontSize: 13 }}>{versionViewData.editor || (knowledgeDetail.createdBy || knowledgeDetail.author || '未知作者')}</span>
+                  <span style={{ fontSize: 12, color: '#999' }}>{versionViewData.date || knowledgeDetail.createdTime || knowledgeDetail.date || ''}</span>
+                </div>
+                <span style={{ fontSize: 12, color: '#666' }}>版本 {String(versionViewData.version || '')}</span>
+              </div>
+
+              {Array.isArray(versionViewData.tags) && versionViewData.tags.length > 0 && (
+                <div className="tags" style={{ marginBottom: 12 }}>
+                  {versionViewData.tags.map((tag, index) => (
+                    <div key={index} className="custom-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#f5f5f5', borderRadius: 4, padding: '2px 6px', marginRight: 6 }}>
+                      <span className="tag-icon" style={{ fontSize: 12 }}>
+                        <TagOutlined />
+                      </span>
+                      <span className="tag-text" style={{ fontSize: 12 }}>{tag}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {versionViewData.tableData && versionViewData.tableData.rows && versionViewData.tableData.columns && versionViewData.tableData.rows.length > 0 && versionViewData.tableData.columns.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <KnowledgeTable tableData={versionViewData.tableData} />
+                </div>
+              )}
+
+              <div style={{ marginBottom: 16 }}>
+                <div 
+                  dangerouslySetInnerHTML={{ 
+                    __html: sanitizeHtmlLinks(versionViewData.content) || '暂无内容' 
+                  }} 
+                />
+              </div>
+
+              {Array.isArray(versionViewData.attachments) && versionViewData.attachments.length > 0 && (
+                <div>
+                  <h4>附件</h4>
+                  <div className="attachment-list">
+                    {versionViewData.attachments.map((attachment, index) => (
+                      <div key={index} className="attachment-item" style={{ marginBottom: 12 }}>
+                        <div className="attachment-header" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span className="attachment-icon">
+                            {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
+                          </span>
+                          <span className="attachment-name">{attachment.fileName || attachment.name}</span>
+                        </div>
+                        {(attachment.fileType === 'pdf' || 
+                          attachment.fileType === 'application/pdf' ||
+                          (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
+                          (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
+                          <div className="pdf-preview-embedded" style={{ marginTop: 8 }}>
+                            <PdfPreview 
+                              fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 
+                              pageNum={1}
+                              bboxes={knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion ? [knowledgeDetail.bbox_union || knowledgeDetail.bboxUnion] : []}
+                            />
+                          </div>
+                        )}
+                        {!(attachment.fileType === 'pdf' || 
+                           attachment.fileType === 'application/pdf' ||
+                           (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
+                           (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
+                          <div style={{ fontSize: 12, color: '#999', marginTop: 8 }}>
+                            非PDF文件，无法预览
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(versionViewData.effectiveDate || knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate) && (
+                <div className="effective-date" style={{ marginTop: 12 }}>
+                  <span>生效时间: {versionViewData.effectiveDate || knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate || '未知'}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </Modal>
       </Card>
       </Spin>
     </div>

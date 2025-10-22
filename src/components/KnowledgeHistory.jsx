@@ -9,8 +9,9 @@ import { Button, Select, Table, Space } from 'antd';
  * - currentVersion: 当前版本号（可选，默认取 versions[0].version）
  * - onCompare: (fromVersion, toVersion) => void 比较回调
  * - onClose: () => void 关闭历史视图并返回详情tabs
+ * - onViewVersion: (versionNumber) => void 点击查看该版本内容
  */
-const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onCompare, onClose, loading = false }) => {
+const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onCompare, onClose, loading = false, onViewVersion }) => {
   const latestVersion = useMemo(() => currentVersion ?? (versions[0]?.version ?? ''), [currentVersion, versions]);
   const [targetVersion, setTargetVersion] = useState(() => {
     // 默认选择次新版
@@ -24,6 +25,11 @@ const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onComp
       <a href="#" onClick={(e) => e.preventDefault()}>{text}</a>
     ) },
     { title: '发布日期', dataIndex: 'date', key: 'date', width: 160 },
+    { title: '操作', key: 'actions', width: 120, render: (_, row) => (
+      <Space>
+        <Button size="small" onClick={() => onViewVersion?.(row.version)}>查看</Button>
+      </Space>
+    ) },
   ];
 
   const handleShowDiff = () => {
@@ -64,8 +70,7 @@ const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onComp
         rowKey={(row) => String(row.version)}
         columns={columns}
         dataSource={versions}
-        pagination={false}
-        locale={{ emptyText: '无历史记录' }}
+        pagination={{ pageSize: 10 }}
       />
     </div>
   );

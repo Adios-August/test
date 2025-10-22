@@ -56,6 +56,11 @@ export const knowledgeAPI = {
     return http.get(`/knowledge/${knowledgeId}/versions`);
   },
 
+  // 新增：获取指定版本内容
+  getKnowledgeVersion: (knowledgeId, versionNumber) => {
+    return http.get(`/knowledge/${knowledgeId}/versions/${versionNumber}`);
+  },
+
   // 创建知识
   createKnowledge: (data) => {
     return http.post("/knowledge", data);
