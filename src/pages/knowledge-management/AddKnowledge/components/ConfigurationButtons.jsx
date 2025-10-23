@@ -15,36 +15,44 @@ const ConfigurationButtons = ({
   attachmentButtonRef,
   onPopupToggle 
 }) => {
+  // Check if required fields are filled
+  const hasTags = formData.tags && formData.tags.length > 0;
+  const hasVisibility = formData.privateToRoles && formData.privateToRoles.length > 0;
+  const hasTime = formData.effectiveTime && formData.effectiveTime[0] && formData.effectiveTime[1];
+
   return (
     <div className="config-buttons">
       <button
         ref={tagsButtonRef}
-        className={`config-link-button ${formData.tags.length > 0 ? 'has-content' : ''}`}
+        className={`config-link-button ${hasTags ? 'has-content' : 'required-field'}`}
         onClick={() => onPopupToggle('tags', tagsButtonRef)}
       >
         <TagsOutlined style={{ marginRight: 4 }} />
         标签管理
+        {!hasTags && <span className="required-indicator">*</span>}
         {renderTagsDisplay(formData.tags)}
       </button>
       
       <button
         ref={visibilityButtonRef}
-        className={`config-link-button ${formData.privateToRoles.length > 0 ? 'has-content' : ''}`}
+        className={`config-link-button ${hasVisibility ? 'has-content' : 'required-field'}`}
         onClick={() => onPopupToggle('visibility', visibilityButtonRef)}
       >
         <EyeOutlined style={{ marginRight: 4 }} />
         可见范围
+        {!hasVisibility && <span className="required-indicator">*</span>}
         {renderVisibilityDisplay(formData.privateToRoles)}
       </button>
       
       <button
         ref={timeButtonRef}
-        className={`config-link-button ${formData.effectiveTime && formData.effectiveTime[0] ? 'has-time-config' : ''}`}
+        className={`config-link-button ${hasTime ? 'has-time-config' : 'required-field'}`}
         onClick={() => onPopupToggle('time', timeButtonRef)}
       >
         <CalendarOutlined style={{ marginRight: 4 }} />
         有效时间
-        {formData.effectiveTime && formData.effectiveTime[0] && (
+        {!hasTime && <span className="required-indicator">*</span>}
+        {hasTime && (
           <span className="status-indicator">●</span>
         )}
       </button>

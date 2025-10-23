@@ -259,7 +259,8 @@ const CategoryManagement = () => {
     
     <div className="management-content">
       <div className="content-header">
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div></div>
+        <div style={{ display: 'flex', gap: '12px' }}>
           <RoleProtectedComponent permission="canManageCategories">
             <Button 
               type="primary" 
