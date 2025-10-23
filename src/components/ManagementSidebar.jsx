@@ -12,7 +12,7 @@ import './ManagementSidebar.scss';
 const { Sider } = Layout;
 
 const ManagementSidebar = ({ 
-  width = 250,
+  width = 280,
   height = "calc(100vh - 135px)",
  
 }) => {
@@ -25,12 +25,12 @@ const ManagementSidebar = ({
     {
       key: 'role-management',
       icon: <UserOutlined />,
-      label: '角色管理',
+      label: 'Users',
     },
     {
       key: 'category-management',
       icon: <FolderOutlined />,
-      label: '栏目管理',
+      label: 'Categories',
     },
     {
       key: 'queries',

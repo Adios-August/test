@@ -12,11 +12,11 @@ const RecommendedQuestions = ({
 
   return (
     <div className="recommended-questions">
-      <div className="section-title">推荐问题</div>
+      <div className="section-title">Recommend</div>
       {loading ? (
         <div className="loading-questions">
           <Spin size="small" />
-          <span>加载中...</span>
+          <span>Loading...</span>
         </div>
       ) : questions.length > 0 ? (
         <>
@@ -42,13 +42,13 @@ const RecommendedQuestions = ({
                 onShowAllToggle();
               }}
             >
-              {showAll ? '收起' : `查看更多 (${questions.length - 2})`}
+              {showAll ? 'Fold Up' : `More (${questions.length - 2})`}
             </div>
           )}
         </>
       ) : (
         <div className="no-recommendations">
-          <p>暂无推荐问题</p>
+          <p>There are currently no recommended issues</p>
         </div>
       )}
     </div>

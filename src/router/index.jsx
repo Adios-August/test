@@ -16,6 +16,9 @@ import FeedbackManagement from '../pages/knowledge-management/FeedbackManagement
 import Favorites from '../pages/favorites/Favorites';
 import Login from '../pages/login/Login';
 import RouteGuard from './RouteGuard';
+import Messages from '../pages/messages/Messages'
+import MessageChat from '../pages/messages/MessageChat'
+import MessageThread from '../pages/messages/MessageThread'
 
 const router = createBrowserRouter([
   {
@@ -66,7 +69,19 @@ const router = createBrowserRouter([
             path: '/favorites',
             element: <Favorites />,
           },
-           
+          {
+            path: '/messages',
+            element: <Messages />,
+          },
+          {
+            path: '/messages/chat/:userId',
+            element: <MessageChat />,
+          },
+          {
+            path: '/messages/thread/:threadId',
+            element: <MessageThread />,
+          },
+          
           {
             path: '/knowledge-admin',
             element: <KnowledgeManagement />,

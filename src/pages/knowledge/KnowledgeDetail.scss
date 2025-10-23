@@ -186,7 +186,7 @@
     padding: 24px;
     color: #333333;
     background: white;
-    margin: 16px 16px 16px 16px;
+    margin: 0 12px 0 0;
     border-radius: 12px;
     min-height: 64px;
     transition: all 0.3s ease;
@@ -338,11 +338,7 @@
         color: #666666;
         font-size: 14px;
 
-        .info-icon {
-          margin-right: 8px;
-          font-size: 16px;
-          font-weight: bold;
-        }
+        
       }
 
       .search-loading {
@@ -429,7 +425,7 @@
   }
 
   .detail-content {
-    margin: 16px 16px 16px 16px;
+  
     background: #e9f0fb;
     height: calc(100vh - 134px);
     border-radius: 12px;
@@ -917,3 +913,4 @@
   }
 }
 
+ 

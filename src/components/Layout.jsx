@@ -11,15 +11,15 @@ import "./Layout.scss";
 const { Header, Content } = Layout;
 import Logo from "../assets/image/logo.png";
 
-// Base menu items that are available to all users
+ 
 const baseMenuItems = [
-  { key: "/", label: "首页" },
-  { key: "/knowledge", label: "知识库" },
+  { key: "/", label: "Home" },
+  { key: "/knowledge", label: "Knowledge Base" },
 ];
 
-// Additional menu items that require specific permissions
+ 
 const adminMenuItems = [
-  { key: "/knowledge-admin", label: "知识库管理" },
+  { key: "/knowledge-admin", label: "Knowledge Management" },
   // { key: "/stats", label: "数据统计" }, // 暂时隐藏数据统计模块
 ];
 
@@ -102,11 +102,18 @@ const LayoutComponent = observer(() => {
           </div>
           <div className="header-user">
             <Space>
-              <Tooltip title="收藏夹" placement="bottom">
+              <Tooltip title="Favorites" placement="bottom">
                 <Button 
                   type="text" 
                   icon={<StarOutlined />} 
                   onClick={() => navigate('/favorites')}
+                />
+              </Tooltip>
+              <Tooltip title="InMails" placement="bottom">
+                <Button 
+                  type="text" 
+                  icon={<MessageOutlined />} 
+                  onClick={() => navigate('/messages')}
                 />
               </Tooltip>
               <Dropdown
@@ -128,7 +135,7 @@ const LayoutComponent = observer(() => {
                   {authStore.currentWorkspace || authStore.user?.workspace?.split(',')[0] || '未设置workspace'}
                 </div>
               </Dropdown>
-               <span className="wpd-button">欢迎您，{authStore.user?.displayName ||   ''}</span>
+               <span className="wpd-button">{authStore.user?.displayName ||   ''}</span>
               <Dropdown
                 menu={{ items: userMenuItems }}
                 placement="bottomRight"

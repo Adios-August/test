@@ -1536,7 +1536,7 @@ const KnowledgeQA = () => {
                         ) : isLoading && message.id === messages[messages.length - 1]?.id ? (
                           <div className="thinking-indicator">
                             <Spin size="small" />
-                            <span>AI正在思考中...</span>
+                            <span>AI Thinking...</span>
                           </div>
                         ) : (
                           <span />

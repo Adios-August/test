@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Space, Select, message, Input, Button, Modal, Form, Dropdown, Menu } from 'antd';
+import { Table, Space, Select, message, Input, Button, Modal, Form, Dropdown, Menu, Tooltip } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { http } from '../../utils/request';
 import { workspaceAPI } from '../../api/workspace';
@@ -274,7 +274,8 @@ const RoleManagement = () => {
               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
           />
-          <Button 
+          <Tooltip title="Add Workspace"> 
+            <Button 
             type="primary" 
             icon={<PlusOutlined />}
             style={{ 
@@ -289,6 +290,7 @@ const RoleManagement = () => {
             }}
             onClick={() => setWorkspaceModalVisible(true)}
           />
+          </Tooltip>
        
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -304,7 +306,7 @@ const RoleManagement = () => {
             type="primary"
             onClick={() => { setPage(1); fetchData(1, size); }}
           >
-            查询
+            Search
           </Button>
           <Button 
             onClick={() => {
@@ -326,7 +328,7 @@ const RoleManagement = () => {
               })();
             }}
           >
-            重置
+            Reset
           </Button>
         </div>
         
@@ -344,7 +346,7 @@ const RoleManagement = () => {
             total, 
             showSizeChanger: false,
             showQuickJumper: true,
-            showTotal: (total, range) => `每页${size}条 共${total}条记录`,
+           
             onChange: (p, s) => { setPage(p); setSize(s); fetchData(p, s);} 
           }}
           expandable={{
@@ -455,16 +457,16 @@ const RoleManagement = () => {
         >
           <Form.Item
             name="workspaceName"
-            label="新建workspace名称"
-            rules={[{ required: true, message: '请输入workspace名称' }]}
+            label="Add Workspace"
+            rules={[{ required: true, message: 'Place enter workspace name' }]}
           >
-            <Input placeholder="请输入workspace名称" />
+            <Input placeholder="Place enter workspace name" />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
               <Button onClick={handleCancelAddWorkspace}>
-                取消
+                Cancel
               </Button>
               <Button 
                 type="primary" 
@@ -474,7 +476,7 @@ const RoleManagement = () => {
                   borderColor: '#1677ff'
                 }}
               >
-                确定
+                Submit
               </Button>
             </Space>
           </Form.Item>

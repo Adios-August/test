@@ -202,7 +202,7 @@ const Home = observer(() => {
                 {/* 搜索输入框容器 - 相对定位 */}
                 <div className="search-input-container">
                   <Input
-                    placeholder="请输入关键字"
+                    placeholder="Place enter to search..."
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                     onPressEnter={handleSearchEnter}
@@ -226,7 +226,7 @@ const Home = observer(() => {
                           height: "auto",
                         }}
                       >
-                        搜索
+                        Search
                       </Button>
                     }
                     style={{
@@ -249,7 +249,7 @@ const Home = observer(() => {
                   <div className="hot-tags-header">
                     <span className="hot-tags-title">
                     <TagOutlined />
-                      热门标签</span>
+                      Hot Tag</span>
                     {hotTags.map((tag, index) => (
                       <Tag key={index} className="hot-tag" onClick={() => handleTagClick(tag)}>
                         {tag.name}
@@ -274,14 +274,14 @@ const Home = observer(() => {
                 <div className="panel-header">
                   <div className="panel-title">
                     <HeartOutlined className="panel-icon" />
-                    <span>知识推荐</span>
+                    <span>Recommend</span>
                   </div>
                 </div>
 
                 {loading ? (
                   <div className="loading-container">
                     <Spin size="large" />
-                    <p>加载中...</p>
+                    <p>Loading...</p>
                   </div>
                 ) : (
                   <List
@@ -293,13 +293,13 @@ const Home = observer(() => {
                           items: [
                             {
                               key: 'current',
-                              label: '在当前页面打开',
+                              label: 'Open in Current Page',
                               icon: <GlobalOutlined />,
                               onClick: () => handleOpenInCurrentPage(item.id),
                             },
                             {
                               key: 'new',
-                              label: '在新页面打开',
+                              label: 'Open in New Page',
                               icon: <ExportOutlined />,
                               onClick: () => handleOpenInNewPage(item.id),
                             },
@@ -335,14 +335,14 @@ const Home = observer(() => {
                 <div className="panel-header">
                   <div className="panel-title">
                     <ClockCircleOutlined className="panel-icon"  />
-                    <span>最新知识</span>
+                    <span>Latest</span>
                   </div>
                 </div>
 
                 {latestLoading ? (
                   <div className="loading-container">
                     <Spin size="large" />
-                    <p>加载中...</p>
+                    <p>Loading...</p>
                   </div>
                 ) : (
                   <List
@@ -354,13 +354,13 @@ const Home = observer(() => {
                           items: [
                             {
                               key: 'current',
-                              label: '在当前页面打开',
+                              label: 'Open in Current Page',
                               icon: <GlobalOutlined />,
                               onClick: () => handleOpenInCurrentPage(item.id),
                             },
                             {
                               key: 'new',
-                              label: '在新页面打开',
+                              label: 'Open in New Page',
                               icon: <ExportOutlined />,
                               onClick: () => handleOpenInNewPage(item.id),
                             },
@@ -396,14 +396,14 @@ const Home = observer(() => {
                 <div className="panel-header">
                   <div className="panel-title">
                     <FireOutlined className="panel-icon"  />
-                    <span>最热资料</span>
+                    <span>Hot</span>
                   </div>
                 </div>
 
                 {hotDownloadsLoading ? (
                   <div className="loading-container">
                     <Spin size="large" />
-                    <p>加载中...</p>
+                    <p>Loading...</p>
                   </div>
                 ) : (
                   <List
@@ -415,13 +415,13 @@ const Home = observer(() => {
                           items: [
                             {
                               key: 'current',
-                              label: '在当前页面打开',
+                              label: 'Open in Current Page',
                               icon: <GlobalOutlined />,
                               onClick: () => handleOpenInCurrentPage(item.id),
                             },
                             {
                               key: 'new',
-                              label: '在新页面打开',
+                              label: 'Open in New Page',
                               icon: <ExportOutlined />,
                               onClick: () => handleOpenInNewPage(item.id),
                             },

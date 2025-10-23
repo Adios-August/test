@@ -552,7 +552,7 @@ const KnowledgeDetail = () => {
             <div className="search-container">
               <div className="search-input">
                 <Input
-                  placeholder="请输入关键字"
+                  placeholder="input..."
                   prefix={<SearchOutlined />}
                   value={searchValue}
                   onChange={handleSearchChange}
@@ -570,7 +570,7 @@ const KnowledgeDetail = () => {
                         height: "auto",
                       }}
                     >
-                      搜索
+                      Search
                     </Button>
                   }
                   style={{
@@ -627,8 +627,8 @@ const KnowledgeDetail = () => {
                 })
               ) : (
                 <div className="no-results">
-                  <span className="info-icon">!</span>
-                  {searchValue.trim() ? '未找到结果! 请更换搜索词,重新尝试!' : '请输入关键词进行搜索'}
+                   
+                  {searchValue.trim() ? 'No results found! Please change the search term and try again!' : 'Please enter keywords to search'}
                 </div>
               )}
             </div>
@@ -636,11 +636,17 @@ const KnowledgeDetail = () => {
           
           <div className="search-toggle">
             <Button
+            className="icon-bold"
               type="text"
+               style={{
+                fontSize: "24px",
+               
+                 
+              }}
               icon={searchCollapsed ? <RightOutlined /> : <LeftOutlined />}
               onClick={handleSearchToggle}
             />
-            <span className="search-text">Search</span>
+            
           </div>
         </div>
 

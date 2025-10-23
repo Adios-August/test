@@ -13,8 +13,8 @@ const CommonSidebar = ({
   showBackButton = false, 
   onBackClick, 
   width = 300,
-  height = "calc(100vh - 152px)",
-  marginTop = "24px",
+  height = "calc(100vh - 132px)",
+  marginRight = "16px",
   enableNavigation = false,
   filterCategoryId = null,
   onCategoryClick = null,
@@ -547,7 +547,7 @@ const CommonSidebar = ({
       className="common-sidebar"
       width={width}
       collapsed={collapsed}
-      style={{ height: height, marginTop: marginTop }}
+      style={{ height: height, marginRight: marginRight }}
     >
       <div className="sidebar-content">
         {showBackButton && (

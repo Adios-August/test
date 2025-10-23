@@ -228,18 +228,18 @@ const Knowledge = observer(() => {
           );
           
           if (response.code === 200) {
-            message.success('已取消点踩');
+            message.success('Canceled dislike');
             // 立即更新UI状态，让点踩图标变暗
             setAiAnswer(prev => ({
               ...prev,
               isDisliked: false
             }));
           } else {
-            message.error(response.message || '取消点踩失败');
+            message.error(response.message || 'Error');
           }
         } catch (error) {
           console.error('取消点踩失败:', error);
-          message.error('操作失败，请重试');
+          message.error('Error');
         }
         return;
       }
@@ -291,7 +291,7 @@ const Knowledge = observer(() => {
         );
         
         if (response.code === 200) {
-          message.success('已取消点赞');
+          message.success('Canceled like');
           // 立即更新UI状态，让点赞图标变暗
           setAiAnswer(prev => ({
             ...prev,
@@ -309,26 +309,26 @@ const Knowledge = observer(() => {
         );
         
         if (response.code === 200) {
-          message.success('已点赞该回答');
+          message.success('Successful');
           // 立即更新UI状态，让点赞图标变亮
           setAiAnswer(prev => ({
             ...prev,
             isLiked: true
           }));
         } else {
-          message.error(response.message || '点赞失败');
+          message.error(response.message || 'Failed.');
         }
       }
     } catch (error) {
       console.error('点赞操作失败:', error);
-      message.error('操作失败，请重试');
+      message.error('Error.');
     }
   };
 
   // 提交反馈弹窗中的反馈
   const handleSubmitFeedback = async () => {
     if (!currentUserId) {
-      message.error('请先登录');
+      message.error('Place login first.');
       return;
     }
 
@@ -342,7 +342,7 @@ const Knowledge = observer(() => {
       );
 
       if (response.code === 200) {
-        message.success("点踩提交成功");
+        message.success("Dislike submitted successfully.");
         setFeedbackModalVisible(false);
         setFeedbackContent("");
         // 立即更新UI状态，让点踩图标变亮
@@ -351,18 +351,18 @@ const Knowledge = observer(() => {
           isDisliked: true
         }));
       } else {
-        message.error(response.message || "提交失败，请重试");
+        message.error(response.message || "Dislike failed.");
       }
     } catch (error) {
       console.error('点踩失败:', error);
-      message.error("提交失败，请重试");
+      message.error("Error occurred. Please try again.");
     }
   };
 
   // 取消反馈弹窗
   const handleCancelFeedback = async () => {
     if (!currentUserId) {
-      message.error('请先登录');
+      message.error('Place login first.');
       return;
     }
 
@@ -376,7 +376,7 @@ const Knowledge = observer(() => {
       );
 
       if (response.code === 200) {
-        message.success("点踩提交成功");
+        message.success("Dislike submitted successfully.");
         setFeedbackModalVisible(false);
         setFeedbackContent("");
         // 立即更新UI状态，让点踩图标变亮
@@ -385,11 +385,11 @@ const Knowledge = observer(() => {
           isDisliked: true
         }));
       } else {
-        message.error(response.message || "提交失败，请重试");
+        message.error(response.message || "Error occurred. Please try again.");
       }
     } catch (error) {
       console.error('点踩失败:', error);
-      message.error("提交失败，请重试");
+      message.error("Error occurred. Please try again.");
     }
   };
 
@@ -1039,7 +1039,7 @@ const Knowledge = observer(() => {
         <div className="search-container">
           <div className="search-input">
             <Input
-              placeholder="请输入..."
+              placeholder="Input..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               onPressEnter={(e) => handleSearch(e.target.value)}
@@ -1059,7 +1059,7 @@ const Knowledge = observer(() => {
                     height: "auto",
                   }}
                 >
-                  搜索
+                  Search
                 </Button>
               }
               style={{
@@ -1098,7 +1098,7 @@ const Knowledge = observer(() => {
                   <div className="message-content">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <Spin size="small" />
-                      <p style={{ margin: 0 }}>AI正在思考中，请稍候...</p>
+                      <p style={{ margin: 0 }}>AI is thinking, please wait...</p>
                     </div>
                   </div>
                 </div>
@@ -1121,7 +1121,7 @@ const Knowledge = observer(() => {
                           </Button>
                         </>
                       )}
-                      <Tooltip title={aiAnswer?.isLiked ? "取消点赞" : "点赞回答"}>
+                      <Tooltip title={aiAnswer?.isLiked ? "Dislike" : "Like"}>
                         <Button
                           type="text"
                           size="small"
@@ -1129,7 +1129,7 @@ const Knowledge = observer(() => {
                           onClick={() => handleAIFeedback("like")}
                         />
                       </Tooltip>
-                      <Tooltip title={aiAnswer?.isDisliked ? "取消点踩" : "点踩回答（需要填写反馈）"}>
+                      <Tooltip title={aiAnswer?.isDisliked ? "Cancel Dislike" : "Dislike"}>
                         <Button
                           type="text"
                           size="small"
@@ -1146,18 +1146,18 @@ const Knowledge = observer(() => {
                     <Avatar icon={<RobotOutlined />} className="ai-avatar" />
                   </div>
                   <div className="message-content">
-                    <p>请输入您的问题，我将为您提供专业的回答。</p>
+                    <p>Please enter your question, and I will provide you with a professional answer。</p>
                   </div>
                 </div>
               )}
 
               {/* 继续解答区域 */}
               <div className="continue-section">
-                <h4>继续为你解答</h4>
+                <h4>Continue</h4>
                 {  aiLoading ? (
                   <div className="suggested-questions">
                     <Spin size="small" />
-                    <span style={{ marginLeft: 8 }}>正在获取推荐问题...</span>
+                    <span style={{ marginLeft: 8 }}>Loading...</span>
                   </div>
                 ) :  aiAnswer && aiAnswer.recommendedQuestions && aiAnswer.recommendedQuestions.length > 0 ? (
                   <div className="suggested-questions">
@@ -1181,7 +1181,7 @@ const Knowledge = observer(() => {
                     <Input.TextArea
                       value={questionInput}
                       onChange={(e) => setQuestionInput(e.target.value)}
-                      placeholder="请在这里继续输入问题"
+                      placeholder="Please continue to input questions here"
                       rows={2}
                       style={{ marginBottom: 0 }}
                       disabled={aiLoading}
@@ -1200,7 +1200,7 @@ const Knowledge = observer(() => {
                       loading={aiLoading}
                       disabled={aiLoading}
                     >
-                      {aiLoading ? '请稍后...' : '发送'}
+                      {aiLoading ? 'Loading...' : 'Send'}
                     </Button>
                   </div>
                 </div>
@@ -1224,7 +1224,7 @@ const Knowledge = observer(() => {
             
             {showAISourceModules && (
               <div className="results-header">
-                <span className="results-count">共找到{searchResults.length}个结果</span>
+                <span className="results-count">Total : {searchResults.length}</span>
                  
               </div>
             )}
@@ -1235,7 +1235,7 @@ const Knowledge = observer(() => {
                 {categoryLoading ? (
                   <div className="category-loading">
                     <Spin size="large" />
-                    <p>正在加载知识内容...</p>
+                    <p>Loading...</p>
                   </div>
                 ) : categoryKnowledge.length > 0 ? (
                   <React.Fragment>
@@ -1255,7 +1255,7 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
 
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="在当前页面打开">
+                              <Tooltip title="Open in current page">
                                 <GlobalOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
@@ -1264,7 +1264,7 @@ const Knowledge = observer(() => {
                                   }}
                                 />
                               </Tooltip>
-                              <Tooltip title="在新页面打开">
+                              <Tooltip title="Open in new page">
                                 <ExportOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
@@ -1299,8 +1299,8 @@ const Knowledge = observer(() => {
                 ) : (
                   <div className="category-info">
                     <InboxOutlined className="empty-icon" />
-                    <h3>暂无知识内容</h3>
-                    <p>当前分类下暂无知识内容，请稍后再试</p>
+                    <h3>No knowledge content available at the moment</h3>
+              
                   </div>
                 )}
               </div>
@@ -1310,7 +1310,7 @@ const Knowledge = observer(() => {
                 {categoryLoading ? (
                   <div className="category-loading">
                     <Spin size="large" />
-                    <p>正在加载知识内容...</p>
+                    <p>Loading...</p>
                   </div>
                 ) : categoryKnowledge.length > 0 ? (
                   <React.Fragment>
@@ -1333,7 +1333,7 @@ const Knowledge = observer(() => {
                               <span className="date-text">2025-01-15</span>
 
                            
-                              <Tooltip title="在当前页面打开">
+                              <Tooltip title="Open in current page">
                                 <GlobalOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
@@ -1342,7 +1342,7 @@ const Knowledge = observer(() => {
                                   }}
                                 />
                               </Tooltip>
-                              <Tooltip title="在新页面打开">
+                              <Tooltip title="Open in new page">
                                 <ExportOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
@@ -1377,8 +1377,8 @@ const Knowledge = observer(() => {
                 ) : (
                   <div className="category-info">
                     <InboxOutlined className="empty-icon" />
-                    <h3>暂无知识内容</h3>
-                    <p>当前分类下暂无知识内容，请稍后再试</p>
+                     <h3>No knowledge content available at the moment</h3>
+                   
                   </div>
                 )}
               </div>
@@ -1387,7 +1387,7 @@ const Knowledge = observer(() => {
                 {searchLoading ? (
                   <div className="search-loading">
                     <Spin size="large" />
-                    <p>正在加载知识内容...</p>
+                    <p>Loading...</p>
                   </div>
                 ) : searchResults.length > 0 ? (
                   <React.Fragment>
@@ -1407,7 +1407,7 @@ const Knowledge = observer(() => {
                             <div className="card-actions">
 
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="在当前页面打开">
+                              <Tooltip title="Open in current page">
                                 <GlobalOutlined
                                   style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }}
                                   onClick={(e) => {
@@ -1416,7 +1416,7 @@ const Knowledge = observer(() => {
                                   }}
                                 />
                               </Tooltip>
-                              <Tooltip title="在新页面打开">
+                              <Tooltip title="Open in new page">
                                 <ExportOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
@@ -1458,8 +1458,8 @@ const Knowledge = observer(() => {
                   // 有AI模块时，显示搜索相关的空状态
                   <div className="search-empty">
                     <InboxOutlined className="empty-icon" />
-                    <h3>暂无知识内容</h3>
-                    <p>当前分类下暂无知识内容，请稍后再试</p>
+                       <h3>No knowledge content available at the moment</h3>
+                    
                   </div>
                 ) : categoryKnowledge.length > 0 ? (
                   // 没有搜索时，显示分类知识
@@ -1479,7 +1479,7 @@ const Knowledge = observer(() => {
                             </div>
                             <div className="card-actions">
                               <span className="date-text">2025-01-15</span>
-                              <Tooltip title="在当前页面打开">
+                              <Tooltip title="Open in current page">
                                 <GlobalOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
@@ -1488,7 +1488,7 @@ const Knowledge = observer(() => {
                                   }}
                                 />
                               </Tooltip>
-                              <Tooltip title="在新页面打开">
+                              <Tooltip title="Open in new page">
                                 <ExportOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                                   onClick={(e) => {
@@ -1523,8 +1523,8 @@ const Knowledge = observer(() => {
                 ) : (
                   <div className="search-placeholder">
                     <FolderOpenOutlined className="empty-icon" />
-                    <h3>欢迎使用 SMART SEARCH</h3>
-                    <p>请在搜索框中输入关键词，或点击左侧分类查看相关知识内容</p>
+                    <h3>Welecome To SMART SEARCH</h3>
+                     
                   </div>
                 )}
               </React.Fragment>
@@ -1543,7 +1543,7 @@ const Knowledge = observer(() => {
               {sourcesLoading ? (
                 <div className="sources-loading">
                   <Spin size="large" />
-                  <p style={{ color: '#999', marginTop: '16px' }}>正在查找相关来源...</p>
+                  <p style={{ color: '#999', marginTop: '16px' }}>Loading...</p>
                 </div>
               ) : references.length > 0 ? (
                 references.map((reference, index) => (
@@ -1581,7 +1581,7 @@ const Knowledge = observer(() => {
                           </div>
                         </div>
                         <div className="source-actions">
-                          <Tooltip title="在当前页面打开">
+                          <Tooltip title="Open in current page">
                             <GlobalOutlined
                               style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                               onClick={(e) => {
@@ -1590,7 +1590,7 @@ const Knowledge = observer(() => {
                               }}
                             />
                           </Tooltip>
-                          <Tooltip title="在新页面打开">
+                          <Tooltip title="Opne in new page">
                             <ExportOutlined
                               style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
                               onClick={(e) => {
@@ -1633,7 +1633,7 @@ const Knowledge = observer(() => {
                               height: 'auto'
                             }}
                           >
-                            收起
+                            Fold Up
                           </Button>
                         </div>
 
@@ -1700,12 +1700,12 @@ const Knowledge = observer(() => {
 
         {/* 反馈弹窗 */}
         <Modal
-          title="请提供反馈"
+          title="Dislike Feedback"
           open={feedbackModalVisible}
           onOk={handleSubmitFeedback}
           onCancel={handleCancelFeedback}
-          okText="提交反馈"
-          cancelText="取消"
+          okText="Submit"
+          cancelText="Cancel"
           width={500}
           className="feedback-modal"
           style={{
@@ -1718,13 +1718,13 @@ const Knowledge = observer(() => {
         >
           <div style={{ marginBottom: 16 }}>
             <p style={{ marginBottom: 8, color: '#666' }}>
-              请告诉我们您对这次回答不满意的地方，帮助我们改进：
+           Reason：
             </p>
             <div style={{ marginBottom: 16 }}>
               <Input.TextArea
                 value={feedbackContent}
                 onChange={(e) => setFeedbackContent(e.target.value)}
-                placeholder="请输入您的反馈意见..."
+                placeholder="Input..."
                 rows={4}
                 maxLength={500}
                 showCount

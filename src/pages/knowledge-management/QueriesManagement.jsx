@@ -78,20 +78,19 @@ const QueriesManagement = () => {
 
   const columns = [
     { title: 'ID', dataIndex: 'id', width: 80 },
-    { title: '用户ID', dataIndex: 'userId', width: 120 },
-    { title: '搜索关键词', dataIndex: 'query', ellipsis: true },
-    { title: '搜索时间', dataIndex: 'searchTime', width: 200 },
-    { title: '结果数量', dataIndex: 'resultCount', width: 100 },
+    { title: 'Staff ID', dataIndex: 'userId', width: 120 },
+    { title: 'Query', dataIndex: 'query', ellipsis: true },
+    { title: 'Time', dataIndex: 'searchTime', width: 200 },
     {
-      title: '操作',
+      title: 'Operation',
       width: 120,
       render: (_, record) => (
         <Space>
           <Popconfirm
-            title="确定删除该查询记录吗？"
+            title="Are you sure to delete this query record?"
             onConfirm={() => handleDelete(record.id)}
           >
-            <a>删除</a>
+            <a>Delete</a>
           </Popconfirm>
         </Space>
       )
@@ -101,13 +100,13 @@ const QueriesManagement = () => {
   return (
     <div className="management-content">
       <div className="content-header">
-        <h2>Queries管理</h2>
+        <h2>Queries Management</h2>
         <div style={{ marginLeft: 'auto' }}>
           <Space>
 
             <RangePicker
               showTime
-              placeholder={['开始时间', '结束时间']}
+              placeholder={['Start Time', 'End Time']}
               value={dateRange}
               onChange={setDateRange}
               style={{ width: 300 }}

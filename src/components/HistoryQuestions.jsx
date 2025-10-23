@@ -12,11 +12,11 @@ const HistoryQuestions = ({
 
   return (
     <div className="history-questions">
-      <div className="section-title">历史问题</div>
+      <div className="section-title">History</div>
       {loading ? (
         <div className="loading-questions">
           <Spin size="small" />
-          <span>加载中...</span>
+          <span>Loading...</span>
         </div>
       ) : questions.length > 0 ? (
         <>
@@ -42,13 +42,13 @@ const HistoryQuestions = ({
                 onShowAllToggle();
               }}
             >
-              {showAll ? '收起' : `查看更多 (${questions.length - 2})`}
+              {showAll ? 'Fold Up' : `More (${questions.length - 2})`}
             </div>
           )}
         </>
       ) : (
         <div className="no-history">
-          <p>暂无搜索历史</p>
+          <p>No search history available at the moment</p>
         </div>
       )}
     </div>

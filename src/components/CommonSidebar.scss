@@ -1,11 +1,12 @@
 .common-sidebar {
   background: white;
   border-radius: 12px;
-  margin: 0 16px 16px 16px;
+   
   overflow: visible;
   overflow-y: scroll;
   display: flex;
   flex-direction: column;
+  margin-top: 0 !important;
  
   // 隐藏滚动条但保持滚动功能
   &::-webkit-scrollbar {

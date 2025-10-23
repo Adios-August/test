@@ -154,7 +154,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
 
     // 先加载HTML差异（较快）
     setDiffLoading(true);
-    knowledgeAPI.getKnowledgeDiffHtml(knowledgeId, String(fromVersion), String(toVersion))
+    knowledgeAPI.getKnowledgeDiffHtml(knowledgeId, String(toVersion), String( fromVersion))
       .then((resp) => {
         const data = resp?.data ?? resp;
         const htmlDiff = typeof data === 'string' ? data : (data?.htmlDiff || data?.html_diff || data?.html || '');
@@ -446,7 +446,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
           open={versionViewVisible}
           onCancel={() => setVersionViewVisible(false)}
           footer={null}
-          width={800}
+          width={1200}
           destroyOnClose
         >
           {versionViewLoading ? (
