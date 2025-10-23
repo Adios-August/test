@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Button, Select, Table, Space } from 'antd';
 
 /**
@@ -13,10 +13,23 @@ import { Button, Select, Table, Space } from 'antd';
  */
 const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onCompare, onClose, loading = false, onViewVersion }) => {
   const latestVersion = useMemo(() => currentVersion ?? (versions[0]?.version ?? ''), [currentVersion, versions]);
-  const [targetVersion, setTargetVersion] = useState(() => {
-    // 默认选择次新版
-    return versions[1]?.version ?? versions[0]?.version ?? '';
-  });
+const filteredVersions = useMemo(() => {
+  return Array.isArray(versions)
+    ? versions.filter(v => String(v.version) !== String(latestVersion))
+    : [];
+}, [versions, latestVersion]);
+const [targetVersion, setTargetVersion] = useState(() => {
+  // 默认选择第一个非当前版本
+  return filteredVersions[0]?.version ?? '';
+});
+
+// 当版本列表或当前版本变化时，若当前选择无效则重置
+useEffect(() => {
+  const valid = filteredVersions.some(v => String(v.version) === String(targetVersion));
+  if (!valid) {
+    setTargetVersion(filteredVersions[0]?.version ?? '');
+  }
+}, [filteredVersions]);
   const hasVersions = Array.isArray(versions) && versions.length > 0;
 
   const columns = [
@@ -58,7 +71,7 @@ const KnowledgeHistory = ({ documentTitle, versions = [], currentVersion, onComp
           <Select
             style={{ width: 120 }}
             value={targetVersion}
-            options={versions.map(v => ({ label: String(v.version), value: v.version }))}
+            options={filteredVersions.map(v => ({ label: String(v.version), value: v.version }))}
             onChange={setTargetVersion}
           />
           <Button type="primary" onClick={handleShowDiff} disabled={!latestVersion || !targetVersion || latestVersion === targetVersion} loading={loading}>显示</Button>

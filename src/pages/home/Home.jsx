@@ -249,7 +249,7 @@ const Home = observer(() => {
                   <div className="hot-tags-header">
                     <span className="hot-tags-title">
                     <TagOutlined />
-                      Hot Tag</span>
+                      Hot Tags</span>
                     {hotTags.map((tag, index) => (
                       <Tag key={index} className="hot-tag" onClick={() => handleTagClick(tag)}>
                         {tag.name}

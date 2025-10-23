@@ -154,19 +154,19 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
 
     // 先加载HTML差异（较快）
     setDiffLoading(true);
-    knowledgeAPI.getKnowledgeDiffHtml(knowledgeId, String(toVersion), String( fromVersion))
-      .then((resp) => {
-        const data = resp?.data ?? resp;
-        const htmlDiff = typeof data === 'string' ? data : (data?.htmlDiff || data?.html_diff || data?.html || '');
-        setDiffData(prev => ({ ...prev, htmlDiff }));
-      })
-      .catch((err) => {
-        console.error('获取HTML差异失败:', err);
-        message.error('获取HTML差异失败');
-      })
-      .finally(() => {
-        setDiffLoading(false);
-      });
+-    knowledgeAPI.getKnowledgeDiffHtml(knowledgeId, String(toVersion), String( fromVersion))
+       .then((resp) => {
+         const data = resp?.data ?? resp;
+         const htmlDiff = typeof data === 'string' ? data : (data?.htmlDiff || data?.html_diff || data?.html || '');
+         setDiffData(prev => ({ ...prev, htmlDiff }));
+       })
+       .catch((err) => {
+         console.error('获取HTML差异失败:', err);
+         message.error('获取HTML差异失败');
+       })
+       .finally(() => {
+         setDiffLoading(false);
+       });
 
     // 并行加载AI摘要（较慢，显示loading）
     setSummaryLoading(true);

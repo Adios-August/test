@@ -1298,8 +1298,8 @@ const Knowledge = observer(() => {
                   </React.Fragment>
                 ) : (
                   <div className="category-info">
-                    <InboxOutlined className="empty-icon" />
-                    <h3>No knowledge content available at the moment</h3>
+                    {/* <InboxOutlined className="empty-icon" />
+                    <h3>No knowledge content available at the moment</h3> */}
               
                   </div>
                 )}
@@ -1376,8 +1376,8 @@ const Knowledge = observer(() => {
                   </React.Fragment>
                 ) : (
                   <div className="category-info">
-                    <InboxOutlined className="empty-icon" />
-                     <h3>No knowledge content available at the moment</h3>
+                    {/* <InboxOutlined className="empty-icon" />
+                     <h3>No knowledge content available at the moment</h3> */}
                    
                   </div>
                 )}
@@ -1457,8 +1457,8 @@ const Knowledge = observer(() => {
                 ) : showAISourceModules ? (
                   // 有AI模块时，显示搜索相关的空状态
                   <div className="search-empty">
-                    <InboxOutlined className="empty-icon" />
-                       <h3>No knowledge content available at the moment</h3>
+                    {/* <InboxOutlined className="empty-icon" />
+                       <h3>No knowledge content available at the moment</h3> */}
                     
                   </div>
                 ) : categoryKnowledge.length > 0 ? (

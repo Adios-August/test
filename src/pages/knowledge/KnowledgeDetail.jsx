@@ -81,6 +81,8 @@ const KnowledgeDetail = () => {
   const [historyVersions, setHistoryVersions] = useState([]);
   const [showDiff, setShowDiff] = useState(false);
   const [diffData, setDiffData] = useState({ fromVersion: '', toVersion: '', fromContent: '', toContent: '' });
+  const [diffLoading, setDiffLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   
   // 获取knowledgeStore和authStore
   const knowledgeStore = useKnowledgeStore();
@@ -271,30 +273,49 @@ const KnowledgeDetail = () => {
       return;
     }
 
-    knowledgeAPI.getKnowledgeDiff(knowledgeId, String(fromVersion), String(toVersion))
+    // 预填本地内容并立即显示差异视图
+    const from = historyVersions.find(v => String(v.version) === String(fromVersion));
+    const to = historyVersions.find(v => String(v.version) === String(toVersion));
+    setDiffData({
+      fromVersion,
+      toVersion,
+      fromContent: from?.content || '',
+      toContent: to?.content || '',
+      htmlDiff: '',
+      summary: '',
+    });
+    setShowDiff(true);
+
+    // 并发：HTML差异（较快）
+    setDiffLoading(true);
+    knowledgeAPI.getKnowledgeDiffHtml(knowledgeId, String(toVersion), String( fromVersion ))
       .then((resp) => {
-        // 兼容多种返回结构
         const data = resp?.data || resp;
-        const htmlDiff = data?.htmlDiff || data?.html_diff || '';
-        const summary = data?.summary || '';
-
-        // 如果后端不返回内容，使用本地版本列表的内容作为回退
-        const from = historyVersions.find(v => String(v.version) === String(fromVersion));
-        const to = historyVersions.find(v => String(v.version) === String(toVersion));
-
-        setDiffData({
-          fromVersion,
-          toVersion,
-          fromContent: from?.content || '',
-          toContent: to?.content || '',
-          htmlDiff,
-          summary,
-        });
-        setShowDiff(true);
+        const htmlDiff = typeof data === 'string' ? data : (data?.htmlDiff || data?.html_diff || data?.html || '');
+        setDiffData(prev => ({ ...prev, htmlDiff }));
       })
       .catch((err) => {
-        console.error('获取版本差异失败:', err);
-        message.error('获取版本差异失败');
+        console.error('获取HTML差异失败:', err);
+        message.error('获取HTML差异失败');
+      })
+      .finally(() => {
+        setDiffLoading(false);
+      });
+
+    // 并发：AI摘要（可能较慢）
+    setSummaryLoading(true);
+    knowledgeAPI.getKnowledgeDiffSummary(knowledgeId, String(fromVersion), String(toVersion))
+      .then((resp) => {
+        const data = resp?.data || resp;
+        const summary = typeof data === 'string' ? data : (data?.summary || data?.text || '');
+        setDiffData(prev => ({ ...prev, summary }));
+      })
+      .catch((err) => {
+        console.error('获取AI摘要失败:', err);
+        // 摘要失败不阻断HTML差异展示
+      })
+      .finally(() => {
+        setSummaryLoading(false);
       });
   };
 
@@ -640,8 +661,6 @@ const KnowledgeDetail = () => {
               type="text"
                style={{
                 fontSize: "24px",
-               
-                 
               }}
               icon={searchCollapsed ? <RightOutlined /> : <LeftOutlined />}
               onClick={handleSearchToggle}
@@ -846,6 +865,7 @@ const KnowledgeDetail = () => {
                     currentVersion={historyVersions[0]?.version}
                     onCompare={handleCompareVersions}
                     onClose={handleCloseHistory}
+                    loading={diffLoading}
                   />
                 ) : (
                   <KnowledgeDiff
@@ -856,6 +876,7 @@ const KnowledgeDetail = () => {
                     toContent={diffData.toContent}
                     htmlDiff={diffData.htmlDiff}
                     summary={diffData.summary}
+                    summaryLoading={summaryLoading}
                     attachments={tabs.find(t => t.key === activeTabKey)?.content?.attachments || knowledgeDetail?.attachments || []}
                     onClose={handleCloseDiff}
                   />
