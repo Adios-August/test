@@ -34,6 +34,9 @@
     max-width: 600px;
 
     .search-input {
+      position: relative;
+      margin-bottom: 16px;
+      z-index: 1000;
       .ant-input {
         background: white;
         transition: all 0.3s ease;

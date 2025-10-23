@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Button } from 'antd';
+import { Button, Spin } from 'antd';
 import { FilePdfOutlined, FileExcelOutlined } from '@ant-design/icons';
 
 // 简单词级别Diff算法（LCS），用于高亮新增/删除的差异
@@ -75,7 +75,7 @@ const SegmentsView = ({ segments, mode }) => {
  * - toContent: 目标版本内容
  * - onClose: 关闭回到历史列表
  */
-const KnowledgeDiff = ({ documentTitle, fromVersion, toVersion, fromContent, toContent, htmlDiff, summary, attachments = [], onClose }) => {
+const KnowledgeDiff = ({ documentTitle, fromVersion, toVersion, fromContent, toContent, htmlDiff, summary, summaryLoading = false, attachments = [], onClose }) => {
   const { oldSegments, newSegments } = useMemo(() => computeWordDiff(fromContent, toContent), [fromContent, toContent]);
 
   return (
@@ -95,12 +95,17 @@ const KnowledgeDiff = ({ documentTitle, fromVersion, toVersion, fromContent, toC
 
       <div className="document-content">
         <div className="content-section">
-          {summary && (
-            <div style={{ background: '#fafafa', border: '1px solid #eee', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>变更摘要</div>
-              <div style={{ fontSize: 14, color: '#444' }}>{summary}</div>
-            </div>
-          )}
+          <div style={{ background: '#fafafa', border: '1px solid #eee', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>变更摘要</div>
+            {summaryLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Spin size="small" />
+                <span style={{ fontSize: 14, color: '#666' }}>AI 摘要生成中...</span>
+              </div>
+            ) : (
+              <div style={{ fontSize: 14, color: '#444' }}>{summary || '暂无摘要'}</div>
+            )}
+          </div>
 
           <div style={{ marginBottom: 8, fontSize: 12, color: '#666' }}>绿色为新增，红色为删除。</div>
           <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, minHeight: 160 }}>
