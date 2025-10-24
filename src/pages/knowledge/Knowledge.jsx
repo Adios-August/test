@@ -1073,6 +1073,12 @@ const Knowledge = observer(() => {
               visible={searchFocused}
               onQuestionClick={(q) => handleSearch(q)}
               onMouseDown={(e) => e.preventDefault()}
+              onClose={() => {
+                setSearchFocused(false);
+                if (document?.activeElement && typeof document.activeElement.blur === 'function') {
+                  try { document.activeElement.blur(); } catch {}
+                }
+              }}
             />
           </div>
         </div>

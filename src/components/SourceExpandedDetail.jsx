@@ -104,7 +104,7 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], p
                     (attachment.fileName && attachment.fileName.toLowerCase().endsWith('.pdf')) ||
                     (attachment.name && attachment.name.toLowerCase().endsWith('.pdf'))) && (
                     <div className="pdf-preview-embedded">
-                      <h4>PDF预览 - {attachment.fileName || attachment.name}</h4>
+                    
                       {(preferredAttachmentName && (attachment.fileName !== preferredAttachmentName && attachment.name !== preferredAttachmentName)) ? null : (
                       <PdfPreview 
                         fileUrl={attachment.filePath || attachment.fileUrl || attachment.url} 

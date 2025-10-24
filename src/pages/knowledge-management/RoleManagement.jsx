@@ -407,7 +407,7 @@ const RoleManagement = () => {
               <Select
                 placeholder="请选择系统角色"
                 options={[
-                  { value: 'ADMIN', label: 'Admin' },
+                 
                   { value: 'BLOCKED', label: 'Blocked' },
                   { value: 'REVIEWER', label: 'Reviewer' },
                 ]}
