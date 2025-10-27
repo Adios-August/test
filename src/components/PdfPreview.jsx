@@ -5,7 +5,7 @@ import { authenticatedFetch } from "../utils/request";
 // 配置 pdf.js worker（使用 CDN，避免本地路径问题）
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-const containerStyle = { position: "relative", width: "100%" };
+const containerStyle = { position: "relative", width: "100%", overflow: "auto" };
 
 const highlightStyleBase = {
   position: "absolute",
@@ -31,6 +31,13 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const pageWrapRef = useRef(null);
+  // 新增：下载文件名
+  const [downloadName, setDownloadName] = useState("document.pdf");
+  // 新增：缩放状态
+  const [zoom, setZoom] = useState(1);
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 3;
+  const ZOOM_STEP = 0.1;
 
   // 同步外部页码
   useEffect(() => {
@@ -50,6 +57,8 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
     if (fileUrl.startsWith('blob:')) {
       setBlobUrl(fileUrl);
       setError(null);
+      // 设定默认下载名
+      setDownloadName('document.pdf');
       return;
     }
 
@@ -71,6 +80,31 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        
+        // 推断下载名：优先 Content-Disposition，其次 URL
+        let name = 'document.pdf';
+        const cd = response.headers.get('Content-Disposition') || response.headers.get('content-disposition');
+        if (cd) {
+          const matchStar = cd.match(/filename\*=(?:UTF-8''|)([^;\n\r]+)/i);
+          const match = cd.match(/filename=\"?([^\";\n\r]+)\"?/i);
+          const raw = (matchStar && matchStar[1]) || (match && match[1]);
+          if (raw) {
+            try { name = decodeURIComponent(raw.replace(/^\"|\"$/g, '')); } catch { name = raw; }
+          }
+        } else {
+          try {
+            const u = new URL(fetchUrl);
+            const byParam = u.searchParams.get('fileName') || u.searchParams.get('filename') || u.searchParams.get('name');
+            if (byParam) {
+              name = byParam;
+            } else {
+              const segs = u.pathname.split('/').filter(Boolean);
+              const last = segs[segs.length - 1] || '';
+              if (last) name = decodeURIComponent(last);
+            }
+          } catch {}
+        }
+        setDownloadName(name || 'document.pdf');
         
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
@@ -153,6 +187,30 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
     return (currentPage || 1) === target;
   }, [currentPage, pageNum]);
 
+  // 新增：计算缩放后的宽度与容器尺寸（保证高亮百分比正确映射）
+  const displayWidth = useMemo(() => Math.max(100, Math.round((containerWidth || 600) * zoom)), [containerWidth, zoom]);
+  const pageContainerStyle = useMemo(() => ({
+    position: 'relative',
+    width: displayWidth,
+    height: pageSize && pageSize.width ? Math.round(displayWidth * (pageSize.height / pageSize.width)) : 'auto',
+  }), [displayWidth, pageSize]);
+
+  // 新增：缩放控制函数
+  const handleZoomIn = () => setZoom(z => Math.min(MAX_ZOOM, parseFloat((z + ZOOM_STEP).toFixed(2))));
+  const handleZoomOut = () => setZoom(z => Math.max(MIN_ZOOM, parseFloat((z - ZOOM_STEP).toFixed(2))));
+  const handleZoomReset = () => setZoom(1);
+
+  // 新增：下载处理
+  const handleDownload = () => {
+    if (!blobUrl) return;
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = downloadName || 'document.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // 显示错误状态
   if (error) {
     return (
@@ -185,24 +243,40 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
     <div className="pdf-preview" style={{ width: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div>
-            <button disabled={!blobUrl || currentPage <= 1} onClick={() => setCurrentPage(1)}>首页</button>
-            <button style={{ marginLeft: 8 }} disabled={!blobUrl || currentPage <= 1} onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}>上一页</button>
-            <button style={{ marginLeft: 8 }} disabled={!blobUrl || (numPages && currentPage >= numPages)} onClick={() => setCurrentPage(currentPage + 1)}>下一页</button>
-            <button style={{ marginLeft: 8 }} disabled={!blobUrl || !numPages || currentPage >= numPages} onClick={() => setCurrentPage(numPages)}>最后一页</button>
-          </div>
-        <div>{currentPage}{numPages ? ` / ${numPages}` : ""}</div>
+          {/* 翻页按钮 */}
+          <button disabled={!blobUrl || currentPage <= 1} onClick={() => setCurrentPage(1)}>首页</button>
+          <button style={{ marginLeft: 8 }} disabled={!blobUrl || currentPage <= 1} onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}>上一页</button>
+          <button style={{ marginLeft: 8 }} disabled={!blobUrl || (numPages && currentPage >= numPages)} onClick={() => setCurrentPage(currentPage + 1)}>下一页</button>
+          <button style={{ marginLeft: 8 }} disabled={!blobUrl || !numPages || currentPage >= numPages} onClick={() => setCurrentPage(numPages)}>最后一页</button>
+        </div>
+        {/* 页码与缩放显示 */}
+        <div>
+          <span style={{ marginRight: 12 }}>{currentPage}{numPages ? ` / ${numPages}` : ""}</span>
+          <span>缩放：{Math.round(zoom * 100)}%</span>
+        </div>
+        {/* 下载与缩放控制 */}
+        <div>
+          <button style={{ marginLeft: 8 }} disabled={!blobUrl} onClick={handleDownload}>下载</button>
+          <button style={{ marginLeft: 8 }} disabled={!blobUrl || zoom <= MIN_ZOOM} onClick={handleZoomOut}>缩小</button>
+          <button style={{ marginLeft: 8 }} disabled={!blobUrl || zoom >= MAX_ZOOM} onClick={handleZoomIn}>放大</button>
+          <button style={{ marginLeft: 8 }} disabled={!blobUrl} onClick={handleZoomReset}>重置</button>
+        </div>
       </div>
+
+      {/* 外层滚动容器 + 内层相对定位容器，保证高亮与页面同步缩放 */}
       <div ref={pageWrapRef} style={containerStyle}>
-        <Document file={blobUrl} onLoadSuccess={onDocumentLoadSuccess} loading={<span>加载文档...</span>}>
-          <Page
-            pageNumber={Math.max(1, currentPage || 1)}
-            width={containerWidth}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-            onRenderSuccess={onPageRenderSuccess}
-          />
-        </Document>
-        {shouldShowHighlights ? highlightRects : null}
+        <div style={pageContainerStyle}>
+          <Document file={blobUrl} onLoadSuccess={onDocumentLoadSuccess} loading={<span>加载文档...</span>}>
+            <Page
+              pageNumber={Math.max(1, currentPage || 1)}
+              width={displayWidth}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              onRenderSuccess={onPageRenderSuccess}
+            />
+          </Document>
+          {shouldShowHighlights ? highlightRects : null}
+        </div>
       </div>
     </div>
   );

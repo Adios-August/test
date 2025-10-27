@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Spin } from 'antd';
+import { Spin, message } from 'antd';
 import { homeAPI } from '../api/home';
 import { useAuthStore } from '../stores';
 import HistoryQuestions from './HistoryQuestions';
 import RecommendedQuestions from './RecommendedQuestions';
 import './SearchSuggestions.scss';
+import { deleteSearchHistory } from '../utils/searchHistoryAPI';
 
 const SearchSuggestions = ({ 
   visible, 
   onQuestionClick, 
-  onMouseDown 
+  onMouseDown,
+  onClose
 }) => {
   const [historyQuestions, setHistoryQuestions] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -42,31 +44,26 @@ const SearchSuggestions = ({
   const fetchHistoryQuestions = async () => {
     setHistoryLoading(true);
     try {
-      // 从localStorage获取用户信息
-      const authStoreStr = localStorage.getItem('authStore');
-      const authStore = JSON.parse(authStoreStr || '{}');
-      const userId = authStore.user?.id;
-      
-      if (!userId) {
-        setHistoryQuestions([]);
-        return;
-      }
-      
+      const userId = authStore.user?.id || authStore.user?.userId;
       const response = await homeAPI.getHistoryQuestions(userId);
-      
       if (response.code === 200) {
-        // 将字符串数组转换为对象数组，以适配渲染逻辑
-        const formattedData = (response.data || []).map((query, index) => ({
-          id: index,
-          query: query
-        }));
-        
-        setHistoryQuestions(formattedData);
+        const raw = response.data || [];
+        const normalized = Array.isArray(raw) ? raw.map((item, idx) => {
+          if (typeof item === 'string') {
+            return { id: `history-${idx}`, query: item };
+          }
+          if (item && typeof item === 'object') {
+            const query = item.query ?? item.text ?? item.title ?? '';
+            return { id: item.id ?? `history-${idx}`, query: String(query || '') };
+          }
+          return { id: `history-${idx}`, query: '' };
+        }) : [];
+        setHistoryQuestions(normalized);
       } else {
         setHistoryQuestions([]);
       }
     } catch (error) {
-      console.error('获取历史问题异常:', error);
+      console.error('获取历史问题失败:', error);
       setHistoryQuestions([]);
     } finally {
       setHistoryLoading(false);
@@ -76,6 +73,19 @@ const SearchSuggestions = ({
   // 处理历史问题点击
   const handleHistoryQuestionClick = (question) => {
     onQuestionClick(question);
+    if (typeof onClose === 'function') onClose();
+  };
+
+  // 删除历史问题
+  const handleDeleteHistory = async (id) => {
+    try {
+      await deleteSearchHistory(id);
+      setHistoryQuestions(prev => prev.filter(item => item.id !== id));
+      message.success('已删除该历史记录');
+    } catch (err) {
+      console.error('删除历史记录失败:', err);
+      message.error('删除失败，请稍后重试');
+    }
   };
 
   // 处理推荐问题点击
@@ -83,6 +93,7 @@ const SearchSuggestions = ({
     // 如果question是对象，提取问题文本
     const questionText = typeof question === 'string' ? question : question.text || question.title || question;
     onQuestionClick(questionText);
+    if (typeof onClose === 'function') onClose();
   };
 
   // 组件挂载时加载数据
@@ -117,6 +128,7 @@ const SearchSuggestions = ({
           showAll={showAllHistory}
           onShowAllToggle={() => setShowAllHistory(!showAllHistory)}
           onQuestionClick={handleHistoryQuestionClick}
+          onDelete={handleDeleteHistory}
         />
         
         <RecommendedQuestions
