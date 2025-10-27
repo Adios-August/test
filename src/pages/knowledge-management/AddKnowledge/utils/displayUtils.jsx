@@ -25,6 +25,15 @@ export const renderTagsDisplay = (tags) => {
 export const renderVisibilityDisplay = (privateToRoles) => {
   if (privateToRoles.length === 0) return null;
   
+  // 如果包含 ALL 选项，只显示 ALL
+  if (privateToRoles.includes('ALL')) {
+    return (
+      <span className="content-display">
+        : <span className="content-items">ALL</span>
+      </span>
+    );
+  }
+  
   if (privateToRoles.length <= 3) {
     // Show actual roles for 3 or fewer
     return (
