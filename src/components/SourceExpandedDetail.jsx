@@ -43,7 +43,12 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], p
   // 附件下载（右侧按钮）
   const handleAttachmentDownload = async (attachment) => {
     try {
-      const downloadUrl = attachment.filePath || attachment.fileUrl || attachment.url;
+        let downloadUrl = attachment.filePath || attachment.fileUrl || attachment.url;
+      // 当为相对路径时，使用环境变量前缀拼接为完整URL
+      if (downloadUrl && typeof downloadUrl === 'string' && downloadUrl.startsWith('/')) {
+        const base = (import.meta.env.VITE_API_FILE_URL || '').replace(/\/+$/, '');
+        downloadUrl = `${base}${downloadUrl}`;
+      }
       if (!downloadUrl) {
         message.error('下载链接不存在');
         return;
