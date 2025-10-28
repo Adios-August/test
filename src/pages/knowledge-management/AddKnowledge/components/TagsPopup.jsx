@@ -19,6 +19,7 @@ const TagsPopup = ({
   visible,
   onClose,
   formData,
+  setFormData,
   tagInput,
   setTagInput,
   tagError,
@@ -28,7 +29,6 @@ const TagsPopup = ({
 }) => {
   const [availableTags, setAvailableTags] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
   const [error, setError] = useState('');
 
   // 获取所有标签
@@ -56,18 +56,6 @@ const TagsPopup = ({
     }
   };
 
-  // 处理标签选择
-  const handleTagSelect = (value) => {
-    if (value && !formData.tags.includes(value)) {
-      // 直接设置tagInput并调用onAddTag
-      setTagInput(value);
-      // 使用setTimeout确保setTagInput先执行
-      setTimeout(() => {
-        onAddTag();
-      }, 0);
-    }
-    setSearchValue('');
-  };
 
   // 处理搜索
   const handleSearch = async (value) => {
@@ -122,14 +110,20 @@ const TagsPopup = ({
         }}
       >
         <div>
-          {/* 备选标签选择器 */}
+          {/* 输入框 - 支持搜索和手动输入 */}
           <div style={{ marginBottom: 12 }}>
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>备选标签：</Text>
+            <Text strong style={{ display: 'block', marginBottom: 8 }}>添加标签：</Text>
             <Select
+              mode="tags"
               style={{ width: '100%' }}
-              placeholder="搜索或选择标签"
-              value={searchValue}
-              onChange={handleTagSelect}
+              placeholder="输入或选择标签"
+              value={formData.tags}
+              onChange={(values) => {
+                setFormData(prev => ({
+                  ...prev,
+                  tags: values
+                }));
+              }}
               onSearch={handleSearch}
               notFoundContent={loading ? <Spin size="small" /> : (error ? error : '暂无标签')}
               options={availableTags.map(tag => ({
@@ -147,50 +141,34 @@ const TagsPopup = ({
             )}
           </div>
 
-          {/* 手动输入标签 */}
-          <div style={{ marginBottom: 12 }}>
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>手动添加：</Text>
-            <Input
-              placeholder="输入标签后按回车添加"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onPressEnter={onAddTag}
-              suffix={
-                <Button 
-                  type="link" 
-                  icon={<PlusOutlined />} 
-                  onClick={onAddTag}
-                  size="small"
-                />
-              }
-            />
-            {tagError && (
-              <Text type="danger" style={{ fontSize: '12px', display: 'block', marginTop: 4 }}>
-                {tagError}
-              </Text>
-            )}
-          </div>
-
-          {/* 已选择的标签 */}
-          <div>
-            <Text strong style={{ display: 'block', marginBottom: 8 }}>已选择标签：</Text>
-            <div style={{ minHeight: 32 }}>
-              {formData.tags.length === 0 ? (
-                <Text type="secondary" style={{ fontSize: '12px' }}>暂无标签</Text>
-              ) : (
-                formData.tags.map((tag, index) => (
+          {/* 备选标签列表 */}
+          {availableTags.length > 0 && (
+            <div>
+              <Text strong style={{ display: 'block', marginBottom: 8 }}>备选标签：</Text>
+              <div style={{ maxHeight: 120, overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '8px' }}>
+                {availableTags.map(tag => (
                   <Tag
-                    key={index}
-                    closable
-                    onClose={() => onRemoveTag(tag)}
-                    style={{ marginBottom: 8, marginRight: 8 }}
+                    key={tag}
+                    style={{ 
+                      margin: '2px', 
+                      cursor: 'pointer',
+                      opacity: formData.tags.includes(tag) ? 0.3 : 1
+                    }}
+                    onClick={() => {
+                      if (!formData.tags.includes(tag)) {
+                        setFormData(prev => ({
+                          ...prev,
+                          tags: [...prev.tags, tag]
+                        }));
+                      }
+                    }}
                   >
                     {tag}
                   </Tag>
-                ))
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </Card>
     </>

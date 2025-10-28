@@ -152,7 +152,26 @@ export const useKnowledgeForm = (mode = 'add') => {
     const nodeTypeParam = searchParams.get('nodeType');
     const isCreatingRootFolder = (parentIdParam === '0' || parentIdParam === 0) && (nodeTypeParam === 'folder' || nodeType === 'folder');
 
-    const errors = validateKnowledgeForm(formData, contentHtml, { allowNoCategory: isCreatingRootFolder });
+    // 处理可见范围：如果包含ALL，需要获取所有实际的角色
+    const processPrivateToRoles = (privateToRoles) => {
+      if (!privateToRoles || privateToRoles.length === 0) return [];
+      
+      // 如果包含ALL，需要替换为所有实际的角色
+      if (privateToRoles.includes('ALL')) {
+        // 从当前选择的角色中过滤掉ALL，保留所有实际的角色
+        // 因为当选择ALL时，实际上已经包含了所有角色
+        return privateToRoles.filter(role => role !== 'ALL');
+      }
+      
+      return privateToRoles;
+    };
+
+    const processedFormData = {
+      ...formData,
+      privateToRoles: processPrivateToRoles(formData.privateToRoles)
+    };
+
+    const errors = validateKnowledgeForm(processedFormData, contentHtml, { allowNoCategory: isCreatingRootFolder });
     if (errors.length > 0) {
       message.error(errors[0].message);
       return;
@@ -190,16 +209,16 @@ export const useKnowledgeForm = (mode = 'add') => {
         
         // 2. Assemble the final data and update the document.
         const submitData = {
-          name: formData.title.trim(),
+          name: processedFormData.title.trim(),
           description: contentHtml,
-          parentId: formData.category,
+          parentId: processedFormData.category,
           nodeType: nodeType,
-          tags: formData.tags,
-          tableData: formData.tableData,
-          effectiveStartTime: formData.effectiveTime?.[0]?.toISOString() || null,
-          effectiveEndTime: formData.effectiveTime?.[1]?.toISOString() || null,
+          tags: processedFormData.tags,
+          tableData: processedFormData.tableData,
+          effectiveStartTime: processedFormData.effectiveTime?.[0]?.toISOString() || null,
+          effectiveEndTime: processedFormData.effectiveTime?.[1]?.toISOString() || null,
           changeReason: "Knowledge update",
-          workspaces: formData.privateToRoles,
+          workspaces: processedFormData.privateToRoles,
           attachments: allFinalAttachments.map(att => ({
             name: att.name,
             url: att.url,
@@ -235,16 +254,16 @@ export const useKnowledgeForm = (mode = 'add') => {
       try {
         // 1. Create the document WITHOUT attachments first.
         const initialSubmitData = {
-          name: formData.title.trim(),
+          name: processedFormData.title.trim(),
           description: contentHtml,
-          parentId: formData.category,
+          parentId: processedFormData.category,
           nodeType: nodeType,
-          tags: formData.tags,
-          tableData: formData.tableData,
-          effectiveStartTime: formData.effectiveTime?.[0]?.toISOString() || null,
-          effectiveEndTime: formData.effectiveTime?.[1]?.toISOString() || null,
+          tags: processedFormData.tags,
+          tableData: processedFormData.tableData,
+          effectiveStartTime: processedFormData.effectiveTime?.[0]?.toISOString() || null,
+          effectiveEndTime: processedFormData.effectiveTime?.[1]?.toISOString() || null,
           changeReason: "Knowledge creation",
-          workspaces: formData.privateToRoles,
+          workspaces: processedFormData.privateToRoles,
           attachments: [] // Send an empty array initially
         };
   

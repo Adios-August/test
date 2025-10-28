@@ -24,6 +24,7 @@ const PopupContainer = ({
           visible={activePopup === 'tags'}
           onClose={onClosePopup}
           formData={formData}
+          setFormData={setFormData}
           tagInput={tagInput}
           setTagInput={setTagInput}
           tagError={tagError}

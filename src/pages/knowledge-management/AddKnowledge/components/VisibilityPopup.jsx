@@ -70,8 +70,8 @@ const VisibilityPopup = ({
         // 如果之前已经选择了 ALL，检查是否取消了其他选项
         const nonAllValues = selectedValues.filter(val => val !== 'ALL');
         if (nonAllValues.length < allValues.length) {
-          // 取消了一些选项，只保留 ALL
-          handlePrivateToChange(['ALL']);
+          // 取消了一些选项，移除ALL，只保留剩余的选项
+          handlePrivateToChange(nonAllValues);
         } else {
           // 没有取消任何选项，保持原样
           handlePrivateToChange(selectedValues);
