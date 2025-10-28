@@ -417,7 +417,7 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
 
             <div className="content-section">
               <div className="effective-date">
-                <span>生效时间: {knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate || '未知'}</span>
+                <span>生效时间: {knowledgeDetail.effectiveStartTime || ''} - {knowledgeDetail.effectiveEndTime || ''}</span>
               </div>
             </div>
           </div>
@@ -576,9 +576,9 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
                 </div>
               )}
 
-              {(versionViewData.effectiveDate || knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate) && (
+              {(  knowledgeDetail.effectiveStartTime  ) && (
                 <div className="effective-date" style={{ marginTop: 12 }}>
-                  <span>生效时间: {versionViewData.effectiveDate || knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate || '未知'}</span>
+                  <span>生效时间: { knowledgeDetail.effectiveStartTime   || ''} - { knowledgeDetail.effectiveEndTime   || ''}</span>
                 </div>
               )}
             </div>

@@ -853,7 +853,7 @@ const KnowledgeDetail = () => {
 
                         <div className="content-section">
                           <div className="effective-date">
-                            <span>生效时间: {tab.content?.effectiveStartTime || tab.content?.effectiveDate || '未知'}</span>
+                            <span>生效时间: {tab.content?.effectiveStartTime || ''} - {tab.content?.effectiveEndTime || ''}</span>
                           </div>
                         </div>
 

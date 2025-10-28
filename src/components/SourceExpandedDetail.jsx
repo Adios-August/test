@@ -165,7 +165,7 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], p
 
           <div className="content-section">
             <div className="effective-date">
-              <span>生效时间: {knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate || '未知'}</span>
+              <span>生效时间: {knowledgeDetail.effectiveStartTime || ''} - {knowledgeDetail.effectiveEndTime || ''}</span>
             </div>
           </div>
         </div>
