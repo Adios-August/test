@@ -60,6 +60,7 @@ const KnowledgeDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
+  const backQuery = searchParams.get('query');
   const [activeTab, setActiveTab] = useState('1');
   const [searchCollapsed, setSearchCollapsed] = useState(false);
   const [searchValue, setSearchValue] = useState('');
@@ -413,8 +414,11 @@ const KnowledgeDetail = () => {
  
 
   const handleBack = () => {
-    const categoryParam = categoryId ? `?category=${categoryId}` : '';
-    navigate(`/knowledge${categoryParam}`);
+    const params = new URLSearchParams();
+    if (categoryId) params.set('parent', categoryId); // Knowledge页识别parent参数
+    if (backQuery && backQuery.trim()) params.set('query', backQuery.trim());
+    const qs = params.toString();
+    navigate(`/knowledge${qs ? `?${qs}` : ''}`);
   };
 
   const handleTabClose = (targetKey) => {

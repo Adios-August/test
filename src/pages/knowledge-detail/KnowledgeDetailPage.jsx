@@ -60,7 +60,8 @@ const KnowledgeDetailPage = () => {
       <Content className="detail-content">
         <KnowledgeDetailContent 
           knowledgeDetail={knowledgeDetail} 
-          loading={loading} 
+          loading={loading}
+          showBackButton={false}
         />
       </Content>
     </Layout>
