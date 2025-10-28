@@ -70,9 +70,10 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
       try {
         let fetchUrl = fileUrl;
         
-        // 如果是相对路径，转换为完整URL
+        // 如果是相对路径，转换为完整URL（使用环境变量前缀）
         if (fileUrl.startsWith('/api/')) {
-          fetchUrl = `${window.location.origin}${fileUrl}`;
+          const base = (import.meta.env.VITE_API_FILE_URL || '').replace(/\/+$/, '');
+          fetchUrl = `${base}${fileUrl}`;
         }
         
         const response = await authenticatedFetch(fetchUrl);
