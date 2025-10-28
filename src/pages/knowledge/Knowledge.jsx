@@ -1267,7 +1267,7 @@ const Knowledge = observer(() => {
                 <KnowledgeDetailContent
                   knowledgeDetail={selectedKnowledgeDetail}
                   loading={selectedKnowledgeLoading}
-                  showBackButton={false}
+                  showBackButton={true}
                   showEmailButton={false}
                 />
               </div>
