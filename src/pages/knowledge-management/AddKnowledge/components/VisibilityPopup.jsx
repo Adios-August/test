@@ -19,6 +19,7 @@ const VisibilityPopup = ({
   if (!visible) return null;
 
   const [options, setOptions] = useState([]);
+  const [allOptions, setAllOptions] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -30,20 +31,63 @@ const VisibilityPopup = ({
                             .filter(Boolean);
         const dynamicOptions = wsNames.map((name) => ({ label: name, value: name }));
         if (mounted) {
-          setOptions(dynamicOptions);
+          setAllOptions(dynamicOptions);
+          // 添加 ALL 选项到最前面
+          setOptions([
+            { label: 'ALL', value: 'ALL' },
+            ...dynamicOptions
+          ]);
         }
       } catch (e) {
         console.error('获取工作空间列表失败:', e);
         message.warning('获取工作空间失败，使用默认选项');
         const fallback = ['WPB', 'GPB', 'IWS', 'FCCS', 'CCSS'];
+        const fallbackOptions = fallback.map((n) => ({ label: n, value: n }));
         if (mounted) {
-          setOptions(fallback.map((n) => ({ label: n, value: n })));
+          setAllOptions(fallbackOptions);
+          setOptions([
+            { label: 'ALL', value: 'ALL' },
+            ...fallbackOptions
+          ]);
         }
       }
     };
     fetchWorkspaces();
     return () => { mounted = false; };
   }, []);
+
+  // 处理选择变化
+  const handleChange = (selectedValues) => {
+    const allValues = allOptions.map(opt => opt.value);
+    const previousValues = formData.privateToRoles || [];
+    
+    // 如果选择了 ALL
+    if (selectedValues.includes('ALL')) {
+      // 如果之前没有选择 ALL，说明是刚选择 ALL，选择所有选项
+      if (!previousValues.includes('ALL')) {
+        handlePrivateToChange(['ALL', ...allValues]);
+      } else {
+        // 如果之前已经选择了 ALL，检查是否取消了其他选项
+        const nonAllValues = selectedValues.filter(val => val !== 'ALL');
+        if (nonAllValues.length < allValues.length) {
+          // 取消了一些选项，移除ALL，只保留剩余的选项
+          handlePrivateToChange(nonAllValues);
+        } else {
+          // 没有取消任何选项，保持原样
+          handlePrivateToChange(selectedValues);
+        }
+      }
+    } else {
+      // 没有选择 ALL
+      // 如果之前选择了 ALL，现在取消 ALL，选择所有其他选项
+      if (previousValues.includes('ALL')) {
+        handlePrivateToChange(allValues);
+      } else {
+        // 正常的多选逻辑
+        handlePrivateToChange(selectedValues);
+      }
+    }
+  };
 
   return (
     <>
@@ -80,7 +124,7 @@ const VisibilityPopup = ({
             style={{ width: '100%' }}
             placeholder="选择可见范围"
             value={formData.privateToRoles}
-            onChange={handlePrivateToChange}
+            onChange={handleChange}
             options={options}
           />
         </div>

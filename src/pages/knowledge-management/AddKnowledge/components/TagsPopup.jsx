@@ -1,14 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  Input, 
-  Button, 
   Tag, 
   Typography,
-  Card
+  Card,
+  Select,
+  Spin
 } from 'antd';
-import { 
-  PlusOutlined
-} from '@ant-design/icons';
+import { tagsAPI } from '../../../../api/tags';
 
 const { Text } = Typography;
 
@@ -16,13 +14,40 @@ const TagsPopup = ({
   visible,
   onClose,
   formData,
-  tagInput,
-  setTagInput,
-  tagError,
-  onAddTag,
-  onRemoveTag,
-  anchorEl
+  setFormData
 }) => {
+  const [availableTags, setAvailableTags] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // 获取所有标签
+  useEffect(() => {
+    if (visible) {
+      fetchAllTags();
+    }
+  }, [visible]);
+
+  const fetchAllTags = async () => {
+    try {
+      setLoading(true);
+      const response = await tagsAPI.getAllTags();
+      if (response && response.data) {
+        setAvailableTags(response.data);
+      }
+    } catch (error) {
+      console.error('获取标签列表失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理标签变化
+  const handleTagsChange = (values) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: values || []
+    }));
+  };
+
   if (!visible) return null;
 
   return (
@@ -55,37 +80,24 @@ const TagsPopup = ({
         }}
       >
         <div>
-          <Input
-            placeholder="输入标签后按回车添加"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onPressEnter={onAddTag}
-            suffix={
-              <Button 
-                type="link" 
-                icon={<PlusOutlined />} 
-                onClick={onAddTag}
-                size="small"
-              />
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>选择标签：</Text>
+          <Select
+            mode="tags"
+            style={{ width: '100%' }}
+            placeholder="输入或选择标签"
+            value={formData.tags || []}
+            onChange={handleTagsChange}
+            notFoundContent={loading ? <Spin size="small" /> : '暂无标签'}
+            options={availableTags.map(tag => ({
+              label: tag,
+              value: tag
+            }))}
+            filterOption={(input, option) =>
+              option?.label?.toLowerCase().includes(input.toLowerCase())
             }
+            showSearch
+            allowClear
           />
-          {tagError && (
-            <Text type="danger" style={{ fontSize: '12px', display: 'block', marginTop: 4 }}>
-              {tagError}
-            </Text>
-          )}
-          <div style={{ marginTop: 12, minHeight: 32 }}>
-            {formData.tags.map((tag, index) => (
-              <Tag
-                key={index}
-                closable
-                onClose={() => onRemoveTag(tag)}
-                style={{ marginBottom: 8, marginRight: 8 }}
-              >
-                {tag}
-              </Tag>
-            ))}
-          </div>
         </div>
       </Card>
     </>

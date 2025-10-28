@@ -10,11 +10,6 @@ const PopupContainer = ({
   onClosePopup,
   formData,
   setFormData,
-  tagInput,
-  setTagInput,
-  tagError,
-  onAddTag,
-  onRemoveTag,
   handlePrivateToChange
 }) => {
   return (
@@ -24,11 +19,7 @@ const PopupContainer = ({
           visible={activePopup === 'tags'}
           onClose={onClosePopup}
           formData={formData}
-          tagInput={tagInput}
-          setTagInput={setTagInput}
-          tagError={tagError}
-          onAddTag={onAddTag}
-          onRemoveTag={onRemoveTag}
+          setFormData={setFormData}
         />
         
         <TimePopup
