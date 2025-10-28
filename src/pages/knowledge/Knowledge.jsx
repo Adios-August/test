@@ -784,7 +784,7 @@ const Knowledge = observer(() => {
       const params = [];
       if (categoryId) params.push(`category=${categoryId}`);
       if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
-      const qs = params.length ? `?${params.join('&')}` : '';
+      const qs = `?${[...params, 'from=new'].join('&')}`;
       window.open(`/knowledge-detail/${knowledgeId}${qs}`, '_blank');
     } else {
       message.error('知识ID不存在');

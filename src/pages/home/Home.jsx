@@ -64,7 +64,7 @@ const Home = observer(() => {
 
   // 在新页面打开知识详情
   const handleOpenInNewPage = (knowledgeId) => {
-    window.open(`/knowledge-detail/${knowledgeId}`, '_blank');
+    window.open(`/knowledge-detail/${knowledgeId}?from=new`, '_blank');
   };
 
   // 获取热门知识列表

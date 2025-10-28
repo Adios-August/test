@@ -64,7 +64,7 @@ const Favorites = () => {
 
   // 在新页面打开知识详情
   const handleOpenInNewPage = (record) => {
-    window.open(`/knowledge-detail/${record.knowledgeId}`, '_blank');
+    window.open(`/knowledge-detail/${record.knowledgeId}?from=new`, '_blank');
   };
 
   // 处理删除收藏

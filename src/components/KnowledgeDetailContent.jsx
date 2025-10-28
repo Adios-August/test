@@ -3,6 +3,7 @@ import { Button, Avatar, Select, Input, message, Tooltip, Card, Spin, Modal } fr
 import {
   FilePdfOutlined, FileExcelOutlined, TagOutlined,
   SendOutlined, UserOutlined, ArrowLeftOutlined, HistoryOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { knowledgeAPI } from '../api/knowledge';
 import { useFeedbackTypes } from '../hooks/useFeedbackTypes';
@@ -11,11 +12,39 @@ import FeedbackMailButton from './FeedbackMailButton';
 import FavoriteButton from './FavoriteButton';
 import { useAuthStore } from '../stores';
 import { sanitizeHtmlLinks } from '../utils/htmlUtils';
-
+import { authenticatedFetch } from '../utils/request';
+  
 import PdfPreview from './PdfPreview';
 import KnowledgeTable from './KnowledgeTable';
 import './KnowledgeDetailContent.scss';
-
+  
+  // 附件下载（右侧按钮）
+  const handleAttachmentDownload = async (attachment) => {
+    try {
+      const downloadUrl = attachment.filePath || attachment.fileUrl || attachment.url;
+      if (!downloadUrl) {
+        message.error('下载链接不存在');
+        return;
+      }
+      const response = await authenticatedFetch(downloadUrl, { method: 'GET' });
+      if (!response.ok) {
+        message.error('下载失败，请稍后重试');
+        return;
+      }
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = attachment.fileName || attachment.name || 'attachment.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download error:', err);
+      message.error('下载失败，请稍后重试');
+    }
+  };
 import KnowledgeHistory from './KnowledgeHistory';
 import KnowledgeDiff from './KnowledgeDiff';
 
@@ -342,7 +371,13 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
                         {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
                       </span>
                       <span className="attachment-name">{attachment.fileName || attachment.name}</span>
-                      
+                      <Button
+                        type="link"
+                        icon={<DownloadOutlined />}
+                        onClick={() => handleAttachmentDownload(attachment)}
+                      >
+                        下载
+                      </Button>
                        
                     </div>
                     
@@ -502,6 +537,13 @@ const KnowledgeDetailContent = ({ knowledgeDetail, loading = false, showBackButt
                             {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
                           </span>
                           <span className="attachment-name">{attachment.fileName || attachment.name}</span>
+                          <Button
+                            type="link"
+                            icon={<DownloadOutlined />}
+                            onClick={() => handleAttachmentDownload(attachment)}
+                          >
+                            下载
+                          </Button>
                         </div>
                         {(attachment.fileType === 'pdf' || 
                           attachment.fileType === 'application/pdf' ||

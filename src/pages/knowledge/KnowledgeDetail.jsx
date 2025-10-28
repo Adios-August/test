@@ -3,7 +3,7 @@ import { Layout, Tabs, Button, Avatar, Space, List, Card, Input, message, Spin, 
 import {
   HeartOutlined, HeartFilled, HistoryOutlined, TranslationOutlined, FilePdfOutlined, FileExcelOutlined,
   CloseOutlined, ArrowLeftOutlined, LeftOutlined, RightOutlined, SearchOutlined, TagOutlined,
-  SendOutlined, ArrowRightOutlined, UserOutlined,
+  SendOutlined, ArrowRightOutlined, UserOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
@@ -18,6 +18,7 @@ import { engagementAPI } from '../../api/engagement';
 import { useKnowledgeStore, useAuthStore } from '../../stores';
 import { useFeedbackTypes } from '../../hooks/useFeedbackTypes';
 import { addSearchHistory } from '../../utils/searchHistoryAPI';
+import { authenticatedFetch } from '../../utils/request';
 import './KnowledgeDetail.scss';
 
 // HTML标签清理函数
@@ -76,6 +77,34 @@ const KnowledgeDetail = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [favoriteStatusLoading, setFavoriteStatusLoading] = useState(true);
+
+  // 附件下载（右侧按钮）
+  const handleAttachmentDownload = async (attachment) => {
+    try {
+      const downloadUrl = attachment.filePath || attachment.fileUrl || attachment.url;
+      if (!downloadUrl) {
+        message.error('下载链接不存在');
+        return;
+      }
+      const response = await authenticatedFetch(downloadUrl, { method: 'GET' });
+      if (!response.ok) {
+        message.error('下载失败，请稍后重试');
+        return;
+      }
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = attachment.fileName || attachment.name || 'attachment.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download error:', err);
+      message.error('下载失败，请稍后重试');
+    }
+  };
 
   // 历史视图相关状态
   const [showHistory, setShowHistory] = useState(false);
@@ -782,7 +811,13 @@ const KnowledgeDetail = () => {
                                     {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
                                   </span>
                                   <span className="attachment-name">{attachment.fileName || attachment.name}</span>
-                                  
+                                  <Button
+                                    type="link"
+                                    icon={<DownloadOutlined />}
+                                    onClick={() => handleAttachmentDownload(attachment)}
+                                  >
+                                    下载
+                                  </Button>
                                 </div>
                                 
 

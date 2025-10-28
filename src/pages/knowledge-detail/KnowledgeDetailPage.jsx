@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, message, Spin } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { knowledgeAPI } from '../../api/knowledge';
 import KnowledgeDetailContent from '../../components/KnowledgeDetailContent';
 import { useAuthStore } from '../../stores';
@@ -11,6 +11,7 @@ const { Content } = Layout;
 const KnowledgeDetailPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const authStore = useAuthStore();
   
   // 知识详情数据状态
@@ -61,7 +62,7 @@ const KnowledgeDetailPage = () => {
         <KnowledgeDetailContent 
           knowledgeDetail={knowledgeDetail} 
           loading={loading}
-          showBackButton={false}
+          showBackButton={searchParams.get('from') !== 'new'}
         />
       </Content>
     </Layout>

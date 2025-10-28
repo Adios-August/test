@@ -254,9 +254,8 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
           <span style={{ marginRight: 12 }}>{currentPage}{numPages ? ` / ${numPages}` : ""}</span>
           <span>缩放：{Math.round(zoom * 100)}%</span>
         </div>
-        {/* 下载与缩放控制 */}
+        {/* 缩放控制 */}
         <div>
-          <button style={{ marginLeft: 8 }} disabled={!blobUrl} onClick={handleDownload}>下载</button>
           <button style={{ marginLeft: 8 }} disabled={!blobUrl || zoom <= MIN_ZOOM} onClick={handleZoomOut}>缩小</button>
           <button style={{ marginLeft: 8 }} disabled={!blobUrl || zoom >= MAX_ZOOM} onClick={handleZoomIn}>放大</button>
           <button style={{ marginLeft: 8 }} disabled={!blobUrl} onClick={handleZoomReset}>重置</button>
