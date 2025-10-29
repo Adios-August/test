@@ -20,6 +20,13 @@ const FormContent = ({
   isTableCheckboxDisabled,
   handleTableChange
 }) => {
+  // Check if creating a 一级菜单 (first-level menu)
+  const isCreatingRootFolder = () => {
+    const params = new URLSearchParams(window.location.search);
+    const parentId = params.get('parentId');
+    const nodeTypeParam = params.get('nodeType');
+    return (parentId === '0' || parentId === 0) && nodeTypeParam === 'folder';
+  };
   return (
     <div className="content-body">
       {/* Node type selector - always show when category is selected (including root) */}
@@ -55,8 +62,8 @@ const FormContent = ({
         onImageUpload={handleImageUpload}
       />
 
-      {/* Table toggle checkbox - only show for folder type creation */}
-      {nodeTypeToCreate === 'folder' && (
+      {/* Table toggle checkbox - only show for folder type creation, but not for 一级菜单 */}
+      {nodeTypeToCreate === 'folder' && !isCreatingRootFolder() && (
         <>
           <div style={{ marginTop: '24px', marginBottom: '16px' }}>
             <Checkbox

@@ -175,7 +175,10 @@ export const useKnowledgeForm = (mode = 'add') => {
     console.log('原始 privateToRoles:', formData.privateToRoles);
     console.log('处理后的 privateToRoles:', processedFormData.privateToRoles);
 
-    const errors = validateKnowledgeForm(processedFormData, contentHtml, { allowNoCategory: isCreatingRootFolder });
+    const errors = validateKnowledgeForm(processedFormData, contentHtml, { 
+      allowNoCategory: isCreatingRootFolder,
+      isCreatingRootFolder: isCreatingRootFolder
+    });
     if (errors.length > 0) {
       message.error(errors[0].message);
       return;

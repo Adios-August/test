@@ -68,7 +68,7 @@ export const convertToTreeData = (categories) => {
 // Form validation
 // 允许通过 options 控制是否跳过"必须选择分类"的校验，例如创建一级类目(parentId=0)
 export const validateKnowledgeForm = (formData, contentHtml, options = {}) => {
-  const { allowNoCategory = false } = options;
+  const { allowNoCategory = false, isCreatingRootFolder = false } = options;
   const errors = [];
   // Title validation
   if (!formData.title.trim()) {
@@ -82,35 +82,40 @@ export const validateKnowledgeForm = (formData, contentHtml, options = {}) => {
   if (isContentEmpty(contentHtml)) {
     errors.push({ field: 'content', message: '请填写正文内容' });
   }
-  // Required fields validation
-  // Tags validation
-  if (!formData.tags || formData.tags.length === 0) {
-    errors.push({ field: 'tags', message: '请至少添加一个标签' });
-  }
-  // Visibility validation
-  if (!formData.privateToRoles || formData.privateToRoles.length === 0) {
-    errors.push({ field: 'privateToRoles', message: '请选择可见范围' });
-  }
-  // Effective time validation
-  const [startTime, endTime] = formData.effectiveTime;
-  if (!startTime || !endTime) {
-    errors.push({ field: 'effectiveTime', message: '请设置有效时间' });
-  } else if (startTime >= endTime) {
-    errors.push({ field: 'effectiveTime', message: '结束时间需晚于开始时间' });
-  }
-  // Table validation
-  if (formData.tableData) {
-    try {
-      const { validateTableData } = require('./tableUtils');
-      const tableErrors = validateTableData(formData.tableData);
-      if (tableErrors.length > 0) {
-        errors.push({ field: 'table', message: tableErrors[0].message });
+  
+  // For 一级菜单 (root folder), skip validation for tags, visibility, effective time, and table
+  if (!isCreatingRootFolder) {
+    // Required fields validation
+    // Tags validation
+    if (!formData.tags || formData.tags.length === 0) {
+      errors.push({ field: 'tags', message: '请至少添加一个标签' });
+    }
+    // Visibility validation
+    if (!formData.privateToRoles || formData.privateToRoles.length === 0) {
+      errors.push({ field: 'privateToRoles', message: '请选择可见范围' });
+    }
+    // Effective time validation
+    const [startTime, endTime] = formData.effectiveTime;
+    if (!startTime || !endTime) {
+      errors.push({ field: 'effectiveTime', message: '请设置有效时间' });
+    } else if (startTime >= endTime) {
+      errors.push({ field: 'effectiveTime', message: '结束时间需晚于开始时间' });
+    }
+    // Table validation
+    if (formData.tableData) {
+      try {
+        const { validateTableData } = require('./tableUtils');
+        const tableErrors = validateTableData(formData.tableData);
+        if (tableErrors.length > 0) {
+          errors.push({ field: 'table', message: tableErrors[0].message });
+        }
+      } catch (error) {
+        console.warn('Table validation error:', error);
+        // Don't block form submission if table validation fails
       }
-    } catch (error) {
-      console.warn('Table validation error:', error);
-      // Don't block form submission if table validation fails
     }
   }
+  
   // Disclaimer validation
   if (!formData.disclaimer) {
     errors.push({ field: 'disclaimer', message: '请确认内容不包含受限数据' });
