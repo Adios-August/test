@@ -20,40 +20,73 @@ const ConfigurationButtons = ({
   const hasVisibility = formData.privateToRoles && formData.privateToRoles.length > 0;
   const hasTime = formData.effectiveTime && formData.effectiveTime[0] && formData.effectiveTime[1];
 
+  // Time display function (like the original display functions)
+  const renderTimeDisplay = (effectiveTime) => {
+    if (!effectiveTime || !effectiveTime[0] || !effectiveTime[1]) return null;
+    
+    const startTime = effectiveTime[0];
+    const endTime = effectiveTime[1];
+    
+    return (
+      <span className="content-display">
+        : <span className="content-items">{startTime} - {endTime}</span>
+      </span>
+    );
+  };
+
   return (
     <div className="config-buttons">
       <button
         ref={tagsButtonRef}
         className={`config-link-button ${hasTags ? 'has-content' : 'required-field'}`}
         onClick={() => onPopupToggle('tags', tagsButtonRef)}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
       >
-        <TagsOutlined style={{ marginRight: 4 }} />
-        标签管理
-        {!hasTags && <span className="required-indicator">*</span>}
-        {renderTagsDisplay(formData.tags)}
+        <div>
+          <TagsOutlined style={{ marginRight: 4 }} />
+          标签管理
+          {!hasTags && <span className="required-indicator">*</span>}
+        </div>
+        {hasTags && (
+          <div style={{ marginTop: '4px' }}>
+            {renderTagsDisplay(formData.tags)}
+          </div>
+        )}
       </button>
       
       <button
         ref={visibilityButtonRef}
         className={`config-link-button ${hasVisibility ? 'has-content' : 'required-field'}`}
         onClick={() => onPopupToggle('visibility', visibilityButtonRef)}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
       >
-        <EyeOutlined style={{ marginRight: 4 }} />
-        可见范围
-        {!hasVisibility && <span className="required-indicator">*</span>}
-        {renderVisibilityDisplay(formData.privateToRoles)}
+        <div>
+          <EyeOutlined style={{ marginRight: 4 }} />
+          可见范围
+          {!hasVisibility && <span className="required-indicator">*</span>}
+        </div>
+        {hasVisibility && (
+          <div style={{ marginTop: '4px' }}>
+            {renderVisibilityDisplay(formData.privateToRoles)}
+          </div>
+        )}
       </button>
       
       <button
         ref={timeButtonRef}
         className={`config-link-button ${hasTime ? 'has-time-config' : 'required-field'}`}
         onClick={() => onPopupToggle('time', timeButtonRef)}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
       >
-        <CalendarOutlined style={{ marginRight: 4 }} />
-        有效时间
-        {!hasTime && <span className="required-indicator">*</span>}
+        <div>
+          <CalendarOutlined style={{ marginRight: 4 }} />
+          有效时间
+          {!hasTime && <span className="required-indicator">*</span>}
+        </div>
         {hasTime && (
-          <span className="status-indicator">●</span>
+          <div style={{ marginTop: '4px' }}>
+            {renderTimeDisplay(formData.effectiveTime)}
+          </div>
         )}
       </button>
       
