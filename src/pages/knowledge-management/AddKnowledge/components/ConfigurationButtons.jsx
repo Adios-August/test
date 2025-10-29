@@ -7,6 +7,40 @@ import {
 } from '@ant-design/icons';
 import { renderTagsDisplay, renderVisibilityDisplay } from '../utils/displayUtils';
 
+// Helper functions to render content without colons (for footer display)
+const renderTagsContent = (tags) => {
+  if (tags.length === 0) return null;
+  
+  if (tags.length <= 3) {
+    return <span className="content-items">{tags.join(', ')}</span>;
+  } else {
+    return <span className="content-items">{tags.length}个标签</span>;
+  }
+};
+
+const renderVisibilityContent = (privateToRoles) => {
+  if (privateToRoles.length === 0) return null;
+  
+  if (privateToRoles.includes('ALL')) {
+    return <span className="content-items">ALL</span>;
+  }
+  
+  if (privateToRoles.length <= 3) {
+    return <span className="content-items">{privateToRoles.join(', ')}</span>;
+  } else {
+    return <span className="content-items">{privateToRoles.length}个角色</span>;
+  }
+};
+
+const renderTimeContent = (effectiveTime) => {
+  if (!effectiveTime || !effectiveTime[0] || !effectiveTime[1]) return null;
+  
+  const startTime = effectiveTime[0];
+  const endTime = effectiveTime[1];
+  
+  return <span className="content-items">{startTime} - {endTime}</span>;
+};
+
 const ConfigurationButtons = ({ 
   formData, 
   tagsButtonRef, 
@@ -31,11 +65,14 @@ const ConfigurationButtons = ({
           <div className="button-header">
             <TagsOutlined style={{ marginRight: 4 }} />
             标签管理
-          </div>
-          <div className="button-footer">
             {!hasTags && <span className="required-indicator">*</span>}
-            {renderTagsDisplay(formData.tags)}
+            {hasTags && <span className="colon">:</span>}
           </div>
+          {hasTags && (
+            <div className="button-footer">
+              {renderTagsContent(formData.tags)}
+            </div>
+          )}
         </div>
       </button>
       
@@ -48,11 +85,14 @@ const ConfigurationButtons = ({
           <div className="button-header">
             <EyeOutlined style={{ marginRight: 4 }} />
             可见范围
-          </div>
-          <div className="button-footer">
             {!hasVisibility && <span className="required-indicator">*</span>}
-            {renderVisibilityDisplay(formData.privateToRoles)}
+            {hasVisibility && <span className="colon">:</span>}
           </div>
+          {hasVisibility && (
+            <div className="button-footer">
+              {renderVisibilityContent(formData.privateToRoles)}
+            </div>
+          )}
         </div>
       </button>
       
@@ -65,13 +105,14 @@ const ConfigurationButtons = ({
           <div className="button-header">
             <CalendarOutlined style={{ marginRight: 4 }} />
             有效时间
-          </div>
-          <div className="button-footer">
             {!hasTime && <span className="required-indicator">*</span>}
-            {hasTime && (
-              <span className="status-indicator">●</span>
-            )}
+            {hasTime && <span className="colon">:</span>}
           </div>
+          {hasTime && (
+            <div className="button-footer">
+              {renderTimeContent(formData.effectiveTime)}
+            </div>
+          )}
         </div>
       </button>
       
