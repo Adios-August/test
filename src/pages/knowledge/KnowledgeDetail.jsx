@@ -3,7 +3,7 @@ import { Layout, Tabs, Button, Avatar, Space, List, Card, Input, message, Spin, 
 import {
   HeartOutlined, HeartFilled, HistoryOutlined, TranslationOutlined, FilePdfOutlined, FileExcelOutlined,
   CloseOutlined, ArrowLeftOutlined, LeftOutlined, RightOutlined, SearchOutlined, TagOutlined,
-  SendOutlined, ArrowRightOutlined, UserOutlined,
+  SendOutlined, ArrowRightOutlined, UserOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
@@ -18,6 +18,7 @@ import { engagementAPI } from '../../api/engagement';
 import { useKnowledgeStore, useAuthStore } from '../../stores';
 import { useFeedbackTypes } from '../../hooks/useFeedbackTypes';
 import { addSearchHistory } from '../../utils/searchHistoryAPI';
+import { authenticatedFetch } from '../../utils/request';
 import './KnowledgeDetail.scss';
 
 // HTML标签清理函数
@@ -60,6 +61,7 @@ const KnowledgeDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
+  const backQuery = searchParams.get('query');
   const [activeTab, setActiveTab] = useState('1');
   const [searchCollapsed, setSearchCollapsed] = useState(false);
   const [searchValue, setSearchValue] = useState('');
@@ -75,6 +77,39 @@ const KnowledgeDetail = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [favoriteStatusLoading, setFavoriteStatusLoading] = useState(true);
+
+  // 附件下载（右侧按钮）
+  const handleAttachmentDownload = async (attachment) => {
+    try {
+        let downloadUrl = attachment.filePath || attachment.fileUrl || attachment.url;
+      // 当为相对路径时，使用环境变量前缀拼接为完整URL
+      if (downloadUrl && typeof downloadUrl === 'string' && downloadUrl.startsWith('/')) {
+        const base = (import.meta.env.VITE_API_FILE_URL || '').replace(/\/+$/, '');
+        downloadUrl = `${base}${downloadUrl}`;
+      }
+      if (!downloadUrl) {
+        message.error('下载链接不存在');
+        return;
+      }
+      const response = await authenticatedFetch(downloadUrl, { method: 'GET' });
+      if (!response.ok) {
+        message.error('下载失败，请稍后重试');
+        return;
+      }
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = attachment.fileName || attachment.name || 'attachment.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download error:', err);
+      message.error('下载失败，请稍后重试');
+    }
+  };
 
   // 历史视图相关状态
   const [showHistory, setShowHistory] = useState(false);
@@ -413,8 +448,11 @@ const KnowledgeDetail = () => {
  
 
   const handleBack = () => {
-    const categoryParam = categoryId ? `?category=${categoryId}` : '';
-    navigate(`/knowledge${categoryParam}`);
+    const params = new URLSearchParams();
+    if (categoryId) params.set('parent', categoryId); // Knowledge页识别parent参数
+    if (backQuery && backQuery.trim()) params.set('query', backQuery.trim());
+    const qs = params.toString();
+    navigate(`/knowledge${qs ? `?${qs}` : ''}`);
   };
 
   const handleTabClose = (targetKey) => {
@@ -778,7 +816,13 @@ const KnowledgeDetail = () => {
                                     {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
                                   </span>
                                   <span className="attachment-name">{attachment.fileName || attachment.name}</span>
-                                  
+                                  <Button
+                                    type="link"
+                                    icon={<DownloadOutlined />}
+                                    onClick={() => handleAttachmentDownload(attachment)}
+                                  >
+                                    下载
+                                  </Button>
                                 </div>
                                 
 
@@ -814,7 +858,7 @@ const KnowledgeDetail = () => {
 
                         <div className="content-section">
                           <div className="effective-date">
-                            <span>生效时间: {tab.content?.effectiveStartTime || tab.content?.effectiveDate || '未知'}</span>
+                            <span>生效时间: {tab.content?.effectiveStartTime || ''} - {tab.content?.effectiveEndTime || ''}</span>
                           </div>
                         </div>
 

@@ -288,7 +288,7 @@ const KnowledgeQA = () => {
   const handleOpenInNewPage = (reference) => {
     const knowledgeId = reference.knowledge_id || reference.knowledgeId;
     if (knowledgeId) {
-      window.open(`/knowledge-detail/${knowledgeId}`, '_blank');
+      window.open(`/knowledge-detail/${knowledgeId}?from=new`, '_blank');
     } else {
       message.error('知识ID不存在');
     }

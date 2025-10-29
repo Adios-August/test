@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Avatar, message, Tooltip } from 'antd';
 import {
   FilePdfOutlined, FileExcelOutlined, TagOutlined,
-  UserOutlined,
+  UserOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import { knowledgeAPI } from '../api/knowledge';
 import FavoriteButton from './FavoriteButton';
@@ -10,6 +10,7 @@ import FavoriteButton from './FavoriteButton';
 import PdfPreview from './PdfPreview';
 import KnowledgeTable from './KnowledgeTable';
 import './SourceExpandedDetail.scss';
+import { authenticatedFetch } from '../utils/request';
 
 const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], pageNum = 1, preferredAttachmentName }) => {
   // 处理收藏状态变化
@@ -38,6 +39,39 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], p
       </div>
     );
   }
+
+  // 附件下载（右侧按钮）
+  const handleAttachmentDownload = async (attachment) => {
+    try {
+        let downloadUrl = attachment.filePath || attachment.fileUrl || attachment.url;
+      // 当为相对路径时，使用环境变量前缀拼接为完整URL
+      if (downloadUrl && typeof downloadUrl === 'string' && downloadUrl.startsWith('/')) {
+        const base = (import.meta.env.VITE_API_FILE_URL || '').replace(/\/+$/, '');
+        downloadUrl = `${base}${downloadUrl}`;
+      }
+      if (!downloadUrl) {
+        message.error('下载链接不存在');
+        return;
+      }
+      const response = await authenticatedFetch(downloadUrl, { method: 'GET' });
+      if (!response.ok) {
+        message.error('下载失败，请稍后重试');
+        return;
+      }
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = attachment.fileName || attachment.name || 'attachment.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download error:', err);
+      message.error('下载失败，请稍后重试');
+    }
+  };
 
   return (
     <div className="source-expanded-detail">
@@ -94,7 +128,13 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], p
                       {attachment.fileType === 'pdf' ? <FilePdfOutlined /> : <FileExcelOutlined />}
                     </span>
                     <span className="attachment-name">{attachment.fileName || attachment.name}</span>
-                   
+                    <Button
+                      type="link"
+                      icon={<DownloadOutlined />}
+                      onClick={() => handleAttachmentDownload(attachment)}
+                    >
+                      下载
+                    </Button>
                      
                   </div>
                   
@@ -130,7 +170,7 @@ const SourceExpandedDetail = ({ knowledgeDetail, loading = false, bboxes = [], p
 
           <div className="content-section">
             <div className="effective-date">
-              <span>生效时间: {knowledgeDetail.effectiveStartTime || knowledgeDetail.effectiveDate || '未知'}</span>
+              <span>生效时间: {knowledgeDetail.effectiveStartTime || ''} - {knowledgeDetail.effectiveEndTime || ''}</span>
             </div>
           </div>
         </div>

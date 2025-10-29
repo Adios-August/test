@@ -102,6 +102,7 @@ const Knowledge = observer(() => {
   const authStore = useAuthStore();
   const rootStore = useStore();
   const categoryId = searchParams.get('parent');
+  const urlQuery = searchParams.get('query');
 
   // 获取当前用户ID
   const currentUserId = authStore.user?.id || authStore.user?.userId;
@@ -594,12 +595,31 @@ const Knowledge = observer(() => {
       // 搜索时显示AI和source模块 
       setShowAISourceModules(true);
       shouldKeepAIModule.current = true; // 设置为true，表示需要保持AI模块显示
+
+      // 将搜索关键词写入URL参数，便于返回后恢复
+      try {
+        const params = new URLSearchParams(location.search);
+        params.set('query', value.trim());
+        if (categoryId) params.set('parent', categoryId);
+        navigate({ pathname: location.pathname, search: params.toString() });
+      } catch (e) {
+        console.warn('更新搜索参数到URL失败:', e);
+      }
     } else {
       // 如果搜索框为空，隐藏AI和source模块 
       setShowAISourceModules(false);
       setIsCategorySearchMode(false);
       setSearchResults([]);
       shouldKeepAIModule.current = false; // 设置为false，表示不需要保持AI模块显示
+
+      // 清除URL中的query参数
+      try {
+        const params = new URLSearchParams(location.search);
+        params.delete('query');
+        navigate({ pathname: location.pathname, search: params.toString() });
+      } catch (e) {
+        console.warn('清除搜索参数失败:', e);
+      }
     }
   };
 
@@ -711,12 +731,28 @@ const Knowledge = observer(() => {
     }
   }, [location.state?.searchKeyword]); // 只依赖searchKeyword，不依赖整个location.state对象
 
+  // 当URL中存在 query 参数时，初始化并恢复搜索结果
+  useEffect(() => {
+    if (urlQuery && urlQuery.trim()) {
+      setSearchValue(urlQuery);
+      setShowAISourceModules(true);
+      shouldKeepAIModule.current = true;
+      // 进入搜索模式并触发搜索
+      setIsCategorySearchMode(true);
+      fetchSearchResults(urlQuery.trim(), 1, 10);
+    }
+  }, [urlQuery]);
+
   // 处理知识卡片点击
   const handleResultClick = (item) => {
     // 跳转到知识详情页面
     const knowledgeId = item.id || item.knowledgeId;
     if (knowledgeId) {
-      navigate(`/knowledge/${knowledgeId}`);
+      const params = [];
+      if (categoryId) params.push(`category=${categoryId}`);
+      if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
+      const qs = params.length ? `?${params.join('&')}` : '';
+      navigate(`/knowledge/${knowledgeId}${qs}`);
     } else {
       message.error('知识ID不存在');
     }
@@ -730,8 +766,11 @@ const Knowledge = observer(() => {
     
     if (knowledgeId) {
       // 跳转到带搜索列表的知识详情页面
-      const categoryParam = categoryId ? `?category=${categoryId}` : '';
-      navigate(`/knowledge/${knowledgeId}${categoryParam}`);
+      const params = [];
+      if (categoryId) params.push(`category=${categoryId}`);
+      if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
+      const qs = params.length ? `?${params.join('&')}` : '';
+      navigate(`/knowledge/${knowledgeId}${qs}`);
     } else {
       console.error('无法获取知识ID，知识项数据:', item);
       message.error('知识ID不存在');
@@ -742,8 +781,11 @@ const Knowledge = observer(() => {
   const handleOpenInNewPage = (item) => {
     const knowledgeId = item.id || item._id || item.knowledgeId;
     if (knowledgeId) {
-      const categoryParam = categoryId ? `?category=${categoryId}` : '';
-      window.open(`/knowledge-detail/${knowledgeId}${categoryParam}`, '_blank');
+      const params = [];
+      if (categoryId) params.push(`category=${categoryId}`);
+      if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
+      const qs = `?${[...params, 'from=new'].join('&')}`;
+      window.open(`/knowledge-detail/${knowledgeId}${qs}`, '_blank');
     } else {
       message.error('知识ID不存在');
     }
@@ -886,7 +928,10 @@ const Knowledge = observer(() => {
   // 在当前页面打开知识详情
   const handleOpenInCurrentPage = (item) => {
     // 使用正确的知识详情页面路由
-    const categoryParam = categoryId ? `?category=${categoryId}` : '';
+    const params = [];
+    if (categoryId) params.push(`category=${categoryId}`);
+    if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
+    const categoryParam = params.length ? `?${params.join('&')}` : '';
     const knowledgeId = item.id || item.knowledgeId;
     if (knowledgeId) {
       navigate(`/knowledge-detail/${knowledgeId}${categoryParam}`);
@@ -1222,7 +1267,7 @@ const Knowledge = observer(() => {
                 <KnowledgeDetailContent
                   knowledgeDetail={selectedKnowledgeDetail}
                   loading={selectedKnowledgeLoading}
-                  showBackButton={false}
+                  showBackButton={true}
                   showEmailButton={false}
                 />
               </div>
