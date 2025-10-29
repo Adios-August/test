@@ -27,10 +27,16 @@ const ConfigurationButtons = ({
         className={`config-link-button ${hasTags ? 'has-content' : 'required-field'}`}
         onClick={() => onPopupToggle('tags', tagsButtonRef)}
       >
-        <TagsOutlined style={{ marginRight: 4 }} />
-        标签管理
-        {!hasTags && <span className="required-indicator">*</span>}
-        {renderTagsDisplay(formData.tags)}
+        <div className="button-content">
+          <div className="button-header">
+            <TagsOutlined style={{ marginRight: 4 }} />
+            标签管理
+          </div>
+          <div className="button-footer">
+            {!hasTags && <span className="required-indicator">*</span>}
+            {renderTagsDisplay(formData.tags)}
+          </div>
+        </div>
       </button>
       
       <button
@@ -38,10 +44,16 @@ const ConfigurationButtons = ({
         className={`config-link-button ${hasVisibility ? 'has-content' : 'required-field'}`}
         onClick={() => onPopupToggle('visibility', visibilityButtonRef)}
       >
-        <EyeOutlined style={{ marginRight: 4 }} />
-        可见范围
-        {!hasVisibility && <span className="required-indicator">*</span>}
-        {renderVisibilityDisplay(formData.privateToRoles)}
+        <div className="button-content">
+          <div className="button-header">
+            <EyeOutlined style={{ marginRight: 4 }} />
+            可见范围
+          </div>
+          <div className="button-footer">
+            {!hasVisibility && <span className="required-indicator">*</span>}
+            {renderVisibilityDisplay(formData.privateToRoles)}
+          </div>
+        </div>
       </button>
       
       <button
@@ -49,12 +61,18 @@ const ConfigurationButtons = ({
         className={`config-link-button ${hasTime ? 'has-time-config' : 'required-field'}`}
         onClick={() => onPopupToggle('time', timeButtonRef)}
       >
-        <CalendarOutlined style={{ marginRight: 4 }} />
-        有效时间
-        {!hasTime && <span className="required-indicator">*</span>}
-        {hasTime && (
-          <span className="status-indicator">●</span>
-        )}
+        <div className="button-content">
+          <div className="button-header">
+            <CalendarOutlined style={{ marginRight: 4 }} />
+            有效时间
+          </div>
+          <div className="button-footer">
+            {!hasTime && <span className="required-indicator">*</span>}
+            {hasTime && (
+              <span className="status-indicator">●</span>
+            )}
+          </div>
+        </div>
       </button>
       
       <button
@@ -62,8 +80,12 @@ const ConfigurationButtons = ({
         className="config-link-button"
         onClick={() => onPopupToggle('attachment', attachmentButtonRef)}
       >
-        <FileTextOutlined style={{ marginRight: 4 }} />
-        附件上传
+        <div className="button-content">
+          <div className="button-header">
+            <FileTextOutlined style={{ marginRight: 4 }} />
+            附件上传
+          </div>
+        </div>
       </button>
     </div>
   );
