@@ -42,8 +42,24 @@ const ConfigurationButtons = ({
 
   const getTimeText = () => {
     if (!hasTime) return '';
-    const startDate = formData.effectiveTime[0].split(' ')[0]; // Get only date part
-    const endDate = formData.effectiveTime[1].split(' ')[0]; // Get only date part
+    
+    // Handle different data types (string, Date, Moment)
+    const formatDate = (date) => {
+      if (!date) return '';
+      if (typeof date === 'string') {
+        return date.split(' ')[0]; // Get only date part from string
+      }
+      if (date.format) {
+        return date.format('YYYY-MM-DD'); // Moment object
+      }
+      if (date instanceof Date) {
+        return date.toISOString().split('T')[0]; // Date object
+      }
+      return String(date);
+    };
+    
+    const startDate = formatDate(formData.effectiveTime[0]);
+    const endDate = formatDate(formData.effectiveTime[1]);
     return `${startDate} - ${endDate}`;
   };
 
