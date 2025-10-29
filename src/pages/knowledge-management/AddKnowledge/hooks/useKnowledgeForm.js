@@ -79,7 +79,7 @@ export const useKnowledgeForm = (mode = 'add') => {
         setFormData({
           title: data.name || data.title || '',
           category: data.parentId || data.category_id || null,
-          privateToRoles: data.workspaces || data.audience_roles || [],
+          privateToRoles: data.workspace || data.audience_roles || [],
           tags: data.tags || [],
           effectiveTime: effectiveTime,
           attachments: processedAttachments,
@@ -158,8 +158,8 @@ export const useKnowledgeForm = (mode = 'add') => {
       
       // 如果包含ALL，需要替换为所有实际的角色
       if (privateToRoles.includes('ALL')) {
-        // 从当前选择的角色中过滤掉ALL，保留所有实际的角色
-        // 因为当选择ALL时，实际上已经包含了所有角色
+        // 当选择ALL时，formData.privateToRoles应该包含['ALL', 'role1', 'role2', ...]
+        // 我们需要过滤掉ALL，保留所有实际的角色
         return privateToRoles.filter(role => role !== 'ALL');
       }
       
@@ -170,6 +170,10 @@ export const useKnowledgeForm = (mode = 'add') => {
       ...formData,
       privateToRoles: processPrivateToRoles(formData.privateToRoles)
     };
+
+    // 调试信息
+    console.log('原始 privateToRoles:', formData.privateToRoles);
+    console.log('处理后的 privateToRoles:', processedFormData.privateToRoles);
 
     const errors = validateKnowledgeForm(processedFormData, contentHtml, { allowNoCategory: isCreatingRootFolder });
     if (errors.length > 0) {
@@ -225,6 +229,8 @@ export const useKnowledgeForm = (mode = 'add') => {
             size: att.size
           }))
         };
+
+        console.log('更新知识提交数据:', submitData);
   
         const response = await knowledgeAPI.updateKnowledge(id, submitData);
         if (response.code !== 200) {
@@ -266,6 +272,8 @@ export const useKnowledgeForm = (mode = 'add') => {
           workspaces: processedFormData.privateToRoles,
           attachments: [] // Send an empty array initially
         };
+
+        console.log('创建知识提交数据:', initialSubmitData);
   
         const response = await knowledgeAPI.createKnowledge(initialSubmitData);
         if (response.code !== 200 || !response.data?.id) {
