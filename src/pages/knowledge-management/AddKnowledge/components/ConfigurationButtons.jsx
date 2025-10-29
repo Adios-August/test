@@ -9,7 +9,7 @@ import { renderTagsDisplay, renderVisibilityDisplay } from '../utils/displayUtil
 
 // Helper functions to render content without colons (for footer display)
 const renderTagsContent = (tags) => {
-  if (tags.length === 0) return null;
+  if (!tags || !Array.isArray(tags) || tags.length === 0) return null;
   
   if (tags.length <= 3) {
     return <span className="content-items">{tags.join(', ')}</span>;
@@ -19,7 +19,7 @@ const renderTagsContent = (tags) => {
 };
 
 const renderVisibilityContent = (privateToRoles) => {
-  if (privateToRoles.length === 0) return null;
+  if (!privateToRoles || !Array.isArray(privateToRoles) || privateToRoles.length === 0) return null;
   
   if (privateToRoles.includes('ALL')) {
     return <span className="content-items">ALL</span>;
@@ -33,7 +33,7 @@ const renderVisibilityContent = (privateToRoles) => {
 };
 
 const renderTimeContent = (effectiveTime) => {
-  if (!effectiveTime || !effectiveTime[0] || !effectiveTime[1]) return null;
+  if (!effectiveTime || !Array.isArray(effectiveTime) || !effectiveTime[0] || !effectiveTime[1]) return null;
   
   const startTime = effectiveTime[0];
   const endTime = effectiveTime[1];
@@ -50,9 +50,9 @@ const ConfigurationButtons = ({
   onPopupToggle 
 }) => {
   // Check if required fields are filled
-  const hasTags = formData.tags && formData.tags.length > 0;
-  const hasVisibility = formData.privateToRoles && formData.privateToRoles.length > 0;
-  const hasTime = formData.effectiveTime && formData.effectiveTime[0] && formData.effectiveTime[1];
+  const hasTags = formData.tags && Array.isArray(formData.tags) && formData.tags.length > 0;
+  const hasVisibility = formData.privateToRoles && Array.isArray(formData.privateToRoles) && formData.privateToRoles.length > 0;
+  const hasTime = formData.effectiveTime && Array.isArray(formData.effectiveTime) && formData.effectiveTime[0] && formData.effectiveTime[1];
 
   return (
     <div className="config-buttons">
