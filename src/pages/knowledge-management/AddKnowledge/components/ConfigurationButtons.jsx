@@ -20,18 +20,10 @@ const ConfigurationButtons = ({
   const hasVisibility = formData.privateToRoles && formData.privateToRoles.length > 0;
   const hasTime = formData.effectiveTime && formData.effectiveTime[0] && formData.effectiveTime[1];
 
-  // Time display function (like the original display functions)
-  const renderTimeDisplay = (effectiveTime) => {
-    if (!effectiveTime || !effectiveTime[0] || !effectiveTime[1]) return null;
-    
-    const startTime = effectiveTime[0];
-    const endTime = effectiveTime[1];
-    
-    return (
-      <span className="content-display">
-        : <span className="content-items">{startTime} - {endTime}</span>
-      </span>
-    );
+  // Time display function (returns simple string)
+  const getTimeText = () => {
+    if (!hasTime) return '';
+    return `${formData.effectiveTime[0]} - ${formData.effectiveTime[1]}`;
   };
 
   return (
@@ -85,7 +77,9 @@ const ConfigurationButtons = ({
         </div>
         {hasTime && (
           <div style={{ marginTop: '4px' }}>
-            {renderTimeDisplay(formData.effectiveTime)}
+            <span className="content-display">
+              : <span className="content-items">{getTimeText()}</span>
+            </span>
           </div>
         )}
       </button>
