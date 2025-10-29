@@ -20,10 +20,31 @@ const ConfigurationButtons = ({
   const hasVisibility = formData.privateToRoles && formData.privateToRoles.length > 0;
   const hasTime = formData.effectiveTime && formData.effectiveTime[0] && formData.effectiveTime[1];
 
-  // Time display function (returns simple string)
+  // Content display functions (without colons for separate line)
+  const getTagsText = () => {
+    if (!hasTags) return '';
+    if (formData.tags.length <= 3) {
+      return formData.tags.join(', ');
+    }
+    return `${formData.tags.length}个标签`;
+  };
+
+  const getVisibilityText = () => {
+    if (!hasVisibility) return '';
+    if (formData.privateToRoles.includes('ALL')) {
+      return 'ALL';
+    }
+    if (formData.privateToRoles.length <= 3) {
+      return formData.privateToRoles.join(', ');
+    }
+    return `${formData.privateToRoles.length}个角色`;
+  };
+
   const getTimeText = () => {
     if (!hasTime) return '';
-    return `${formData.effectiveTime[0]} - ${formData.effectiveTime[1]}`;
+    const startDate = formData.effectiveTime[0].split(' ')[0]; // Get only date part
+    const endDate = formData.effectiveTime[1].split(' ')[0]; // Get only date part
+    return `${startDate} - ${endDate}`;
   };
 
   return (
@@ -41,7 +62,9 @@ const ConfigurationButtons = ({
         </div>
         {hasTags && (
           <div style={{ marginTop: '4px' }}>
-            {renderTagsDisplay(formData.tags)}
+            <span className="content-display">
+              <span className="content-items">{getTagsText()}</span>
+            </span>
           </div>
         )}
       </button>
@@ -59,7 +82,9 @@ const ConfigurationButtons = ({
         </div>
         {hasVisibility && (
           <div style={{ marginTop: '4px' }}>
-            {renderVisibilityDisplay(formData.privateToRoles)}
+            <span className="content-display">
+              <span className="content-items">{getVisibilityText()}</span>
+            </span>
           </div>
         )}
       </button>
@@ -78,7 +103,7 @@ const ConfigurationButtons = ({
         {hasTime && (
           <div style={{ marginTop: '4px' }}>
             <span className="content-display">
-              : <span className="content-items">{getTimeText()}</span>
+              <span className="content-items">{getTimeText()}</span>
             </span>
           </div>
         )}

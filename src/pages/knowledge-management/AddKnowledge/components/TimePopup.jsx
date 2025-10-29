@@ -51,7 +51,7 @@ const TimePopup = ({
             style={{ width: '100%' }}
             value={formData.effectiveTime}
             onChange={(dates) => setFormData(prev => ({ ...prev, effectiveTime: dates || [null, null] }))}
-            showTime
+            format="YYYY-MM-DD"
           />
         </div>
       </Card>
