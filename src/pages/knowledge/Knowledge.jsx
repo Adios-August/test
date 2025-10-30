@@ -178,6 +178,10 @@ const Knowledge = observer(() => {
   // 防止AI模块被重复隐藏的ref
   const shouldKeepAIModule = useRef(false);
 
+  // 防止URL参数驱动的搜索在开发环境或重复设置下被触发两次
+  const lastUrlQueryRef = useRef(null);
+  const urlQueryFetchedRef = useRef(false);
+
  
  
 
@@ -591,7 +595,6 @@ const Knowledge = observer(() => {
 
       setCurrentCategoryId(1);
       setIsCategorySearchMode(true); // 进入搜索模式
-      fetchSearchResults(value.trim(), 1, 10);
       // 搜索时显示AI和source模块 
       setShowAISourceModules(true);
       shouldKeepAIModule.current = true; // 设置为true，表示需要保持AI模块显示
@@ -733,14 +736,29 @@ const Knowledge = observer(() => {
 
   // 当URL中存在 query 参数时，初始化并恢复搜索结果
   useEffect(() => {
-    if (urlQuery && urlQuery.trim()) {
-      setSearchValue(urlQuery);
-      setShowAISourceModules(true);
-      shouldKeepAIModule.current = true;
-      // 进入搜索模式并触发搜索
-      setIsCategorySearchMode(true);
-      fetchSearchResults(urlQuery.trim(), 1, 10);
+    const q = urlQuery && urlQuery.trim() ? urlQuery.trim() : '';
+    if (!q) {
+      // 没有query时重置标记，允许下次有query再触发
+      urlQueryFetchedRef.current = false;
+      lastUrlQueryRef.current = null;
+      return;
     }
+
+    // 如果和上次处理的query相同且已拉取过，跳过（防止 StrictMode 或重复设置导致的双触发）
+    if (lastUrlQueryRef.current === q && urlQueryFetchedRef.current) {
+      return;
+    }
+
+    // 记录已处理的query
+    lastUrlQueryRef.current = q;
+    urlQueryFetchedRef.current = true;
+
+    // 同步状态并触发一次搜索
+    setSearchValue(q);
+    setShowAISourceModules(true);
+    shouldKeepAIModule.current = true;
+    setIsCategorySearchMode(true);
+    fetchSearchResults(q, 1, 10);
   }, [urlQuery]);
 
   // 处理知识卡片点击

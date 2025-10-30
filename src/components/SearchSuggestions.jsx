@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Spin, message } from 'antd';
 import { homeAPI } from '../api/home';
 import { useAuthStore } from '../stores';
@@ -21,6 +21,9 @@ const SearchSuggestions = ({
   const [showAllRecommended, setShowAllRecommended] = useState(false);
   
   const authStore = useAuthStore();
+  // 用于在 StrictMode 下防止重复触发请求，以及按工作区和可见性控制加载
+  const lastWorkspaceRef = useRef(authStore.currentWorkspace);
+  const hasFetchedRef = useRef(false);
 
   // 获取推荐问题
   const fetchRecommendedQuestions = async () => {
@@ -96,20 +99,26 @@ const SearchSuggestions = ({
     if (typeof onClose === 'function') onClose();
   };
 
-  // 组件挂载时加载数据
+  // 根据工作区与可见性加载数据，并在开发环境 StrictMode 下避免重复执行
   useEffect(() => {
-    if (visible) {
-      fetchRecommendedQuestions();
-      fetchHistoryQuestions();
+    // 如果不可见，重置拉取标记，等待下次显示时再拉取
+    if (!visible) {
+      hasFetchedRef.current = false;
+      return;
     }
-  }, [visible]);
 
-  // 监听工作区变化，重新加载数据
-  useEffect(() => {
-    if (visible) {
-      fetchRecommendedQuestions();
-      fetchHistoryQuestions();
+    // 如果工作区发生变化，允许下一次拉取
+    if (lastWorkspaceRef.current !== authStore.currentWorkspace) {
+      lastWorkspaceRef.current = authStore.currentWorkspace;
+      hasFetchedRef.current = false;
     }
+
+    // 已经为当前工作区拉取过，则跳过，避免重复请求（处理 StrictMode 双触发）
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
+    fetchRecommendedQuestions();
+    fetchHistoryQuestions();
   }, [authStore.currentWorkspace, visible]);
 
   if (!visible) {
