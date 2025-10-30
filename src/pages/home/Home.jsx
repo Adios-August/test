@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Layout, Input, Button, Card, Row, Col, List, Tag, message, Spin, Dropdown } from "antd";
 import { useNavigate } from "react-router-dom";
 import {
@@ -32,6 +32,8 @@ const Home = observer(() => {
   const [latestLoading, setLatestLoading] = useState(false);
   const [hotDownloadsLoading, setHotDownloadsLoading] = useState(false);
   const authStore = useAuthStore();
+  const initRunRef = useRef(false);
+  const lastWorkspaceRef = useRef(null);
 
   // 加载所有数据的函数
   const loadAllData = async () => {
@@ -176,16 +178,18 @@ const Home = observer(() => {
     });
   };
 
-
-
-  // 组件挂载时加载数据
+  // 监听工作区变化或首次加载，带去重的加载数据
   useEffect(() => {
-    loadAllData();
-  }, []);
-
-  // 监听工作区变化，重新加载数据
-  useEffect(() => {
-    
+    // 若工作区尚未准备好，则不触发首页数据加载，避免初始化阶段与后续设置工作区导致的重复
+    if (!authStore.currentWorkspace) {
+      return;
+    }
+    const workspaceKey = `home:${authStore.currentWorkspace}`;
+    if (initRunRef.current && lastWorkspaceRef.current === workspaceKey) {
+      return; // 在 StrictMode 双调用或无变更的情况下避免重复请求
+    }
+    initRunRef.current = true;
+    lastWorkspaceRef.current = workspaceKey;
     loadAllData();
   }, [authStore.currentWorkspace]);
 
