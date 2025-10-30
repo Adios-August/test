@@ -4,6 +4,11 @@ import { HeartOutlined, HeartFilled, StarOutlined, StarFilled } from '@ant-desig
 import { engagementAPI } from '../api/engagement';
 import { useAuthStore } from '../stores';
 
+// 去重与短期缓存，避免同页面多处渲染导致重复调用收藏状态接口
+const favoriteStatusCache = new Map(); // key -> { value: { isFavorited, count }, ts }
+const favoriteStatusInFlight = new Map(); // key -> Promise
+const CACHE_TTL_MS = 10000; // 10 秒缓存有效期
+
 /**
  * 收藏按钮组件
  * 
@@ -62,8 +67,40 @@ const FavoriteButton = ({
     
     setStatusLoading(true);
     try {
+      const workspace = authStore.currentWorkspace || 'default';
+      const key = `${knowledgeId}:${currentUserId || 'anon'}:${workspace}`;
+
+      // 命中缓存且未过期，直接使用缓存，避免重复请求
+      const cached = favoriteStatusCache.get(key);
+      if (cached && (Date.now() - cached.ts < CACHE_TTL_MS)) {
+        const favoriteStatus = cached.value.isFavorited;
+        const count = cached.value.count;
+        setIsFavorited(favoriteStatus);
+        setFavoriteCount(count);
+        onStatusChange && onStatusChange(favoriteStatus, count);
+        return;
+      }
+
+      // 若已有进行中的同键请求，复用它
+      if (favoriteStatusInFlight.has(key)) {
+        const response = await favoriteStatusInFlight.get(key);
+        if (response?.code === 200) {
+          const favoriteStatus = response.data?.isFavorited || false;
+          const count = response.data?.isFavorited ? 1 : 0;
+          setIsFavorited(favoriteStatus);
+          setFavoriteCount(count);
+          favoriteStatusCache.set(key, { value: { isFavorited: favoriteStatus, count }, ts: Date.now() });
+          onStatusChange && onStatusChange(favoriteStatus, count);
+        } else {
+          console.error('获取收藏状态失败:', response?.message);
+        }
+        return;
+      }
      
-      const response = await engagementAPI.getFavoriteStatus(knowledgeId);
+      const inflight = engagementAPI.getFavoriteStatus(knowledgeId);
+      favoriteStatusInFlight.set(key, inflight);
+      const response = await inflight;
+      favoriteStatusInFlight.delete(key);
       
       
       if (response.code === 200) {
@@ -76,6 +113,8 @@ const FavoriteButton = ({
         
         setIsFavorited(favoriteStatus);
         setFavoriteCount(count);
+        // 更新缓存
+        favoriteStatusCache.set(key, { value: { isFavorited: favoriteStatus, count }, ts: Date.now() });
         onStatusChange && onStatusChange(favoriteStatus, count);
       } else {
         console.error('获取收藏状态失败:', response.message);
@@ -220,4 +259,4 @@ const FavoriteButton = ({
   );
 };
 
-export default FavoriteButton; 
+export default FavoriteButton;
