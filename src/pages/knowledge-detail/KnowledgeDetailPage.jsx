@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout, message, Spin } from 'antd';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { knowledgeAPI } from '../../api/knowledge';
@@ -17,6 +17,7 @@ const KnowledgeDetailPage = () => {
   // 知识详情数据状态
   const [knowledgeDetail, setKnowledgeDetail] = useState(null);
   const [loading, setLoading] = useState(false);
+  const lastFetchKeyRef = useRef(null);
 
   // 获取知识详情
   const fetchKnowledgeDetail = async (knowledgeId) => {
@@ -38,19 +39,17 @@ const KnowledgeDetailPage = () => {
     }
   };
 
-  // 组件挂载时获取知识详情
+  // 根据 id 与 workspace 合并触发，并加入去重防护（避免 StrictMode 或双监听导致的重复请求）
   useEffect(() => {
-    if (id) {
-      fetchKnowledgeDetail(id);
+    if (!id) return;
+    const workspace = authStore.currentWorkspace || 'default';
+    const fetchKey = `${workspace}:${id}`;
+    if (lastFetchKeyRef.current === fetchKey) {
+      return;
     }
-  }, [id]);
-
-  // 监听工作区变化，重新加载当前知识详情
-  useEffect(() => {
-    if (id && authStore.currentWorkspace) {
-      fetchKnowledgeDetail(id);
-    }
-  }, [authStore.currentWorkspace, id]);
+    lastFetchKeyRef.current = fetchKey;
+    fetchKnowledgeDetail(id);
+  }, [id, authStore.currentWorkspace]);
 
   const handleBack = () => {
     navigate(-1);

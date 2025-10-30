@@ -28,6 +28,8 @@ const CommonSidebar = ({
   const [categoryTree, setCategoryTree] = useState([]);
   const [loading, setLoading] = useState(false);
   const hasInitialized = useRef(false);
+  const lastWorkspaceRef = useRef(null);
+  const initRunRef = useRef(false);
   const authStore = useAuthStore();
   const currentWorkspace = authStore.currentWorkspace;
 
@@ -154,9 +156,14 @@ const CommonSidebar = ({
     }
   };
 
-  // 组件挂载时获取分类树，并在工作区变化时重新获取
+  // 组件挂载与工作区变化均触发，但加入工作区维度的去重，避免 StrictMode 或双触发导致重复请求
   useEffect(() => {
-   
+    const workspaceKey = currentWorkspace || 'default';
+    if (lastWorkspaceRef.current === workspaceKey && initRunRef.current) {
+      return;
+    }
+    lastWorkspaceRef.current = workspaceKey;
+    initRunRef.current = true;
     fetchCategoryTree();
   }, [currentWorkspace]); // 当工作区变化时重新获取分类数据
 

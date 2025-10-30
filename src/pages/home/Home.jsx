@@ -210,7 +210,7 @@ const Home = observer(() => {
                     onBlur={() => {
                       setTimeout(() => {
                         setSearchFocused(false);
-                        resetSearchSuggestions();
+                        
                       }, 300);
                     }}
                     suffix={
