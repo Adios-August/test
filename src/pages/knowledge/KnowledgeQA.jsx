@@ -450,8 +450,7 @@ const KnowledgeQA = () => {
       timestamp: new Date(),
     };
 
-    // 生成sessionId
-    const generatedSessionId = customSessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+ 
     
     // 添加新的AI回复消息
     const newAIMessage = {
@@ -460,7 +459,7 @@ const KnowledgeQA = () => {
       content: "",
       timestamp: new Date(),
       references: [],
-      sessionId: generatedSessionId,
+      
       messageId: "",
       isLiked: false,
       isDisliked: false,
@@ -478,7 +477,7 @@ const KnowledgeQA = () => {
       const requestData = {
         question: userQuestion,
         userId: currentUserId, // 从用户状态获取
-        sessionId: generatedSessionId,
+       
         knowledgeIds: [], // 这里可以从store获取知识ID列表
         stream: true,
       };
