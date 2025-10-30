@@ -604,7 +604,8 @@ const Knowledge = observer(() => {
         const params = new URLSearchParams(location.search);
         params.set('query', value.trim());
         if (categoryId) params.set('parent', categoryId);
-        navigate({ pathname: location.pathname, search: params.toString() });
+        const searchStr = params.toString();
+        navigate({ pathname: location.pathname, search: searchStr ? `?${searchStr}` : '' });
       } catch (e) {
         console.warn('更新搜索参数到URL失败:', e);
       }
@@ -619,7 +620,8 @@ const Knowledge = observer(() => {
       try {
         const params = new URLSearchParams(location.search);
         params.delete('query');
-        navigate({ pathname: location.pathname, search: params.toString() });
+        const searchStr = params.toString();
+        navigate({ pathname: location.pathname, search: searchStr ? `?${searchStr}` : '' });
       } catch (e) {
         console.warn('清除搜索参数失败:', e);
       }
@@ -729,8 +731,7 @@ const Knowledge = observer(() => {
       setSearchValue(keyword);
       // 自动触发搜索（handleSearch现在会自动设置showAISourceModules为true）
       handleSearch(keyword);
-      // 清空location.state，避免重复触发
-      navigate(location.pathname + location.search, { replace: true });
+      // 不再执行 replace 导航以避免覆盖刚设置的 URL 查询参数
     }
   }, [location.state?.searchKeyword]); // 只依赖searchKeyword，不依赖整个location.state对象
 
