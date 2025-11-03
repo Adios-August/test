@@ -1,6 +1,22 @@
 import axios from "axios";
 import { message } from "antd";
 
+// 全局 GET 去重与短期缓存（StrictMode/双触发防抖）
+const inFlightGet = new Map(); // key -> Promise
+const getCache = new Map(); // key -> { data, expire }
+const DEFAULT_GET_TTL_MS = 2000; // 短期缓存 TTL，2 秒内重复调用直接命中缓存
+
+const makeGetKey = (url, params) => {
+  let p = "";
+  try {
+    p = params ? JSON.stringify(params) : "";
+  } catch (_) {
+    // 非可序列化参数时，退化为空串
+    p = "";
+  }
+  return `GET:${url}?${p}`;
+};
+
 // 统一的token获取函数
 const getTokenFromStorage = () => {
   try {
@@ -121,7 +137,35 @@ request.interceptors.response.use(
 // 封装常用的请求方法
 export const http = {
   get: (url, params, config = {}) => {
-    return request.get(url, { params, ...config });
+    const key = makeGetKey(url, params);
+
+    // 命中短期缓存，直接返回缓存结果（与 axios 拦截器保持一致，返回的是 response.data）
+    const cached = getCache.get(key);
+    if (cached && cached.expire > Date.now()) {
+      return Promise.resolve(cached.data);
+    }
+
+    // 如有相同在途请求，复用同一个 Promise，避免并发重复
+    const inFlight = inFlightGet.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const promise = request
+      .get(url, { params, ...config })
+      .then((data) => {
+        // 写入短期缓存
+        getCache.set(key, { data, expire: Date.now() + DEFAULT_GET_TTL_MS });
+        inFlightGet.delete(key);
+        return data;
+      })
+      .catch((err) => {
+        inFlightGet.delete(key);
+        throw err;
+      });
+
+    inFlightGet.set(key, promise);
+    return promise;
   },
 
   post: (url, data, config = {}) => {
