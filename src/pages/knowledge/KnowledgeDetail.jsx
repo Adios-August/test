@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Layout, Tabs, Button, Avatar, Space, List, Card, Input, message, Spin, Select, Tooltip } from 'antd';
 import {
   HeartOutlined, HeartFilled, HistoryOutlined, TranslationOutlined, FilePdfOutlined, FileExcelOutlined,
-  CloseOutlined, ArrowLeftOutlined, LeftOutlined, RightOutlined, SearchOutlined, TagOutlined,
-  SendOutlined, ArrowRightOutlined, UserOutlined, DownloadOutlined,
+  TagOutlined,
+  SendOutlined, UserOutlined, DownloadOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
@@ -15,41 +15,13 @@ import KnowledgeDiff from '../../components/KnowledgeDiff';
 import { knowledgeAPI } from '../../api/knowledge';
 import { feedbackAPI } from '../../api/feedback';
 import { engagementAPI } from '../../api/engagement';
-import { useKnowledgeStore, useAuthStore } from '../../stores';
+import { useAuthStore } from '../../stores';
 import { useFeedbackTypes } from '../../hooks/useFeedbackTypes';
-import { addSearchHistory } from '../../utils/searchHistoryAPI';
+// 搜索模块移除：不再需要搜索历史
 import { authenticatedFetch } from '../../utils/request';
 import './KnowledgeDetail.scss';
 
-// HTML标签清理函数
-const stripHtmlTags = (htmlString) => {
-  if (!htmlString || typeof htmlString !== 'string') {
-    return htmlString || '';
-  }
-  
-  // 如果内容不包含HTML标签，直接返回
-  if (!htmlString.includes('<')) {
-    return htmlString;
-  }
-  
-  try {
-    // 创建临时DOM元素来解析HTML
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlString;
-    
-    // 获取纯文本内容
-    const textContent = tempDiv.textContent || tempDiv.innerText || htmlString;
-    
-    // 清理临时元素
-    tempDiv.remove();
-    
-    return textContent;
-  } catch (error) {
-    console.warn('HTML标签清理失败:', error);
-    // 如果解析失败，使用正则表达式移除标签
-    return htmlString.replace(/<[^>]*>/g, '');
-  }
-};
+// 搜索模块移除：不再需要HTML标签清理辅助函数
 
 
 
@@ -62,12 +34,12 @@ const KnowledgeDetail = () => {
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
   const backQuery = searchParams.get('query');
-  const [activeTab, setActiveTab] = useState('1');
-  const [searchCollapsed, setSearchCollapsed] = useState(false);
-  const [searchValue, setSearchValue] = useState('');
   const [activeTabKey, setActiveTabKey] = useState('1');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
+  // 搜索模块移除：删除搜索相关状态
+  // const [searchCollapsed, setSearchCollapsed] = useState(false);
+  // const [searchValue, setSearchValue] = useState('');
+  // const [searchResults, setSearchResults] = useState([]);
+  // const [searchLoading, setSearchLoading] = useState(false);
   
   // 知识详情数据状态
   const [knowledgeDetail, setKnowledgeDetail] = useState(null);
@@ -120,7 +92,6 @@ const KnowledgeDetail = () => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   
   // 获取knowledgeStore和authStore
-  const knowledgeStore = useKnowledgeStore();
   const authStore = useAuthStore();
   const currentUserId = authStore.user?.id || authStore.user?.userId;
   
@@ -436,15 +407,7 @@ const KnowledgeDetail = () => {
   // 初始化标签页
   const [tabs, setTabs] = useState([]);
 
-  // 从搜索结果中获取搜索列表数据
-  const searchResultsData = searchResults.length > 0 ? searchResults : knowledgeStore.knowledgeList;
-  const displayResults = searchResultsData.map(item => ({
-    id: item.id,
-    title: item.name || item.title || '无标题',
-    date: item.createdTime || item.date || '未知日期',
-    description: item.description || '暂无描述',
-    type: "pdf",
-  }));
+  // 搜索模块移除：不再生成搜索结果展示数据
  
 
   const handleBack = () => {
@@ -471,126 +434,7 @@ const KnowledgeDetail = () => {
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchValue.trim()) {
-      message.warning("请输入搜索关键词");
-      return;
-    }
-    
-    setSearchLoading(true);
-    try {
-      // 添加搜索历史
-      addSearchHistory(searchValue.trim());
-      
-      // 调用搜索API
-      const response = await knowledgeAPI.searchKnowledgeByQuery({
-        query: searchValue.trim(),
-        page: 1,
-        size: 20,
-        userId: currentUserId
-      });
-      
-      if (response.code === 200) {
-        // 处理搜索结果，如果name为空则使用description的前50个字符作为标题
-        const processedResults = (response.data.esResults || []).map(item => ({
-          ...item,
-          name: item.name || item.description?.substring(0, 50) + '...' || '无标题',
-          displayName: item.name || item.description?.substring(0, 50) + '...' || '无标题'
-        }));
-        
-        setSearchResults(processedResults);
-        // 更新knowledgeStore中的数据
-        knowledgeStore.setKnowledgeList(processedResults);
-      } else {
-        message.error(response.message || '搜索失败');
-        setSearchResults([]);
-      }
-    } catch (error) {
-      console.error('搜索失败:', error);
-      message.error('搜索失败，请稍后重试');
-      setSearchResults([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchValue(e.target.value);
-  };
-
-  const handleSearchKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const handleSearchToggle = () => {
-    setSearchCollapsed(!searchCollapsed);
-  };
-
-  const addTabFromSearch = async (searchItem) => { 
-    
-    // 检查是否已经存在相同的标签页
-    const existingTab = tabs.find(tab => tab.key === `search-${searchItem.id}`);
-    if (existingTab) {
-      // 如果已存在，直接切换到该标签页
-      setActiveTabKey(existingTab.key);
-      return;
-    }
-
-    // 先创建一个临时的标签页，显示加载状态
-    const newKey = `search-${searchItem.id}`;
-    const tempTab = {
-      key: newKey,
-      label: searchItem.title,
-      closable: true,
-              content: {
-          id: searchItem.id,
-          title: searchItem.title,
-          author: '加载中...',
-          date: searchItem.date,
-          tags: ['加载中'],
-          attachments: [],
-          effectiveDate: '加载中...',
-        }
-    };
-
-    // 使用函数式更新确保获取最新的tabs状态
-    setTabs(prevTabs => { 
-      if (prevTabs.length === 1 && prevTabs[0].key.startsWith('knowledge-')) {
-        // 替换知识详情标签页
-        return [tempTab];
-      } else {
-        // 添加新标签页
-        return [...prevTabs, tempTab];
-      }
-    });
-    setActiveTabKey(newKey);
-
-    try { 
-      // 调用API获取知识详情
-      const response = await knowledgeAPI.getKnowledgeDetail(searchItem.id); 
-      if (response.code === 200) {
-        // 使用函数式更新确保获取最新的tabs状态
-        setTabs(prevTabs => { 
-          return prevTabs.map(tab => {
-            if (tab.key === newKey) {
-              return {
-                ...tab,
-                content: response.data
-              };
-            }
-            return tab;
-          });
-        });
-      } else {
-        message.error(response.message || '获取知识详情失败');
-      }
-    } catch (error) {
-      console.error('获取知识详情失败:', error);
-      message.error('获取知识详情失败，请稍后重试');
-    }
-  };
+  // 搜索模块移除：删除搜索事件与从搜索添加标签页逻辑
 
   return (
     <Layout className="knowledge-detail-layout">
@@ -605,107 +449,7 @@ const KnowledgeDetail = () => {
           filterCategoryId={categoryId}
         />
 
-        {/* 中间搜索栏 */}
-        <div className='search-section-container'>
-          <div className={`search-section ${searchCollapsed ? 'collapsed' : ''}`}>
-            <div className="search-container">
-              <div className="search-input">
-                <Input
-                  placeholder="input..."
-                  prefix={<SearchOutlined />}
-                  value={searchValue}
-                  onChange={handleSearchChange}
-                  onKeyPress={handleSearchKeyPress}
-                  suffix={
-                    <Button
-                      type="text"
-                      size="small"
-                      onClick={handleSearch}
-                      style={{
-                        fontSize: "16px",
-                        color: "var(--ant-primary-color)",
-                        border: "none",
-                        padding: "0 8px",
-                        height: "auto",
-                      }}
-                    >
-                      Search
-                    </Button>
-                  }
-                  style={{
-                    fontSize: "16px",
-                    height: "48px",
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
-              </div>
-            </div>
-            
-            
-            
-            <div className="search-results">
-              {searchLoading ? (
-                <div className="loading-container">
-                  <Spin size="small" />
-                  <span>搜索中...</span>
-                </div>
-              ) : displayResults.length > 0 ? (
-                displayResults.map((item, index) => {
-                  // 检查当前项是否为活跃标签页 - 需要同时检查知识详情标签页和搜索标签页
-                  const isActiveKnowledge = activeTabKey === `knowledge-${item.id}`;
-                  const isActiveSearch = activeTabKey === `search-${item.id}`;
-                  const isActive = isActiveKnowledge || isActiveSearch;
-                  
-                  return (
-                    <div
-                      key={item.id || index}
-                      className={`result-item ${isActive ? 'active' : ''}`}
-                      onClick={() => addTabFromSearch(item)}
-                    >
-                      <div className="result-header">
-                        <div className="result-title">{item.title}</div>
-                    
-                      </div>
-                      <div className="result-description" 
-                        style={{
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          lineHeight: '1.4',
-                          maxHeight: '2.8em',
-                          fontSize: '16px'
-                        }}
-                      >
-                        {stripHtmlTags(item.description)}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="no-results">
-                   
-                  {searchValue.trim() ? 'No results found! Please change the search term and try again!' : 'Please enter keywords to search'}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="search-toggle">
-            <Button
-            className="icon-bold"
-              type="text"
-               style={{
-                fontSize: "24px",
-              }}
-              icon={searchCollapsed ? <RightOutlined /> : <LeftOutlined />}
-              onClick={handleSearchToggle}
-            />
-            
-          </div>
-        </div>
+        {/* 中间搜索栏已移除 */}
 
         {/* 右侧内容区域 */}
         <div className="detail-content">
