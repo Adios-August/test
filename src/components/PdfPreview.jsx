@@ -15,6 +15,53 @@ const highlightStyleBase = {
   boxSizing: "border-box",
 };
 
+// 在途请求复用与短期缓存，避免 StrictMode 或短时间内重复下载
+const pdfFetchInFlight = new Map(); // key -> Promise<{ blob, headers }>
+const pdfFetchCache = new Map(); // key -> { blob, headers, expire }
+const DEFAULT_FETCH_TTL_MS = 2000; // 2 秒短期缓存
+
+const makeFetchKey = (url) => {
+  try {
+    const u = new URL(url, window.location.origin);
+    return u.href; // 使用完整 href（含查询）作为 key
+  } catch {
+    return url || '';
+  }
+};
+
+function fetchPdfOnce(fetchUrl) {
+  const key = makeFetchKey(fetchUrl);
+  const existing = pdfFetchInFlight.get(key);
+  if (existing) return existing;
+  const p = authenticatedFetch(fetchUrl)
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const headers = {
+        'Content-Disposition': response.headers.get('Content-Disposition') || response.headers.get('content-disposition') || '',
+      };
+      const blob = await response.blob();
+      // 写入短期缓存
+      pdfFetchCache.set(key, { blob, headers, expire: Date.now() + DEFAULT_FETCH_TTL_MS });
+      return { blob, headers };
+    })
+    .finally(() => {
+      pdfFetchInFlight.delete(key);
+    });
+  pdfFetchInFlight.set(key, p);
+  return p;
+}
+
+function getPdfResource(fetchUrl) {
+  const key = makeFetchKey(fetchUrl);
+  const cached = pdfFetchCache.get(key);
+  if (cached && cached.expire > Date.now()) {
+    return Promise.resolve({ blob: cached.blob, headers: cached.headers });
+  }
+  return fetchPdfOnce(fetchUrl);
+}
+
 /**
  * PdfPreview: 渲染 PDF 并根据 bbox 高亮
  * props:
@@ -45,46 +92,46 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
     console.log('PdfPreview: pageNum changed', pageNum);
   }, [pageNum]);
 
-  // 获取PDF文件
+  // 获取PDF文件（加入在途请求复用与短期缓存）
   useEffect(() => {
+    let cancelled = false;
+    let localBlobUrl = null;
+
     if (!fileUrl) {
       setBlobUrl(null);
       setError(null);
-      return;
+      setDownloadName('document.pdf');
+      return () => {};
     }
 
     // 如果已经是blob URL，直接使用
     if (fileUrl.startsWith('blob:')) {
       setBlobUrl(fileUrl);
       setError(null);
-      // 设定默认下载名
       setDownloadName('document.pdf');
-      return;
+      return () => {};
     }
 
-    // 如果是相对路径或需要认证的URL，使用authenticatedFetch
-    const fetchPdf = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        let fetchUrl = fileUrl;
-        
-        // 如果是相对路径，转换为完整URL（使用环境变量前缀）
-        if (fileUrl.startsWith('/api/')) {
-          const base = (import.meta.env.VITE_API_FILE_URL || '').replace(/\/+$/, '');
-          fetchUrl = `${base}${fileUrl}`;
-        }
-        
-        const response = await authenticatedFetch(fetchUrl);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
+    setLoading(true);
+    setError(null);
+
+    let fetchUrl = fileUrl;
+    // 如果是相对路径，转换为完整URL（使用环境变量前缀）
+    if (fileUrl.startsWith('/api/')) {
+      const base = (import.meta.env.VITE_API_FILE_URL || '').replace(/\/+$/, '');
+      fetchUrl = `${base}${fileUrl}`;
+    }
+
+    getPdfResource(fetchUrl)
+      .then(({ blob, headers }) => {
+        if (cancelled) return;
+        const url = URL.createObjectURL(blob);
+        localBlobUrl = url;
+        setBlobUrl(url);
+
         // 推断下载名：优先 Content-Disposition，其次 URL
         let name = 'document.pdf';
-        const cd = response.headers.get('Content-Disposition') || response.headers.get('content-disposition');
+        const cd = headers['Content-Disposition'];
         if (cd) {
           const matchStar = cd.match(/filename\*=(?:UTF-8''|)([^;\n\r]+)/i);
           const match = cd.match(/filename=\"?([^\";\n\r]+)\"?/i);
@@ -106,38 +153,27 @@ export default function PdfPreview({ fileUrl, pageNum, bboxes = [] }) {
           } catch {}
         }
         setDownloadName(name || 'document.pdf');
-        
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        setBlobUrl(url);
-        
-      } catch (err) {
+      })
+      .catch((err) => {
+        if (cancelled) return;
         console.error('Failed to fetch PDF:', err);
         setError(err.message || '加载PDF失败');
         setBlobUrl(null);
-      } finally {
+      })
+      .finally(() => {
+        if (cancelled) return;
         setLoading(false);
-      }
-    };
+      });
 
-    fetchPdf();
-
-    // 清理函数
     return () => {
-      if (blobUrl && blobUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(blobUrl);
+      cancelled = true;
+      if (localBlobUrl && localBlobUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(localBlobUrl);
       }
     };
   }, [fileUrl]);
 
-  // 清理blob URL
-  useEffect(() => {
-    return () => {
-      if (blobUrl && blobUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    };
-  }, [blobUrl]);
+  // 注：blob URL 的 revoke 已在上面的 effect 清理函数中按组件实例处理
 
   const onDocumentLoadSuccess = ({ numPages }) => setNumPages(numPages);
 
