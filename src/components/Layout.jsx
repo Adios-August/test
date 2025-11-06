@@ -7,6 +7,7 @@ import { useAuthStore } from "../stores";
 import rootStore from "../stores/rootStore";
 import { canAccessKnowledgeManagement } from "../constants/roles";
 import "./Layout.scss";
+import GlobalAIChatButton from "./GlobalAIChatButton";
 
 const { Header, Content } = Layout;
 import Logo from "../assets/image/logo.png";
@@ -157,6 +158,8 @@ const LayoutComponent = observer(() => {
             <Outlet />
           </Content>
         </Layout>
+        {/* 全局 AI Chat 悬浮按钮 */}
+        <GlobalAIChatButton />
       </Layout>
     </Layout>
   );
