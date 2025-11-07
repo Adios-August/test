@@ -434,8 +434,11 @@ const KnowledgeDetail = () => {
 
   // 标签切换时，同步主知识详情，用于侧边栏高亮和收藏状态检测
   useEffect(() => {
+    console.log('[KnowledgeDetail] activeTabKey changed', { activeTabKey, tabsCount: tabs.length });
     const activeTab = tabs.find((t) => t.key === activeTabKey);
+    console.log('[KnowledgeDetail] activeTab resolved', activeTab);
     if (activeTab?.content) {
+      console.log('[KnowledgeDetail] setKnowledgeDetail from activeTab.content.id', activeTab.content?.id);
       setKnowledgeDetail(activeTab.content);
     }
   }, [activeTabKey, tabs]);
@@ -501,7 +504,11 @@ const KnowledgeDetail = () => {
           marginTop="16px"
           enableNavigation={false}
           filterCategoryId={categoryId}
-          selectedKnowledgeId={tabs.find(t => t.key === activeTabKey)?.content?.id || knowledgeDetail?.id || id}
+          selectedKnowledgeId={(() => {
+            const selectedId = tabs.find(t => t.key === activeTabKey)?.content?.id || knowledgeDetail?.id || id;
+            console.log('[KnowledgeDetail] selectedKnowledgeId prop computed', { activeTabKey, selectedId });
+            return selectedId;
+          })()}
         />
 
         {/* 中间搜索栏已移除 */}

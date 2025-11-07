@@ -184,24 +184,27 @@ const CommonSidebar = ({
  
 
   useEffect(() => {
-    
+    console.log('[CommonSidebar] effect:selectedKnowledgeId', { selectedKnowledgeId, treeLen: categoryTree?.length });
     
     if (selectedKnowledgeId && categoryTree?.length > 0) {
-     
+      console.log('[CommonSidebar] fetching detail for', selectedKnowledgeId);
       
       // 通过API获取知识详情来获取分类信息
       const fetchKnowledgeAndSetCategory = async () => {
         try {
           const response = await knowledgeAPI.getKnowledgeDetail(selectedKnowledgeId);
+          console.log('[CommonSidebar] getKnowledgeDetail response', response);
        
           
           if (response.code === 200 && response.data) {
             const knowledgeData = response.data;
             const knowledgeIdStr = String(knowledgeData.id || selectedKnowledgeId);
+            console.log('[CommonSidebar] knowledgeIdStr derived', knowledgeIdStr);
             
             
             // 尝试从知识数据中获取分类ID
             const categoryId = knowledgeData.categoryId || knowledgeData.category_id || knowledgeData.category?.id;
+            console.log('[CommonSidebar] categoryId derived', categoryId);
           
             
             if (categoryId) {
@@ -220,11 +223,13 @@ const CommonSidebar = ({
               };
               
               const targetCategory = findCategoryInTree(categoryTree, categoryId);
+              console.log('[CommonSidebar] targetCategory', targetCategory);
          
               
               if (targetCategory) {
                 const keyToSelect = String(targetCategory.key || targetCategory.id);
                 // 高亮选中分类（仅对 Menu.Item 生效）
+                console.log('[CommonSidebar] setSelectedKeys -> category', keyToSelect);
                 setSelectedKeys([keyToSelect]);
 
                 // 计算需要展开的父级路径
@@ -243,21 +248,28 @@ const CommonSidebar = ({
                 };
 
                 const parentKeys = expandParents(categoryTree, categoryId) || [];
+                console.log('[CommonSidebar] parentKeys', parentKeys);
 
                 // 如果该分类有子节点，也将其自身加入展开列表，确保层级展开可见
                 const shouldExpandSelf = Array.isArray(targetCategory.children) && targetCategory.children.length > 0;
                 const keysToExpand = shouldExpandSelf ? [...parentKeys, keyToSelect] : parentKeys;
+                console.log('[CommonSidebar] keysToExpand', keysToExpand);
 
                 if (keysToExpand.length > 0) {
+                  console.log('[CommonSidebar] merging openKeys', keysToExpand);
                   setOpenKeys(prev => Array.from(new Set([...(prev || []), ...keysToExpand])));
                 }
 
                 // 懒加载该分类的子节点，尝试选中具体知识叶子
                 try {
                   await loadChildNodes(categoryId);
+                  console.log('[CommonSidebar] loadChildNodes done', categoryId);
                 } catch (e) {
                   // ignore
                 }
+                // 加载完成后，确保当前分类以及其父级均展开
+                console.log('[CommonSidebar] force expand', { keyToSelect, parentKeys });
+                setOpenKeys(prev => Array.from(new Set([...(prev || []), String(keyToSelect), ...parentKeys])));
                 setTimeout(() => {
                   const findCategoryInTree = (tree, targetId) => {
                     for (const node of tree) {
@@ -272,18 +284,26 @@ const CommonSidebar = ({
                   const parentNode = findCategoryInTree(categoryTree, categoryId);
                   const leaf = parentNode?.children?.find(ch => String(ch.id) === String(knowledgeIdStr));
                   if (leaf) {
+                    console.log('[CommonSidebar] select leaf knowledge', knowledgeIdStr);
                     setSelectedKeys([String(knowledgeIdStr)]);
+                  } else {
+                    // 如果未找到叶子节点，则回退到分类高亮，保证至少有可见选中
+                    console.log('[CommonSidebar] leaf not found, fallback category', keyToSelect);
+                    setSelectedKeys([String(keyToSelect)]);
                   }
                 }, 120);
               } else {
                 // 未在树中找到对应分类，保持现状
+                console.warn('[CommonSidebar] targetCategory not found for categoryId', categoryId);
               }
             } else {
+              console.warn('[CommonSidebar] categoryId missing in knowledgeData', knowledgeData);
               
             }
           }
         } catch (error) {
           console.error('获取知识详情失败:', error);
+          console.error('[CommonSidebar] getKnowledgeDetail error', error);
         }
       };
       
