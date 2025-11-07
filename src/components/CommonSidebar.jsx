@@ -184,7 +184,7 @@ const CommonSidebar = ({
  
 
   useEffect(() => {
- 
+    
     
     if (selectedKnowledgeId && categoryTree?.length > 0) {
      
@@ -222,14 +222,14 @@ const CommonSidebar = ({
          
               
               if (targetCategory) {
-                const keyToSelect = targetCategory.key || targetCategory.id;
-              
+                const keyToSelect = String(targetCategory.key || targetCategory.id);
+                // 高亮选中分类（仅对 Menu.Item 生效）
                 setSelectedKeys([keyToSelect]);
-                
-                // 展开父级分类
+
+                // 计算需要展开的父级路径
                 const expandParents = (tree, targetId, parents = []) => {
                   for (const node of tree) {
-                    const currentPath = [...parents, node.key || node.id];
+                    const currentPath = [...parents, String(node.key || node.id)];
                     if (node.id === targetId || node.key === targetId) {
                       return parents;
                     }
@@ -240,15 +240,18 @@ const CommonSidebar = ({
                   }
                   return null;
                 };
-                
-                const parentKeys = expandParents(categoryTree, categoryId);
-             
-                
-                if (parentKeys && parentKeys.length > 0) {
-                  setOpenKeys(prev => [...new Set([...prev, ...parentKeys])]);
+
+                const parentKeys = expandParents(categoryTree, categoryId) || [];
+
+                // 如果该分类有子节点，也将其自身加入展开列表，确保层级展开可见
+                const shouldExpandSelf = Array.isArray(targetCategory.children) && targetCategory.children.length > 0;
+                const keysToExpand = shouldExpandSelf ? [...parentKeys, keyToSelect] : parentKeys;
+
+                if (keysToExpand.length > 0) {
+                  setOpenKeys(prev => Array.from(new Set([...(prev || []), ...keysToExpand])));
                 }
               } else {
-                
+                // 未在树中找到对应分类，保持现状
               }
             } else {
               

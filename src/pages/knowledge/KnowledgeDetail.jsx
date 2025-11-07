@@ -447,6 +447,7 @@ const KnowledgeDetail = () => {
           marginTop="16px"
           enableNavigation={false}
           filterCategoryId={categoryId}
+          selectedKnowledgeId={knowledgeDetail?.id || id}
         />
 
         {/* 中间搜索栏已移除 */}
