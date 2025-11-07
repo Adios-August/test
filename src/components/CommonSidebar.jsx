@@ -225,9 +225,16 @@ const CommonSidebar = ({
             console.log('[CommonSidebar] knowledgeIdStr derived', knowledgeIdStr);
             
             
-            // 尝试从知识数据中获取分类ID
-            const categoryId = knowledgeData.categoryId || knowledgeData.category_id || knowledgeData.category?.id;
-            console.log('[CommonSidebar] categoryId derived', categoryId);
+            // 尝试从知识数据中获取分类ID；若无则回退到父分类ID
+            const categoryId = (
+              knowledgeData.categoryId ||
+              knowledgeData.category_id ||
+              knowledgeData.category?.id ||
+              knowledgeData.parentId ||
+              knowledgeData.parent_id ||
+              knowledgeData.parent?.id
+            );
+            console.log('[CommonSidebar] categoryId derived (with parentId fallback)', categoryId);
           
             
             if (categoryId) {
