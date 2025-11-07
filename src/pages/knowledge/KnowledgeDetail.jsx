@@ -429,6 +429,14 @@ const KnowledgeDetail = () => {
     }
   }, [location.state?.initialTabIds, id]);
 
+  // 标签切换时，同步主知识详情，用于侧边栏高亮和收藏状态检测
+  useEffect(() => {
+    const activeTab = tabs.find((t) => t.key === activeTabKey);
+    if (activeTab?.content) {
+      setKnowledgeDetail(activeTab.content);
+    }
+  }, [activeTabKey, tabs]);
+
   // 当知识详情加载完成后，检查收藏状态
   useEffect(() => {
     if (knowledgeDetail?.id) {
@@ -494,7 +502,7 @@ const KnowledgeDetail = () => {
           marginTop="16px"
           enableNavigation={false}
           filterCategoryId={categoryId}
-          selectedKnowledgeId={knowledgeDetail?.id || id}
+          selectedKnowledgeId={tabs.find(t => t.key === activeTabKey)?.content?.id || knowledgeDetail?.id || id}
         />
 
         {/* 中间搜索栏已移除 */}
