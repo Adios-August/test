@@ -290,10 +290,14 @@ const CommonSidebar = ({
                   setOpenKeys(prev => Array.from(new Set([...(prev || []), ...keysToExpand])));
                 }
 
-                // 懒加载该分类的子节点，尝试选中具体知识叶子
+                // 懒加载该分类的子节点，尝试选中具体知识叶子（仅在未加载时触发）
                 try {
-                  await loadChildNodes(categoryId);
-                  console.log('[CommonSidebar] loadChildNodes done', categoryId);
+                  if (!targetCategory.childrenLoaded) {
+                    await loadChildNodes(categoryId);
+                    console.log('[CommonSidebar] loadChildNodes done', categoryId);
+                  } else {
+                    console.log('[CommonSidebar] children already loaded, skip reload');
+                  }
                 } catch (e) {
                   // ignore
                 }
@@ -339,7 +343,7 @@ const CommonSidebar = ({
       
       fetchKnowledgeAndSetCategory();
     }
-  }, [selectedKnowledgeId, categoryTree.length]);
+  }, [selectedKnowledgeId, categoryTree]);
 
   // 当有filterCategoryId时，初始化选中状态和展开父级
   useEffect(() => {
