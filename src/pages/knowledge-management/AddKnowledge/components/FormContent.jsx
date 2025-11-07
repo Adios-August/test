@@ -11,8 +11,6 @@ const FormContent = ({
   setFormData,
   contentHtml,
   setContentHtml,
-  nodeTypeToCreate,
-  setNodeTypeToCreate,
   handleImageUpload,
   handleRemoveAttachment,
   isEditMode,
@@ -27,8 +25,8 @@ const FormContent = ({
         <div className="node-type-selector">
           <div className="selector-label">创建类型：</div>
           <Radio.Group 
-            value={nodeTypeToCreate} 
-            onChange={(e) => setNodeTypeToCreate(e.target.value)}
+            value={formData.nodeType} 
+            onChange={(e) => setFormData(prev => ({ ...prev, nodeType: e.target.value }))}
             size="small"
           >
             <Radio value="doc">📄 Item</Radio>
@@ -41,7 +39,7 @@ const FormContent = ({
       <div className="title-section">
         <Input
           className="title-input"
-          placeholder={nodeTypeToCreate === 'folder' ? "请输入Category名称" : "请输入标题"}
+          placeholder={formData.nodeType === 'folder' ? "请输入Category名称" : "请输入标题"}
           value={formData.title}
           onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
           maxLength={200}
@@ -56,7 +54,7 @@ const FormContent = ({
       />
 
       {/* Table toggle checkbox - only show for folder type creation */}
-      {nodeTypeToCreate === 'folder' && (
+      {formData.nodeType === 'folder' && (
         <>
           <div style={{ marginTop: '24px', marginBottom: '16px' }}>
             <Checkbox

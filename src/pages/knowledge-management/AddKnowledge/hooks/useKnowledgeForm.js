@@ -23,7 +23,8 @@ export const useKnowledgeForm = (mode = 'add') => {
     attachments: [],
     tableData: createEmptyTable(),
     disclaimer: false,
-    enableTable: false  // 默认不启用表格
+    enableTable: false,  // 默认不启用表格
+    nodeType: 'doc'  // 节点类型：doc 或 folder
   });
   // Content and UI state
   const [contentHtml, setContentHtml] = useState('');
@@ -85,7 +86,8 @@ export const useKnowledgeForm = (mode = 'add') => {
           attachments: processedAttachments,
           tableData: data.tableData || createEmptyTable(),
           disclaimer: true, // Auto-check for edit mode
-          enableTable: hasTableData // 如果有表格数据则启用表格
+          enableTable: hasTableData, // 如果有表格数据则启用表格
+          nodeType: data.nodeType || 'doc' // 从后端数据设置节点类型
         });
         
         // Set content
@@ -145,12 +147,15 @@ export const useKnowledgeForm = (mode = 'add') => {
   };
 
   // Handle publish/save
-  const handlePublish = async (isUploading, nodeType = 'doc') => {
+  const handlePublish = async (isUploading, nodeType = null) => {
+    // 优先使用传入的 nodeType，如果没有则使用 formData.nodeType
+    const finalNodeType = nodeType || formData.nodeType || 'doc';
+    
     // URL 中 parentId=0 且 nodeType=folder 视为创建一级类目，允许不选择分类
     const searchParams = new URLSearchParams(window.location.search);
     const parentIdParam = searchParams.get('parentId');
     const nodeTypeParam = searchParams.get('nodeType');
-    const isCreatingRootFolder = (parentIdParam === '0' || parentIdParam === 0) && (nodeTypeParam === 'folder' || nodeType === 'folder');
+    const isCreatingRootFolder = (parentIdParam === '0' || parentIdParam === 0) && (nodeTypeParam === 'folder' || finalNodeType === 'folder');
 
     // 处理可见范围：如果包含ALL，需要获取所有实际的角色
     const processPrivateToRoles = (privateToRoles) => {
@@ -216,7 +221,7 @@ export const useKnowledgeForm = (mode = 'add') => {
           name: processedFormData.title.trim(),
           description: contentHtml,
           parentId: processedFormData.category,
-          nodeType: nodeType,
+          nodeType: finalNodeType,
           tags: processedFormData.tags,
           tableData: processedFormData.tableData,
           effectiveStartTime: processedFormData.effectiveTime?.[0]?.toISOString() || null,
@@ -263,7 +268,7 @@ export const useKnowledgeForm = (mode = 'add') => {
           name: processedFormData.title.trim(),
           description: contentHtml,
           parentId: processedFormData.category,
-          nodeType: nodeType,
+          nodeType: finalNodeType,
           tags: processedFormData.tags,
           tableData: processedFormData.tableData,
           effectiveStartTime: processedFormData.effectiveTime?.[0]?.toISOString() || null,

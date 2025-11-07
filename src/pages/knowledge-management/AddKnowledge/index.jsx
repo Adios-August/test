@@ -19,7 +19,6 @@ const { Text, Title } = Typography;
 const AddKnowledge = ({ mode = 'add' }) => {
   // State management
   const [isCurrentCategoryLeafNode, setIsCurrentCategoryLeafNode] = useState(false);
-  const [nodeTypeToCreate, setNodeTypeToCreate] = useState('doc'); // default to document
   const [isCurrentCategoryFolderNode, setIsCurrentCategoryFolderNode] = useState(false);
   
   // Refs for anchor positioning
@@ -60,21 +59,20 @@ const AddKnowledge = ({ mode = 'add' }) => {
     setFormData(prev => ({ ...prev, category: value }));
   };
 
-  // 当从“一级菜单”入口进入（parentId=0 且 nodeType=folder）时，初始化为根目录并隐藏类目选择
+  // 当从"一级菜单"入口进入（parentId=0 且 nodeType=folder）时，初始化为根目录并隐藏类目选择
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const parentId = params.get('parentId');
     const nodeTypeParam = params.get('nodeType');
     const isRootFolderCreation = (parentId === '0') && (nodeTypeParam === 'folder');
     if (isRootFolderCreation) {
-      setNodeTypeToCreate('folder');
-      setFormData(prev => ({ ...prev, category: 0 }));
+      setFormData(prev => ({ ...prev, category: 0, nodeType: 'folder' }));
     }
   }, []);
 
   // Handle publish with node type
   const handlePublishWithNodeType = (isUploading) => {
-    handlePublish(isUploading, nodeTypeToCreate);
+    handlePublish(isUploading, formData.nodeType);
   };
 
   // Handle table change
@@ -171,8 +169,6 @@ const AddKnowledge = ({ mode = 'add' }) => {
             setFormData={setFormData}
             contentHtml={contentHtml}
             setContentHtml={setContentHtml}
-            nodeTypeToCreate={nodeTypeToCreate}
-            setNodeTypeToCreate={setNodeTypeToCreate}
             handleImageUpload={handleImageUpload}
             handleRemoveAttachment={handleRemoveAttachment}
             isEditMode={isEditMode}
