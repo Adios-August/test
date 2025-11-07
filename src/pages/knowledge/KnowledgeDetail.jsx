@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout, Tabs, Button, Avatar, Space, List, Card, Input, message, Spin, Select, Tooltip } from 'antd';
 import {
   HeartOutlined, HeartFilled, HistoryOutlined, TranslationOutlined, FilePdfOutlined, FileExcelOutlined,
   TagOutlined,
   SendOutlined, UserOutlined, DownloadOutlined,
 } from '@ant-design/icons';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, useLocation } from 'react-router-dom';
 import CommonSidebar from '../../components/CommonSidebar';
 import PdfPreview from '../../components/PdfPreview';
 import FeedbackMailButton from '../../components/FeedbackMailButton';
@@ -30,6 +30,7 @@ const { TabPane } = Tabs;
 
 const KnowledgeDetail = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
@@ -124,7 +125,7 @@ const KnowledgeDetail = () => {
         console.log('Knowledge detail data:', response.data);
         
         // 如果有知识详情，自动创建第一个标签页
-        if (response.data && tabs.length === 0) {
+        if (response.data && tabs.length === 0 && !tabsInitializedRef.current) {
           // 尝试多个可能的标题字段
           const title = response.data.name || response.data.title || response.data.knowledgeName || response.data.knowledge_name || '知识详情';
           console.log('Tab title will be:', title);
@@ -383,6 +384,51 @@ const KnowledgeDetail = () => {
     }
   }, [id]);
 
+  // 初始化：如果从知识列表带入了多个ID，则批量创建标签
+  useEffect(() => {
+    const incomingIds = Array.isArray(location.state?.initialTabIds) ? location.state.initialTabIds : [];
+    if (!tabsInitializedRef.current && incomingIds.length > 0) {
+      const uniqueIds = Array.from(new Set(incomingIds.map(String)));
+      setLoading(true);
+      Promise.all(
+        uniqueIds.map(async (knowledgeId) => {
+          try {
+            const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
+            if (response?.code === 200 && response?.data) {
+              const data = response.data;
+              const title = data.name || data.title || data.knowledgeName || data.knowledge_name || '知识详情';
+              return {
+                key: `knowledge-${knowledgeId}`,
+                label: title,
+                closable: true,
+                content: data,
+              };
+            }
+          } catch (e) {
+            console.error('批量获取知识详情失败:', e);
+          }
+          return null;
+        })
+      )
+        .then((results) => {
+          const validTabs = results.filter(Boolean);
+          if (validTabs.length > 0) {
+            setTabs(validTabs);
+            // 激活当前路由对应的标签
+            const activeKey = `knowledge-${id}`;
+            setActiveTabKey(activeKey);
+            // 设置主详情数据为当前路由ID对应项（便于收藏等功能）
+            const current = validTabs.find((t) => t.key === activeKey);
+            if (current?.content) {
+              setKnowledgeDetail(current.content);
+            }
+          }
+          tabsInitializedRef.current = true;
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [location.state?.initialTabIds, id]);
+
   // 当知识详情加载完成后，检查收藏状态
   useEffect(() => {
     if (knowledgeDetail?.id) {
@@ -406,6 +452,7 @@ const KnowledgeDetail = () => {
 
   // 初始化标签页
   const [tabs, setTabs] = useState([]);
+  const tabsInitializedRef = useRef(false);
 
   // 搜索模块移除：不再生成搜索结果展示数据
  

@@ -789,7 +789,16 @@ const Knowledge = observer(() => {
       if (categoryId) params.push(`category=${categoryId}`);
       if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
       const qs = params.length ? `?${params.join('&')}` : '';
-      navigate(`/knowledge/${knowledgeId}${qs}`);
+      // 传递当前可见列表的所有知识ID到详情页，用于初始化多个标签
+      const listItems = showAISourceModules
+        ? (Array.isArray(searchResults) ? searchResults : [])
+        : (Array.isArray(categoryKnowledge) ? categoryKnowledge : []);
+      const initialTabIds = listItems
+        .map((it) => it?.id || it?._id || it?.knowledgeId)
+        .filter((v) => v !== undefined && v !== null)
+        .map((v) => String(v));
+
+      navigate(`/knowledge/${knowledgeId}${qs}`, { state: { initialTabIds } });
     } else {
       console.error('无法获取知识ID，知识项数据:', item);
       message.error('知识ID不存在');
@@ -1324,7 +1333,7 @@ const Knowledge = observer(() => {
                             </div>
                             <div className="card-actions">
 
-                              <span className="date-text">2025-01-15</span>
+                              <span className="date-text">{item.createdTime}</span>
                               <Tooltip title="Open in current page">
                                 <GlobalOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
@@ -1400,7 +1409,7 @@ const Knowledge = observer(() => {
 
                             <div className="card-actions">
                           
-                              <span className="date-text">2025-01-15</span>
+                            <span className="date-text">{item.createdTime}</span>
 
                            
                               <Tooltip title="Open in current page">
@@ -1476,7 +1485,7 @@ const Knowledge = observer(() => {
                             </div>
                             <div className="card-actions">
 
-                              <span className="date-text">2025-01-15</span>
+                              <span className="date-text">{item.createdTime}</span>
                               <Tooltip title="Open in current page">
                                 <GlobalOutlined
                                   style={{ color: '#666', marginLeft: '8px', cursor: 'pointer' }}
@@ -1548,7 +1557,7 @@ const Knowledge = observer(() => {
                               <span className="title-text">{item.name}</span>
                             </div>
                             <div className="card-actions">
-                              <span className="date-text">2025-01-15</span>
+                              <span className="date-text">{item.createdTime}</span>
                               <Tooltip title="Open in current page">
                                 <GlobalOutlined
                                   style={{ color: '#666', marginLeft: '4px', cursor: 'pointer' }}
