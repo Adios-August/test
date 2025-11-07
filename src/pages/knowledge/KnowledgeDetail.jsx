@@ -36,6 +36,9 @@ const KnowledgeDetail = () => {
   const categoryId = searchParams.get('category');
   const backQuery = searchParams.get('query');
   const [activeTabKey, setActiveTabKey] = useState('1');
+  // 初始化标签页
+  const [tabs, setTabs] = useState([]);
+  const tabsInitializedRef = useRef(false);
   // 搜索模块移除：删除搜索相关状态
   // const [searchCollapsed, setSearchCollapsed] = useState(false);
   // const [searchValue, setSearchValue] = useState('');
@@ -457,10 +460,6 @@ const KnowledgeDetail = () => {
     ],
     effectiveDate: '2025-07-01~2025-07-31',
   };
-
-  // 初始化标签页
-  const [tabs, setTabs] = useState([]);
-  const tabsInitializedRef = useRef(false);
 
   // 搜索模块移除：不再生成搜索结果展示数据
  
