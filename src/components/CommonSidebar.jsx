@@ -33,6 +33,21 @@ const CommonSidebar = ({
   const authStore = useAuthStore();
   const currentWorkspace = authStore.currentWorkspace;
 
+  // 渲染时输出当前关键状态，便于确认组件是否挂载/更新
+  console.log('[CommonSidebar] render', {
+    selectedKnowledgeId,
+    selectedKeys,
+    openKeys,
+    treeLen: categoryTree.length,
+    loading
+  });
+
+  // 首次挂载日志
+  useEffect(() => {
+    console.log('[CommonSidebar] mounted');
+    return () => console.log('[CommonSidebar] unmounted');
+  }, []);
+
  
   // 获取顶层目录数据
   const fetchCategoryTree = async () => {
@@ -55,6 +70,7 @@ const CommonSidebar = ({
      
       if (response.code === 200) {
         const records = response.data?.records || [];
+        console.log('[CommonSidebar] fetchCategoryTree -> records', records?.length);
        
         
         // 转换为树形结构，标记为可能有子节点但尚未加载
@@ -69,6 +85,7 @@ const CommonSidebar = ({
         
         
         setCategoryTree(topLevelNodes);
+        console.log('[CommonSidebar] setCategoryTree(topLevelNodes)', topLevelNodes?.length);
       } else {
         console.error('API response error:', response);
         message.error(response.message || '获取知识树失败');
@@ -89,11 +106,14 @@ const CommonSidebar = ({
     try {
       // 在加载子节点前，保存当前的展开状态
       const currentOpenKeys = [...openKeys];
+      console.log('[CommonSidebar] loadChildNodes start', { parentId, currentOpenKeys });
       
       const response = await knowledgeAPI.getChildren(parentId, { page: 1, size: 100 });
+      console.log('[CommonSidebar] getChildren response', response);
       
       if (response.code === 200) {
         const childNodes = response.data?.records || [];
+        console.log('[CommonSidebar] childNodes count', childNodes?.length);
         
         
         // 转换为树节点格式
@@ -105,6 +125,7 @@ const CommonSidebar = ({
           children: item.nodeType === 'folder' ? [] : undefined,
           childrenLoaded: false
         }));
+        console.log('[CommonSidebar] mappedChildren sample', mappedChildren?.[0]);
         
         // 更新树状态，将子节点添加到对应的父节点下
         setCategoryTree(prevTree => {
@@ -136,8 +157,10 @@ const CommonSidebar = ({
           // 确保当前点击的节点保持展开
           if (!currentOpenKeys.includes(parentId.toString())) {
             setOpenKeys([...currentOpenKeys, parentId.toString()]);
+            console.log('[CommonSidebar] openKeys appended', parentId.toString());
           } else {
             setOpenKeys(currentOpenKeys);
+            console.log('[CommonSidebar] openKeys unchanged');
           }
         }, 100);
         
