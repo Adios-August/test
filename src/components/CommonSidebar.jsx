@@ -197,6 +197,7 @@ const CommonSidebar = ({
           
           if (response.code === 200 && response.data) {
             const knowledgeData = response.data;
+            const knowledgeIdStr = String(knowledgeData.id || selectedKnowledgeId);
             
             
             // 尝试从知识数据中获取分类ID
@@ -250,6 +251,30 @@ const CommonSidebar = ({
                 if (keysToExpand.length > 0) {
                   setOpenKeys(prev => Array.from(new Set([...(prev || []), ...keysToExpand])));
                 }
+
+                // 懒加载该分类的子节点，尝试选中具体知识叶子
+                try {
+                  await loadChildNodes(categoryId);
+                } catch (e) {
+                  // ignore
+                }
+                setTimeout(() => {
+                  const findCategoryInTree = (tree, targetId) => {
+                    for (const node of tree) {
+                      if (node.id === targetId || node.key === targetId) return node;
+                      if (node.children && node.children.length > 0) {
+                        const found = findCategoryInTree(node.children, targetId);
+                        if (found) return found;
+                      }
+                    }
+                    return null;
+                  };
+                  const parentNode = findCategoryInTree(categoryTree, categoryId);
+                  const leaf = parentNode?.children?.find(ch => String(ch.id) === String(knowledgeIdStr));
+                  if (leaf) {
+                    setSelectedKeys([String(knowledgeIdStr)]);
+                  }
+                }, 120);
               } else {
                 // 未在树中找到对应分类，保持现状
               }
