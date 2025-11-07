@@ -2,6 +2,7 @@ import React from 'react';
 import { FloatButton, Tooltip } from 'antd';
 import { RobotOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import './GlobalAIChatButton.scss';
 
 // 全局右下角 AI Chat 按钮
 const GlobalAIChatButton = () => {
@@ -15,9 +16,9 @@ const GlobalAIChatButton = () => {
   return (
     <Tooltip title="AI Chat">
       <FloatButton
-        type="primary"
-        icon={<RobotOutlined />}
-        description="AI Chat"
+        className="ai-chat-fab"
+        shape="circle"
+        icon={<RobotOutlined style={{ color: '#fff' }} />}
         onClick={() => navigate('/knowledge-qa')}
         style={{ right: 24, bottom: 24, zIndex: 1000 }}
       />
