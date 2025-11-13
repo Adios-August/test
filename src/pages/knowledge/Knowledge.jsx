@@ -441,7 +441,10 @@ const Knowledge = observer(() => {
 
   // 处理分类知识列表分页
   const handleCategoryPaginationChange = (page, pageSize) => {
-    fetchCategoryKnowledge(categoryId, page, pageSize);
+    // 优先使用交互态的当前分类ID，回退到URL中的parent参数
+    const idToUse = currentCategoryId || categoryId;
+    if (!idToUse) return;
+    fetchCategoryKnowledge(idToUse, page, pageSize);
   };
 
   // 获取搜索结果

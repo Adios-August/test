@@ -27,6 +27,8 @@ const CommonSidebar = ({
   const [openKeys, setOpenKeys] = useState([]);
   const [categoryTree, setCategoryTree] = useState([]);
   const [loading, setLoading] = useState(false);
+  // 维护最新的分类树引用，便于在异步懒加载后进行递归搜索
+  const categoryTreeRef = useRef([]);
   const hasInitialized = useRef(false);
   const lastWorkspaceRef = useRef(null);
   const initRunRef = useRef(false);
@@ -190,6 +192,11 @@ const CommonSidebar = ({
     fetchCategoryTree();
   }, [currentWorkspace]); // 当工作区变化时重新获取分类数据
 
+  // 同步最新的分类树到 ref（用于异步懒加载后的递归查找）
+  useEffect(() => {
+    categoryTreeRef.current = categoryTree;
+  }, [categoryTree]);
+
   // 处理默认展开状态（默认不展开任何分类）
   useEffect(() => {
   
@@ -238,7 +245,7 @@ const CommonSidebar = ({
           
             
             if (categoryId) {
-              // 查找分类在树中的位置并设置选中状态
+              // 查找分类在树中的位置并设置选中状态（若未找到则递归懒加载直至找到）
               const findCategoryInTree = (tree, targetId) => {
                 for (const node of tree) {
                   if (node.id === targetId || node.key === targetId) {
@@ -251,17 +258,56 @@ const CommonSidebar = ({
                 }
                 return null;
               };
-              
-              const targetCategory = findCategoryInTree(categoryTree, categoryId);
-              console.log('[CommonSidebar] targetCategory', targetCategory);
-         
-              
-              if (targetCategory) {
-                const keyToSelect = String(targetCategory.key || targetCategory.id);
-                // 高亮选中分类（仅对 Menu.Item 生效）
-                console.log('[CommonSidebar] setSelectedKeys -> category', keyToSelect);
-                setSelectedKeys([keyToSelect]);
 
+              // 辅助：根据ID在当前最新树中获取节点
+              const getNodeById = (tree, targetId) => {
+                for (const node of tree) {
+                  if (String(node.id) === String(targetId)) return node;
+                  if (node.children && node.children.length > 0) {
+                    const found = getNodeById(node.children, targetId);
+                    if (found) return found;
+                  }
+                }
+                return null;
+              };
+
+              // 辅助：递归懒加载并查找目标分类，返回父级key链路
+              const findCategoryWithLoading = async (targetId) => {
+                const visited = new Set();
+                const traverse = async (nodes, parents = []) => {
+                  for (const node of nodes) {
+                    const keyStr = String(node.key || node.id);
+                    if (String(node.id) === String(targetId) || String(node.key) === String(targetId)) {
+                      return { target: node, parentKeys: parents };
+                    }
+                    // 若为文件夹，确保其子节点已加载后再递归
+                    if (node.nodeType === 'folder') {
+                      const needLoad = !node.childrenLoaded;
+                      if (needLoad && !visited.has(node.id)) {
+                        visited.add(node.id);
+                        await loadChildNodes(node.id);
+                      }
+                      const updatedNode = getNodeById(categoryTreeRef.current, node.id) || node;
+                      const children = updatedNode.children || [];
+                      if (children.length > 0) {
+                        const res = await traverse(children, [...parents, keyStr]);
+                        if (res) return res;
+                      }
+                    }
+                  }
+                  return null;
+                };
+                return traverse(categoryTreeRef.current, []);
+              };
+
+              let targetCategory = findCategoryInTree(categoryTreeRef.current, categoryId);
+              let parentKeys = [];
+              if (!targetCategory) {
+                console.log('[CommonSidebar] targetCategory not found, start lazy path loading');
+                const found = await findCategoryWithLoading(categoryId);
+                targetCategory = found?.target || null;
+                parentKeys = found?.parentKeys || [];
+              } else {
                 // 计算需要展开的父级路径
                 const expandParents = (tree, targetId, parents = []) => {
                   for (const node of tree) {
@@ -276,8 +322,18 @@ const CommonSidebar = ({
                   }
                   return null;
                 };
+                parentKeys = expandParents(categoryTreeRef.current, categoryId) || [];
+              }
 
-                const parentKeys = expandParents(categoryTree, categoryId) || [];
+              console.log('[CommonSidebar] targetCategory', targetCategory);
+         
+              
+              if (targetCategory) {
+                const keyToSelect = String(targetCategory.key || targetCategory.id);
+                // 高亮选中分类（仅对 Menu.Item 生效）
+                console.log('[CommonSidebar] setSelectedKeys -> category', keyToSelect);
+                setSelectedKeys([keyToSelect]);
+
                 console.log('[CommonSidebar] parentKeys', parentKeys);
 
                 // 如果该分类有子节点，也将其自身加入展开列表，确保层级展开可见
@@ -305,18 +361,29 @@ const CommonSidebar = ({
                 console.log('[CommonSidebar] force expand', { keyToSelect, parentKeys });
                 setOpenKeys(prev => Array.from(new Set([...(prev || []), String(keyToSelect), ...parentKeys])));
                 setTimeout(() => {
-                  const findCategoryInTree = (tree, targetId) => {
+                  const findCategoryInTreeLocal = (tree, targetId) => {
                     for (const node of tree) {
                       if (node.id === targetId || node.key === targetId) return node;
                       if (node.children && node.children.length > 0) {
-                        const found = findCategoryInTree(node.children, targetId);
+                        const found = findCategoryInTreeLocal(node.children, targetId);
                         if (found) return found;
                       }
                     }
                     return null;
                   };
-                  const parentNode = findCategoryInTree(categoryTree, categoryId);
-                  const leaf = parentNode?.children?.find(ch => String(ch.id) === String(knowledgeIdStr));
+                  const parentNode = findCategoryInTreeLocal(categoryTreeRef.current, categoryId);
+                  const findLeafRecursively = (node, targetId) => {
+                    if (!node) return null;
+                    if (Array.isArray(node.children)) {
+                      for (const ch of node.children) {
+                        if (String(ch.id) === String(targetId)) return ch;
+                        const deeper = findLeafRecursively(ch, targetId);
+                        if (deeper) return deeper;
+                      }
+                    }
+                    return null;
+                  };
+                  const leaf = findLeafRecursively(parentNode, knowledgeIdStr);
                   if (leaf) {
                     console.log('[CommonSidebar] select leaf knowledge', knowledgeIdStr);
                     setSelectedKeys([String(knowledgeIdStr)]);
