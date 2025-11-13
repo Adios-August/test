@@ -793,8 +793,9 @@ const Knowledge = observer(() => {
       if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
       const qs = params.length ? `?${params.join('&')}` : '';
       // 传递当前可见列表的所有知识ID到详情页，用于初始化多个标签
-      const listItems = showAISourceModules
-        ? (Array.isArray(searchResults) ? searchResults : [])
+      // 优先使用当前搜索结果（ES列表），若无则回退到分类列表
+      const listItems = (Array.isArray(searchResults) && searchResults.length > 0)
+        ? searchResults
         : (Array.isArray(categoryKnowledge) ? categoryKnowledge : []);
       const initialTabIds = listItems
         .map((it) => it?.id || it?._id || it?.knowledgeId)
