@@ -5,7 +5,7 @@ import { chatAPI } from "../../api/chat";
 import { knowledgeAPI } from "../../api/knowledge";
 import { engagementAPI } from "../../api/engagement";
 import { authenticatedFetch } from "../../utils/request";
-import { message, Button, Avatar, Input, Spin, Layout, List, Typography, Space, Card, Tag, Tooltip, Divider, Modal, Empty, Badge } from "antd";
+import { message, Button, Avatar, Input, Spin, Layout, List, Typography, Space, Card, Tag, Tooltip, Divider, Modal, Empty, Badge, Dropdown } from "antd";
 import { 
   SendOutlined, 
   UserOutlined, 
@@ -25,7 +25,11 @@ import {
   LoadingOutlined,
   GlobalOutlined,
   ExportOutlined,
-  CloseOutlined
+  CloseOutlined,
+  EllipsisOutlined,
+  EditOutlined,
+  FolderOpenOutlined,
+  DeleteOutlined
 } from "@ant-design/icons";
 import StreamingMarkdownRenderer from "../../components/StreamingMarkdownRenderer";
 import SourceExpandedDetail from "../../components/SourceExpandedDetail";
@@ -122,6 +126,16 @@ const KnowledgeQA = () => {
   const [expandedRelatedTextPreferredAttachment, setExpandedRelatedTextPreferredAttachment] = useState({});
   // 当前选中的引用消息，用于右侧面板显示
   const [selectedReferenceMessage, setSelectedReferenceMessage] = useState(null);
+
+  // 会话项操作弹窗/菜单状态
+  const [actionsConversationId, setActionsConversationId] = useState(null);
+  const [groupInput, setGroupInput] = useState("");
+  const [groupModalVisible, setGroupModalVisible] = useState(false);
+
+  // 当前是否处于“新会话”状态（未发送过消息的会话）
+  const isInNewConversation = Boolean(
+    currentConversation && conversations.some(c => c.id === currentConversation && c.isNew)
+  );
 
   // 处理引用点击：展开右侧、设置页码/坐标覆盖并保证详情加载
   const handleReferenceClick = async (ref, message) => {
@@ -467,6 +481,11 @@ const KnowledgeQA = () => {
     };
 
     setMessages((prev) => [...prev, newUserMessage, newAIMessage]);
+
+    // 首次发送消息后，将当前会话标记为非“新会话”
+    if (currentConversation) {
+      setConversations(prev => prev.map(c => c.id === currentConversation ? { ...c, isNew: false } : c));
+    }
 
     // 创建AbortController用于取消请求
     const controller = new AbortController();
@@ -910,7 +929,11 @@ const KnowledgeQA = () => {
   };
 
   const handleNewConversation = () => {
-
+    // 若当前已处于新会话，则不允许继续新建
+    if (isInNewConversation) {
+      message.info('已是最新对话');
+      return;
+    }
 
     // 安全检查：确保用户已登录
     if (!currentUserId) {
@@ -924,6 +947,7 @@ const KnowledgeQA = () => {
       id: newId,
       title: "新会话问题",
       isActive: true,
+      isNew: true,
     };
 
     // 安全检查：确保状态正确重置
@@ -1427,17 +1451,17 @@ const KnowledgeQA = () => {
               )}
               
               <div className="new-conversation-section">
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleNewConversation}
-                  className="new-conversation-btn"
-                  block
-                  disabled={!currentUserId}
-                  title={!currentUserId ? "请先登录后再新建会话" : "新建会话问题"}
-                >
-                  {!currentUserId ? "请先登录" : "新建会话问题"}
-                </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleNewConversation}
+                className="new-conversation-btn"
+                block
+                disabled={!currentUserId}
+                title={!currentUserId ? "请先登录后再新建会话" : "新建会话问题"}
+              >
+                {!currentUserId ? "请先登录" : "新建会话问题"}
+              </Button>
               </div>
 
               <div className="conversation-list">
@@ -1451,10 +1475,49 @@ const KnowledgeQA = () => {
                         onClick={() => currentUserId && handleConversationSelect(item.id)}
                         style={{ 
                           cursor: currentUserId ? "pointer" : "not-allowed",
-                          opacity: currentUserId ? 1 : 0.6
+                          opacity: currentUserId ? 1 : 0.6,
+                          display: 'flex',
+                          alignItems: 'center'
                         }}
                       >
-                        <div className="conversation-title">{item.title}</div>
+                        <div className="conversation-title" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+                        {!!currentUserId && (
+                          <Dropdown
+                            trigger={["click"]}
+                            overlayStyle={{ minWidth: 200 }}
+                            menu={{
+                              items: [
+                                { key: 'rename', label: '重命名', icon: <EditOutlined /> },
+                                { key: 'group', label: '移动到分组', icon: <FolderOpenOutlined /> },
+                                { key: 'delete', label: '删除此对话', icon: <DeleteOutlined />, danger: true },
+                              ],
+                              onClick: (info) => {
+                                const id = item.id;
+                                if (!id) return;
+                                switch (info.key) {
+                                  case 'rename':
+                                    message.info('正在开发中');
+                                    break;
+                                  case 'group':
+                                    message.info('正在开发中');
+                                    break;
+                                  case 'delete':
+                                    message.info('正在开发中');
+                                    break;
+                                  default:
+                                    break;
+                                }
+                              }
+                            }}
+                          >
+                            <Button
+                              type="text"
+                              icon={<EllipsisOutlined />}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ marginLeft: 8 }}
+                            />
+                          </Dropdown>
+                        )}
                       </List.Item>
                     )}
                   />
@@ -1879,6 +1942,29 @@ const KnowledgeQA = () => {
           })()}
         </div>
       </div>
+
+      
+
+      {/* 分组弹窗 */}
+      <Modal
+        title="移动到分组"
+        open={groupModalVisible}
+        onCancel={() => setGroupModalVisible(false)}
+        onOk={() => {
+          const id = actionsConversationId;
+          const group = (groupInput || '').trim();
+          if (!id) return;
+          setConversations(prev => prev.map(c => c.id === id ? { ...c, group } : c));
+          setGroupModalVisible(false);
+          message.success(group ? `已设置分组：${group}` : '已清空分组');
+        }}
+      >
+        <Input
+          value={groupInput}
+          onChange={(e) => setGroupInput(e.target.value)}
+          placeholder="输入分组名（示例：工作/学习）"
+        />
+      </Modal>
 
       {/* 反馈弹窗 */}
       <Modal

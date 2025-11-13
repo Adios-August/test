@@ -1289,8 +1289,10 @@ const Knowledge = observer(() => {
 
           {/* 搜索结果区域 */}
           <div className="search-results">
-            {/* 选中知识项详情展示 - 只在没有AI模块时显示 */}
-            {selectedKnowledgeDetail && !showAISourceModules && (
+            {/* 选中知识项详情展示 - 只在没有AI模块时显示；若内容为空则不展示 */}
+            {selectedKnowledgeDetail &&
+              !showAISourceModules &&
+              (stripHtmlTags((selectedKnowledgeDetail?.description) || '').trim() !== '') && (
               <div className="selected-knowledge-detail" style={{ marginBottom: '24px' }}>
                 <KnowledgeDetailContent
                   knowledgeDetail={selectedKnowledgeDetail}
