@@ -63,20 +63,39 @@ const CommonSidebar = ({
         setTimeout(() => reject(new Error('API call timeout after 10 seconds')), 10000);
       });
       
-      // 使用新的API调用，只获取顶层目录的folder类型
-      const apiPromise = knowledgeAPI.getKnowledgeList({ page: 1, size: 20, nodeType: 'folder' });
+      // 使用新的API调用：分页拉取全部顶层目录（folder类型）以避免遗漏
+      const pageSize = 200;
+      let page = 1;
+      let allRecords = [];
+      while (true) {
+        const apiPromise = knowledgeAPI.getKnowledgeList({ page, size: pageSize, nodeType: 'folder' });
+        const response = await Promise.race([apiPromise, timeoutPromise]);
+        if (response.code !== 200) {
+          console.error('API response error:', response);
+          message.error(response.message || '获取知识树失败');
+          allRecords = [];
+          break;
+        }
+        const batch = response.data?.records || response.data || [];
+        console.log('[CommonSidebar] fetchCategoryTree page', { page, batchLen: batch?.length });
+        allRecords = allRecords.concat(batch);
+        if (!Array.isArray(batch) || batch.length < pageSize) {
+          break;
+        }
+        page += 1;
+        // 防御：最多拉取10页，避免异常循环
+        if (page > 10) {
+          console.warn('[CommonSidebar] fetchCategoryTree reached max pages limit');
+          break;
+        }
+      }
       
-   
-      const response = await Promise.race([apiPromise, timeoutPromise]);
-      
-     
-      if (response.code === 200) {
-        const records = response.data?.records || [];
-        console.log('[CommonSidebar] fetchCategoryTree -> records', records?.length);
-       
+      if (allRecords.length > 0) {
+        console.log('[CommonSidebar] fetchCategoryTree -> total records', allRecords.length);
+        
         
         // 转换为树形结构，标记为可能有子节点但尚未加载
-        const topLevelNodes = records.map(item => ({
+        const topLevelNodes = allRecords.map(item => ({
           id: item.id,
           name: item.name,
           nodeType: item.nodeType,
