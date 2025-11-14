@@ -152,10 +152,13 @@ export const useKnowledgeForm = (mode = 'add') => {
     const finalNodeType = nodeType || formData.nodeType || 'doc';
     
     // URL 中 parentId=0 且 nodeType=folder 视为创建一级类目，允许不选择分类
+    // 或者在编辑模式下，如果 parentId 为 0 或 null 且 nodeType 为 folder，也视为根目录
     const searchParams = new URLSearchParams(window.location.search);
     const parentIdParam = searchParams.get('parentId');
     const nodeTypeParam = searchParams.get('nodeType');
-    const isCreatingRootFolder = (parentIdParam === '0' || parentIdParam === 0) && (nodeTypeParam === 'folder' || finalNodeType === 'folder');
+    const isCreatingRootFolderFromUrl = (parentIdParam === '0' || parentIdParam === 0) && (nodeTypeParam === 'folder' || finalNodeType === 'folder');
+    const isEditingRootFolder = isEditMode && (formData.category === 0 || formData.category === null || formData.category === undefined) && finalNodeType === 'folder';
+    const isCreatingRootFolder = isCreatingRootFolderFromUrl || isEditingRootFolder;
 
     // 处理可见范围：如果包含ALL，需要获取所有实际的角色
     const processPrivateToRoles = (privateToRoles) => {
@@ -180,7 +183,17 @@ export const useKnowledgeForm = (mode = 'add') => {
     console.log('原始 privateToRoles:', formData.privateToRoles);
     console.log('处理后的 privateToRoles:', processedFormData.privateToRoles);
 
-    const errors = validateKnowledgeForm(processedFormData, contentHtml, { allowNoCategory: isCreatingRootFolder });
+    // 创建一级类目时，跳过某些字段的验证（这些字段在UI中被隐藏）
+    const validationOptions = {
+      allowNoCategory: isCreatingRootFolder,
+      skipTags: isCreatingRootFolder,
+      skipVisibility: isCreatingRootFolder,
+      skipEffectiveTime: isCreatingRootFolder,
+      skipContent: isCreatingRootFolder,
+      skipDisclaimer: isCreatingRootFolder
+    };
+
+    const errors = validateKnowledgeForm(processedFormData, contentHtml, validationOptions);
     if (errors.length > 0) {
       message.error(errors[0].message);
       return;

@@ -66,9 +66,16 @@ export const convertToTreeData = (categories) => {
 };
 
 // Form validation
-// 允许通过 options 控制是否跳过"必须选择分类"的校验，例如创建一级类目(parentId=0)
+// 允许通过 options 控制是否跳过某些校验，例如创建一级类目(parentId=0)时某些字段被隐藏
 export const validateKnowledgeForm = (formData, contentHtml, options = {}) => {
-  const { allowNoCategory = false } = options;
+  const { 
+    allowNoCategory = false,
+    skipTags = false,
+    skipVisibility = false,
+    skipEffectiveTime = false,
+    skipContent = false,
+    skipDisclaimer = false
+  } = options;
   const errors = [];
   // Title validation
   if (!formData.title.trim()) {
@@ -79,24 +86,26 @@ export const validateKnowledgeForm = (formData, contentHtml, options = {}) => {
     errors.push({ field: 'category', message: '请选择分类' });
   }
   // Content validation
-  if (isContentEmpty(contentHtml)) {
+  if (!skipContent && isContentEmpty(contentHtml)) {
     errors.push({ field: 'content', message: '请填写正文内容' });
   }
   // Required fields validation
   // Tags validation
-  if (!formData.tags || formData.tags.length === 0) {
+  if (!skipTags && (!formData.tags || formData.tags.length === 0)) {
     errors.push({ field: 'tags', message: '请至少添加一个标签' });
   }
   // Visibility validation
-  if (!formData.privateToRoles || formData.privateToRoles.length === 0) {
+  if (!skipVisibility && (!formData.privateToRoles || formData.privateToRoles.length === 0)) {
     errors.push({ field: 'privateToRoles', message: '请选择可见范围' });
   }
   // Effective time validation
-  const [startTime, endTime] = formData.effectiveTime;
-  if (!startTime || !endTime) {
-    errors.push({ field: 'effectiveTime', message: '请设置有效时间' });
-  } else if (startTime >= endTime) {
-    errors.push({ field: 'effectiveTime', message: '结束时间需晚于开始时间' });
+  if (!skipEffectiveTime) {
+    const [startTime, endTime] = formData.effectiveTime;
+    if (!startTime || !endTime) {
+      errors.push({ field: 'effectiveTime', message: '请设置有效时间' });
+    } else if (startTime >= endTime) {
+      errors.push({ field: 'effectiveTime', message: '结束时间需晚于开始时间' });
+    }
   }
   // Table validation
   if (formData.tableData) {
@@ -112,7 +121,7 @@ export const validateKnowledgeForm = (formData, contentHtml, options = {}) => {
     }
   }
   // Disclaimer validation
-  if (!formData.disclaimer) {
+  if (!skipDisclaimer && !formData.disclaimer) {
     errors.push({ field: 'disclaimer', message: '请确认内容不包含受限数据' });
   }
   return errors;
