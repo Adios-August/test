@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, List, Typography, message } from 'antd';
+import { Button, List, Typography, message, Modal } from 'antd';
 import { DeleteOutlined, DownloadOutlined, FileTextOutlined } from '@ant-design/icons';
 import { authenticatedFetch } from '../../../../utils/request';
 
@@ -66,11 +66,67 @@ const AttachmentList = ({ attachments, onRemoveAttachment, setFormData }) => {
     }
   };
 
+  // 处理删除附件操作（非常谨慎的删除流程）
   const handleRemove = (attachment) => {
-    onRemoveAttachment(
-      attachment.uid || attachment.id || attachment.name, 
-      setFormData
-    );
+    const attachmentName = attachment.name || attachment.fileName || '此附件';
+    
+    Modal.confirm({
+      title: (
+        <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+          ⚠️ 危险操作：删除附件
+        </span>
+      ),
+      width: 550,
+      icon: null,
+      content: (
+        <div>
+          <p style={{ marginBottom: '12px', fontWeight: 'bold', fontSize: '14px' }}>
+            您即将删除附件：<span style={{ color: '#ff4d4f' }}>"{attachmentName}"</span>
+          </p>
+          <div style={{ 
+            background: '#fff7e6', 
+            border: '1px solid #ffd591', 
+            borderRadius: '4px', 
+            padding: '12px', 
+            marginBottom: '12px' 
+          }}>
+            <p style={{ marginBottom: '8px', fontWeight: 'bold', color: '#d46b08' }}>
+              ⚠️ 警告：此操作具有以下风险：
+            </p>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: '#d46b08' }}>
+              <li>删除后无法恢复</li>
+              <li>附件文件将永久丢失</li>
+              <li>可能影响知识文档的完整性</li>
+              <li>如果已保存，删除后需要重新上传</li>
+            </ul>
+          </div>
+          <p style={{ marginBottom: 0, color: '#666', fontSize: '12px' }}>
+            请确认您已充分了解风险，并确定要执行此操作。
+          </p>
+        </div>
+      ),
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { 
+        danger: true,
+        type: 'primary'
+      },
+      cancelButtonProps: {
+        type: 'default'
+      },
+      onOk: () => {
+        try {
+          onRemoveAttachment(
+            attachment.uid || attachment.id || attachment.name, 
+            setFormData
+          );
+          message.success('附件删除成功');
+        } catch (error) {
+          console.error('删除附件失败:', error);
+          message.error('删除失败，请稍后重试');
+        }
+      },
+    });
   };
 
   if (attachments.length === 0) {
