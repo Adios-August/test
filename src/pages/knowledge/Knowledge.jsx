@@ -181,6 +181,7 @@ const Knowledge = observer(() => {
 
   // 防止URL参数驱动的搜索在开发环境或重复设置下被触发两次
   const lastUrlQueryRef = useRef(null);
+  const lastUrlPageRef = useRef(urlPage);
   const urlQueryFetchedRef = useRef(false);
 
  
@@ -770,13 +771,14 @@ const Knowledge = observer(() => {
       return;
     }
 
-    // 如果和上次处理的query相同且已拉取过，跳过（防止 StrictMode 或重复设置导致的双触发）
-    if (lastUrlQueryRef.current === q && urlQueryFetchedRef.current) {
+    // 如果和上次处理的query相同且页码相同且已拉取过，跳过（防止 StrictMode 或重复设置导致的双触发）
+    if (lastUrlQueryRef.current === q && lastUrlPageRef.current === urlPage && urlQueryFetchedRef.current) {
       return;
     }
 
-    // 记录已处理的query
+    // 记录已处理的query和页码
     lastUrlQueryRef.current = q;
+    lastUrlPageRef.current = urlPage;
     urlQueryFetchedRef.current = true;
 
     // 同步状态并触发一次搜索
