@@ -557,6 +557,7 @@ const CommonSidebar = ({
   const convertToMenuItems = (categories, isTopLevel = true) => {
     return categories.map(category => ({
       key: category.id.toString(),
+      selectable: true,
       label: (
         <div 
           onClick={(e) => {
