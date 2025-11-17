@@ -493,13 +493,13 @@ const KnowledgeDetail = () => {
         const existingTabIndex = tabs.findIndex(tab => tab.key === newTab.key);
         
         if (existingTabIndex !== -1) {
-          // 如果标签已存在，切换到该标签
-          setActiveTabKey(newTab.key);
-        } else {
-          // 如果标签不存在，添加新标签
-          setTabs([...tabs, newTab]);
-          setActiveTabKey(newTab.key);
-        }
+        // 如果标签已存在，切换到该标签
+        setActiveTabKey(newTab.key);
+      } else {
+        // 如果标签不存在，添加新标签
+        setTabs(prevTabs => [...prevTabs, newTab]);
+        setActiveTabKey(newTab.key);
+      }
       } else {
         message.error(response.message || '获取知识详情失败');
       }
@@ -545,6 +545,7 @@ const KnowledgeDetail = () => {
             console.log('[KnowledgeDetail] selectedKnowledgeId prop computed', { activeTabKey, selectedId });
             return selectedId;
           })()}
+          onCategoryClick={handleCategoryClick}
         />
 
         {/* 中间搜索栏已移除 */}
