@@ -176,6 +176,13 @@ const CategoryManagement = () => {
             onClick={() => handleMoveDown(record)}
             size="small"
           />
+          <Button 
+            type="link" 
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteCategory(record)}
+            size="small"
+            danger
+          />
         </Space>
       ),
     },
@@ -203,25 +210,105 @@ const CategoryManagement = () => {
     setModalVisible(true);
   };
 
-  // 处理删除操作
-  const handleDelete = (record) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除知识节点"${record.name}"吗？删除后不可恢复。`,
-      okText: '确定',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          const res = await knowledgeAPI.deleteKnowledge(record.id);
-          if (res.code === 200) {
-            message.success('删除成功');
-          }
-          fetchCategoryTree(); // 重新加载数据
-        } catch (error) {
-          message.error('删除失败');
+  // 处理删除分类操作（非常谨慎的删除流程）
+  const handleDeleteCategory = async (record) => {
+    try {
+      // 第一步：检查该分类下是否有子项
+      // 使用 size: 1 来快速检查是否有子项，同时获取 total 来显示准确数量
+      const childrenResponse = await knowledgeAPI.getChildren(record.id, { page: 1, size: 1 });
+      
+      if (childrenResponse.code === 200) {
+        const children = childrenResponse.data?.records || [];
+        const totalCount = childrenResponse.data?.total ?? children.length;
+        
+        // 如果有子项，阻止删除并提示用户
+        if (totalCount > 0 || children.length > 0) {
+          Modal.warning({
+            title: '无法删除分类',
+            width: 500,
+            content: (
+              <div>
+                <p style={{ marginBottom: '12px', fontWeight: 'bold', color: '#ff4d4f' }}>
+                  该分类下存在 {totalCount > 0 ? totalCount : children.length} 个子项，无法删除。
+                </p>
+                <p style={{ marginBottom: '8px' }}>
+                  为了确保数据安全，请先手动删除该分类下的所有子项（包括子分类和文档），然后再删除此分类。
+                </p>
+                <p style={{ color: '#666', fontSize: '12px' }}>
+                  删除操作不可恢复，请谨慎操作。
+                </p>
+              </div>
+            ),
+            okText: '我知道了',
+            okButtonProps: { type: 'primary' },
+          });
+          return;
         }
-      },
-    });
+      }
+      
+      // 如果没有子项，显示严格的确认对话框
+      Modal.confirm({
+        title: (
+          <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+            ⚠️ 危险操作：删除分类
+          </span>
+        ),
+        width: 550,
+        icon: null,
+        content: (
+          <div>
+            <p style={{ marginBottom: '12px', fontWeight: 'bold', fontSize: '14px' }}>
+              您即将删除分类：<span style={{ color: '#ff4d4f' }}>"{record.name}"</span>
+            </p>
+            <div style={{ 
+              background: '#fff7e6', 
+              border: '1px solid #ffd591', 
+              borderRadius: '4px', 
+              padding: '12px', 
+              marginBottom: '12px' 
+            }}>
+              <p style={{ marginBottom: '8px', fontWeight: 'bold', color: '#d46b08' }}>
+                ⚠️ 警告：此操作具有以下风险：
+              </p>
+              <ul style={{ margin: 0, paddingLeft: '20px', color: '#d46b08' }}>
+                <li>删除后无法恢复</li>
+                <li>所有关联数据将永久丢失</li>
+                <li>可能影响系统其他功能</li>
+              </ul>
+            </div>
+            <p style={{ marginBottom: 0, color: '#666', fontSize: '12px' }}>
+              请确认您已充分了解风险，并确定要执行此操作。
+            </p>
+          </div>
+        ),
+        okText: '确认删除',
+        cancelText: '取消',
+        okButtonProps: { 
+          danger: true,
+          type: 'primary'
+        },
+        cancelButtonProps: {
+          type: 'default'
+        },
+        onOk: async () => {
+          try {
+            const res = await knowledgeAPI.deleteKnowledge(record.id);
+            if (res.code === 200) {
+              message.success('分类删除成功');
+              fetchCategoryTree(); // 重新加载数据
+            } else {
+              message.error(res.message || '删除失败');
+            }
+          } catch (error) {
+            console.error('删除分类失败:', error);
+            message.error('删除失败，请稍后重试');
+          }
+        },
+      });
+    } catch (error) {
+      console.error('检查子项失败:', error);
+      message.error('检查分类子项失败，无法执行删除操作');
+    }
   };
 
   // 处理上移操作
