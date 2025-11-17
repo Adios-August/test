@@ -475,6 +475,42 @@ const KnowledgeDetail = () => {
     navigate(`/knowledge${qs ? `?${qs}` : ''}`);
   };
 
+  // 处理侧边栏分类/知识点击事件
+  const handleCategoryClick = async (category) => {
+    if (!category || !category.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await knowledgeAPI.getKnowledgeDetail(category.id);
+      if (response.code === 200) {
+        const newTab = {
+          key: `knowledge-${category.id}`,
+          label: response.data.name,
+          content: response.data,
+        };
+        
+        // 检查标签是否已存在
+        const existingTabIndex = tabs.findIndex(tab => tab.key === newTab.key);
+        
+        if (existingTabIndex !== -1) {
+          // 如果标签已存在，切换到该标签
+          setActiveTabKey(newTab.key);
+        } else {
+          // 如果标签不存在，添加新标签
+          setTabs([...tabs, newTab]);
+          setActiveTabKey(newTab.key);
+        }
+      } else {
+        message.error(response.message || '获取知识详情失败');
+      }
+    } catch (error) {
+      console.error('获取知识详情失败:', error);
+      message.error('获取知识详情失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTabClose = (targetKey) => {
     const newTabs = tabs.filter(tab => tab.key !== targetKey);
     setTabs(newTabs);
