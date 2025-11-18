@@ -182,10 +182,6 @@ const Knowledge = observer(() => {
   const lastUrlQueryRef = useRef(null);
   const urlQueryFetchedRef = useRef(false);
 
- 
- 
-
- 
 
   // 处理问题提交
   const handleQuestionSubmit = () => {
