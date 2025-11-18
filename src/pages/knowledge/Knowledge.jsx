@@ -103,6 +103,7 @@ const Knowledge = observer(() => {
   const rootStore = useStore();
   const categoryId = searchParams.get('parent');
   const urlQuery = searchParams.get('query');
+  const urlPage = parseInt(searchParams.get('page')) || 1; // 从URL参数获取分页信息
 
   // 获取当前用户ID
   const currentUserId = authStore.user?.id || authStore.user?.userId;
@@ -132,7 +133,7 @@ const Knowledge = observer(() => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchPagination, setSearchPagination] = useState({
-    current: 1,
+    current: urlPage,
     pageSize: 10,
     total: 0
   });
@@ -180,6 +181,7 @@ const Knowledge = observer(() => {
 
   // 防止URL参数驱动的搜索在开发环境或重复设置下被触发两次
   const lastUrlQueryRef = useRef(null);
+  const lastUrlPageRef = useRef(urlPage);
   const urlQueryFetchedRef = useRef(false);
 
 
@@ -481,6 +483,16 @@ const Knowledge = observer(() => {
           pageSize: size
         }));
         
+        // 将分页信息添加到URL参数
+        try {
+          const params = new URLSearchParams(location.search);
+          params.set('page', page);
+          const searchStr = params.toString();
+          navigate({ pathname: location.pathname, search: searchStr ? `?${searchStr}` : '' });
+        } catch (e) {
+          console.warn('更新分页参数到URL失败:', e);
+        }
+        
         // 停止ES加载状态
        
         // 关键修改：ES搜索返回后立即停止列表的loading状态，让用户尽快看到结果
@@ -598,10 +610,11 @@ const Knowledge = observer(() => {
       setShowAISourceModules(true);
       shouldKeepAIModule.current = true; // 设置为true，表示需要保持AI模块显示
 
-      // 将搜索关键词写入URL参数，便于返回后恢复
+      // 将搜索关键词和分页信息写入URL参数，便于返回后恢复
       try {
         const params = new URLSearchParams(location.search);
         params.set('query', value.trim());
+        params.set('page', 1); // 搜索时重置为第一页
         if (categoryId) params.set('parent', categoryId);
         const searchStr = params.toString();
         navigate({ pathname: location.pathname, search: searchStr ? `?${searchStr}` : '' });
@@ -634,6 +647,16 @@ const Knowledge = observer(() => {
     // 使用当前搜索关键词
     if (searchValue.trim()) {
       fetchSearchResults(searchValue.trim(), page, pageSize);
+      
+      // 将分页信息添加到URL参数
+      try {
+        const params = new URLSearchParams(location.search);
+        params.set('page', page);
+        const searchStr = params.toString();
+        navigate({ pathname: location.pathname, search: searchStr ? `?${searchStr}` : '' });
+      } catch (e) {
+        console.warn('更新分页参数到URL失败:', e);
+      }
     }
   };
 
@@ -744,13 +767,14 @@ const Knowledge = observer(() => {
       return;
     }
 
-    // 如果和上次处理的query相同且已拉取过，跳过（防止 StrictMode 或重复设置导致的双触发）
-    if (lastUrlQueryRef.current === q && urlQueryFetchedRef.current) {
+    // 如果和上次处理的query相同且页码相同且已拉取过，跳过（防止 StrictMode 或重复设置导致的双触发）
+    if (lastUrlQueryRef.current === q && lastUrlPageRef.current === urlPage && urlQueryFetchedRef.current) {
       return;
     }
 
-    // 记录已处理的query
+    // 记录已处理的query和页码
     lastUrlQueryRef.current = q;
+    lastUrlPageRef.current = urlPage;
     urlQueryFetchedRef.current = true;
 
     // 同步状态并触发一次搜索

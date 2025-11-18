@@ -479,6 +479,11 @@ const KnowledgeDetail = () => {
   const handleCategoryClick = async (category) => {
     if (!category || !category.id) return;
     
+    // 如果点击的是分类文件夹，不处理知识详情（只需要高亮）
+    if (category.nodeType === 'folder') {
+      return;
+    }
+    
     setLoading(true);
     try {
       const response = await knowledgeAPI.getKnowledgeDetail(category.id);
@@ -493,13 +498,13 @@ const KnowledgeDetail = () => {
         const existingTabIndex = tabs.findIndex(tab => tab.key === newTab.key);
         
         if (existingTabIndex !== -1) {
-        // 如果标签已存在，切换到该标签
-        setActiveTabKey(newTab.key);
-      } else {
-        // 如果标签不存在，添加新标签
-        setTabs(prevTabs => [...prevTabs, newTab]);
-        setActiveTabKey(newTab.key);
-      }
+          // 如果标签已存在，切换到该标签
+          setActiveTabKey(newTab.key);
+        } else {
+          // 如果标签不存在，添加新标签
+          setTabs(prevTabs => [...prevTabs, newTab]);
+          setActiveTabKey(newTab.key);
+        }
       } else {
         message.error(response.message || '获取知识详情失败');
       }
