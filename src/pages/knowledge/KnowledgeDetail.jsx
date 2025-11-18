@@ -35,6 +35,7 @@ const KnowledgeDetail = () => {
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
   const backQuery = searchParams.get('query');
+  const backPage = searchParams.get('page') || 1;
   const [activeTabKey, setActiveTabKey] = useState('1');
   // 初始化标签页
   const [tabs, setTabs] = useState([]);
@@ -465,14 +466,12 @@ const KnowledgeDetail = () => {
   };
 
   // 搜索模块移除：不再生成搜索结果展示数据
- 
-
   const handleBack = () => {
-    const params = new URLSearchParams();
-    if (categoryId) params.set('parent', categoryId); // Knowledge页识别parent参数
-    if (backQuery && backQuery.trim()) params.set('query', backQuery.trim());
-    const qs = params.toString();
-    navigate(`/knowledge${qs ? `?${qs}` : ''}`);
+    const newSearchParams = new URLSearchParams();
+    if (categoryId) newSearchParams.set('parent', categoryId);
+    if (backQuery) newSearchParams.set('query', backQuery);
+    newSearchParams.set('page', backPage);
+    navigate({ pathname: '/knowledge', search: newSearchParams.toString() }, { replace: true });
   };
 
   // 处理侧边栏分类/知识点击事件

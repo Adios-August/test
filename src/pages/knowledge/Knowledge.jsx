@@ -103,6 +103,7 @@ const Knowledge = observer(() => {
   const rootStore = useStore();
   const categoryId = searchParams.get('parent');
   const urlQuery = searchParams.get('query');
+  const urlPage = parseInt(searchParams.get('page')) || 1;
 
   // 获取当前用户ID
   const currentUserId = authStore.user?.id || authStore.user?.userId;
@@ -123,7 +124,7 @@ const Knowledge = observer(() => {
   const [categoryKnowledge, setCategoryKnowledge] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryPagination, setCategoryPagination] = useState({
-    current: 1,
+    current: urlPage,
     pageSize: 10,
     total: 0
   });
@@ -132,7 +133,7 @@ const Knowledge = observer(() => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchPagination, setSearchPagination] = useState({
-    current: 1,
+    current: urlPage,
     pageSize: 10,
     total: 0
   });
@@ -416,7 +417,7 @@ const Knowledge = observer(() => {
         setCategoryKnowledge(knowledgeList);
         setCategoryPagination(prev => ({
           ...prev,
-          current: response.data.current || page,
+          current: page, // 直接使用请求的page参数，避免API返回错误的current值
           total: response.data.total || 0,
           pageSize: response.data.size || size
         }));
@@ -437,10 +438,11 @@ const Knowledge = observer(() => {
 
   // 处理分类知识列表分页
   const handleCategoryPaginationChange = (page, pageSize) => {
-    // 优先使用交互态的当前分类ID，回退到URL中的parent参数
-    const idToUse = currentCategoryId || categoryId;
-    if (!idToUse) return;
-    fetchCategoryKnowledge(idToUse, page, pageSize);
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('page', page);
+    navigate({ search: newSearchParams.toString() }, { replace: true });
+    const id = currentCategoryId || categoryId;
+    fetchCategoryKnowledge(id, page, pageSize);
   };
 
   // 获取搜索结果
@@ -603,6 +605,7 @@ const Knowledge = observer(() => {
         const params = new URLSearchParams(location.search);
         params.set('query', value.trim());
         if (categoryId) params.set('parent', categoryId);
+        params.set('page', 1); // 重置页码为1
         const searchStr = params.toString();
         navigate({ pathname: location.pathname, search: searchStr ? `?${searchStr}` : '' });
       } catch (e) {
@@ -624,6 +627,9 @@ const Knowledge = observer(() => {
       } catch (e) {
         console.warn('清除搜索参数失败:', e);
       }
+      // 搜索框清空后，刷新分类数据并保持当前页码
+      const urlPage = parseInt(searchParams.get('page'), 10) || 1;
+      fetchCategoryKnowledge(currentCategoryId || categoryId, urlPage, 10);
     }
   };
 
@@ -631,10 +637,10 @@ const Knowledge = observer(() => {
 
   // 处理搜索分页
   const handleSearchPaginationChange = (page, pageSize) => {
-    // 使用当前搜索关键词
-    if (searchValue.trim()) {
-      fetchSearchResults(searchValue.trim(), page, pageSize);
-    }
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('page', page);
+    navigate({ search: newSearchParams.toString() }, { replace: true });
+    fetchSearchResults(urlQuery, page, pageSize);
   };
 
 
@@ -653,7 +659,8 @@ const Knowledge = observer(() => {
       }
       setCurrentCategoryId(categoryId);
       console.log('调用fetchCategoryKnowledge，categoryId:', categoryId);
-      fetchCategoryKnowledge(categoryId, 1, 10); // 从第一页开始加载
+      const urlPage = parseInt(searchParams.get('page'), 10) || 1;
+      fetchCategoryKnowledge(categoryId, urlPage, 10); // 使用URL中的page参数或默认1
       // 获取分类详情
       console.log('调用fetchSelectedKnowledgeDetail，categoryId:', categoryId);
       fetchSelectedKnowledgeDetail(categoryId);
@@ -664,7 +671,7 @@ const Knowledge = observer(() => {
       console.log('categoryId不存在，跳过分类处理');
     }
     // 移除else分支，避免在categoryId为null时执行不必要的逻辑
-  }, [categoryId]); // 移除fetchCategoryKnowledge依赖，避免无限循环
+  }, [categoryId, searchParams.get('page')]); // 增加page参数依赖，确保页码变化时重新请求数据
 
   // 组件初始化时清空搜索结果并获取默认内容
   // useEffect(() => {
@@ -744,37 +751,30 @@ const Knowledge = observer(() => {
       return;
     }
 
-    // 如果和上次处理的query相同且已拉取过，跳过（防止 StrictMode 或重复设置导致的双触发）
-    if (lastUrlQueryRef.current === q && urlQueryFetchedRef.current) {
+    // 如果和上次处理的query及page相同且已拉取过，跳过（防止 StrictMode 或重复设置导致的双触发）
+    if (lastUrlQueryRef.current && lastUrlQueryRef.current.query === q && lastUrlQueryRef.current.page === urlPage && urlQueryFetchedRef.current) {
       return;
     }
 
-    // 记录已处理的query
-    lastUrlQueryRef.current = q;
+    // 记录已处理的query和page
+    lastUrlQueryRef.current = { query: q, page: urlPage };
     urlQueryFetchedRef.current = true;
 
     // 同步状态并触发一次搜索
     setSearchValue(q);
-    setShowAISourceModules(true);
+    setShowAISourceModules(urlPage === 1); // 如果是第一页，显示AI模块；否则显示搜索结果列表
     shouldKeepAIModule.current = true;
     setIsCategorySearchMode(true);
-    fetchSearchResults(q, 1, 10);
-  }, [urlQuery]);
+    fetchSearchResults(q, urlPage, 10);
+  }, [urlQuery, urlPage]);
 
-  // 处理知识卡片点击
-  const handleResultClick = (item) => {
-    // 跳转到知识详情页面
-    const knowledgeId = item.id || item.knowledgeId;
-    if (knowledgeId) {
-      const params = [];
-      if (categoryId) params.push(`category=${categoryId}`);
-      if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
-      const qs = params.length ? `?${params.join('&')}` : '';
-      navigate(`/knowledge/${knowledgeId}${qs}`);
-    } else {
-      message.error('知识ID不存在');
+  // 监听URL page参数变化，更新分类分页
+  useEffect(() => {
+    const id = currentCategoryId || categoryId;
+    if (id && !isCategorySearchMode) {
+      fetchCategoryKnowledge(id, urlPage, 10);
     }
-  };
+  }, [urlPage, currentCategoryId, categoryId, isCategorySearchMode]);
 
   // 处理知识项点击（跳转到知识详情页面）
   const handleKnowledgeDetailClick = (item) => {
@@ -787,6 +787,9 @@ const Knowledge = observer(() => {
       const params = [];
       if (categoryId) params.push(`category=${categoryId}`);
       if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
+      // 添加当前页码参数
+      const currentPage = searchValue ? searchPagination.current : categoryPagination.current;
+      params.push(`page=${currentPage}`);
       const qs = params.length ? `?${params.join('&')}` : '';
       // 传递当前可见列表的所有知识ID到详情页，用于初始化多个标签
       // 优先使用当前搜索结果（ES列表），若无则回退到分类列表
@@ -810,9 +813,13 @@ const Knowledge = observer(() => {
     const knowledgeId = item.id || item._id || item.knowledgeId;
     if (knowledgeId) {
       const params = [];
-      if (categoryId) params.push(`category=${categoryId}`);
+      if (categoryId) params.push(`parent=${categoryId}`);
       if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
-      const qs = `?${[...params, 'from=new'].join('&')}`;
+      // 添加当前页码参数
+      const currentPage = searchValue ? searchPagination.current : categoryPagination.current;
+      params.push(`page=${currentPage}`);
+      params.push('from=new');
+      const qs = `?${params.join('&')}`;
       window.open(`/knowledge-detail/${knowledgeId}${qs}`, '_blank');
     } else {
       message.error('知识ID不存在');
@@ -957,8 +964,11 @@ const Knowledge = observer(() => {
   const handleOpenInCurrentPage = (item) => {
     // 使用正确的知识详情页面路由
     const params = [];
-    if (categoryId) params.push(`category=${categoryId}`);
+    if (categoryId) params.push(`parent=${categoryId}`);
     if (searchValue && searchValue.trim()) params.push(`query=${encodeURIComponent(searchValue.trim())}`);
+    // 添加当前页码参数
+    const currentPage = searchValue ? searchPagination.current : categoryPagination.current;
+    params.push(`page=${currentPage}`);
     const categoryParam = params.length ? `?${params.join('&')}` : '';
     const knowledgeId = item.id || item.knowledgeId;
     if (knowledgeId) {
