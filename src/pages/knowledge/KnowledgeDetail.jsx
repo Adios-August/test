@@ -544,6 +544,7 @@ const KnowledgeDetail = () => {
             console.log('[KnowledgeDetail] selectedKnowledgeId prop computed', { activeTabKey, selectedId });
             return selectedId;
           })()}
+          ancestorId={knowledgeDetail?.categoryId || categoryId}
           onCategoryClick={handleCategoryClick}
         />
 

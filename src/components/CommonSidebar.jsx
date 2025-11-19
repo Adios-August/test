@@ -27,6 +27,9 @@ const CommonSidebar = ({
   const [openKeys, setOpenKeys] = useState([]);
   const [categoryTree, setCategoryTree] = useState([]);
   const [loading, setLoading] = useState(false);
+  // 加载状态：防止重复调用子节点接口
+  const [loadingChildNodes, setLoadingChildNodes] = useState(new Set());
+  const [ancestorId, setAncestorId] = useState([]);
   // 维护最新的分类树引用，便于在异步懒加载后进行递归搜索
   const categoryTreeRef = useRef([]);
   const hasInitialized = useRef(false);
@@ -35,20 +38,7 @@ const CommonSidebar = ({
   const authStore = useAuthStore();
   const currentWorkspace = authStore.currentWorkspace;
 
-  // 渲染时输出当前关键状态，便于确认组件是否挂载/更新
-  console.log('[CommonSidebar] render', {
-    selectedKnowledgeId,
-    selectedKeys,
-    openKeys,
-    treeLen: categoryTree.length,
-    loading
-  });
-
-  // 首次挂载日志
-  useEffect(() => {
-    console.log('[CommonSidebar] mounted');
-    return () => console.log('[CommonSidebar] unmounted');
-  }, []);
+ 
 
  
   // 获取顶层目录数据
@@ -71,29 +61,23 @@ const CommonSidebar = ({
         const apiPromise = knowledgeAPI.getKnowledgeList({ page, size: pageSize, nodeType: 'folder' });
         const response = await Promise.race([apiPromise, timeoutPromise]);
         if (response.code !== 200) {
-          console.error('API response error:', response);
           message.error(response.message || '获取知识树失败');
           allRecords = [];
           break;
         }
         const batch = response.data?.records || response.data || [];
-        console.log('[CommonSidebar] fetchCategoryTree page', { page, batchLen: batch?.length });
         allRecords = allRecords.concat(batch);
         if (!Array.isArray(batch) || batch.length < pageSize) {
           break;
         }
         page += 1;
-        // 防御：最多拉取10页，避免异常循环
+        
         if (page > 10) {
-          console.warn('[CommonSidebar] fetchCategoryTree reached max pages limit');
           break;
         }
       }
       
       if (allRecords.length > 0) {
-        console.log('[CommonSidebar] fetchCategoryTree -> total records', allRecords.length);
-        
-        
         // 转换为树形结构，标记为可能有子节点但尚未加载
         const topLevelNodes = allRecords.map(item => ({
           id: item.id,
@@ -104,16 +88,12 @@ const CommonSidebar = ({
           childrenLoaded: false // 标记子节点尚未加载
         }));
         
-        
         setCategoryTree(topLevelNodes);
-        console.log('[CommonSidebar] setCategoryTree(topLevelNodes)', topLevelNodes?.length);
       } else {
-        console.error('API response error:', response);
         message.error(response.message || '获取知识树失败');
         setCategoryTree([]);
       }
     } catch (error) {
-      console.error('获取知识树失败:', error);
       message.error('获取知识树失败，请稍后重试');
       setCategoryTree([]);
     } finally {
@@ -123,19 +103,24 @@ const CommonSidebar = ({
   
   // 按需加载子节点
   const loadChildNodes = async (parentId) => {
- 
+    // 防止同一节点重复加载
+    const parentIdStr = String(parentId);
+    if (loadingChildNodes.has(parentIdStr)) {
+      return;
+    }
+
     try {
-      // 在加载子节点前，保存当前的展开状态
+      // 保存当前展开状态
       const currentOpenKeys = [...openKeys];
-      console.log('[CommonSidebar] loadChildNodes start', { parentId, currentOpenKeys });
       
+      // 标记节点正在加载
+      setLoadingChildNodes(prev => new Set(prev).add(parentIdStr));
+      
+      // 调用API获取子节点
       const response = await knowledgeAPI.getChildren(parentId, { page: 1, size: 100 });
-      console.log('[CommonSidebar] getChildren response', response);
       
       if (response.code === 200) {
         const childNodes = response.data?.records || [];
-        console.log('[CommonSidebar] childNodes count', childNodes?.length);
-        
         
         // 转换为树节点格式
         const mappedChildren = childNodes.map(item => ({
@@ -146,21 +131,19 @@ const CommonSidebar = ({
           children: item.nodeType === 'folder' ? [] : undefined,
           childrenLoaded: false
         }));
-        console.log('[CommonSidebar] mappedChildren sample', mappedChildren?.[0]);
         
-        // 更新树状态，将子节点添加到对应的父节点下
+        // 更新树状态：添加子节点并标记为已加载
         setCategoryTree(prevTree => {
           const updateTreeNodes = (nodes) => {
             return nodes.map(node => {
-              if (node.id === parentId) {
-                // 找到目标父节点，更新其子节点并标记为已加载
+              // 使用字符串比较确保ID类型一致性
+              if (String(node.id) === parentIdStr) {
                 return {
                   ...node,
-                  children: mappedChildren,
+                  children: mappedChildren.length > 0 ? mappedChildren : undefined,
                   childrenLoaded: true
                 };
               } else if (node.children && node.children.length > 0) {
-                // 递归处理子节点
                 return {
                   ...node,
                   children: updateTreeNodes(node.children)
@@ -169,34 +152,57 @@ const CommonSidebar = ({
               return node;
             });
           };
-          
           return updateTreeNodes(prevTree);
         });
         
         // 数据加载完成后，确保展开状态不变，并添加新展开的节点
         setTimeout(() => {
           // 确保当前点击的节点保持展开
-          if (!currentOpenKeys.includes(parentId.toString())) {
-            setOpenKeys([...currentOpenKeys, parentId.toString()]);
-            console.log('[CommonSidebar] openKeys appended', parentId.toString());
+          if (!currentOpenKeys.includes(parentIdStr)) {
+            setOpenKeys([...currentOpenKeys, parentIdStr]);
           } else {
             setOpenKeys(currentOpenKeys);
-            console.log('[CommonSidebar] openKeys unchanged');
           }
         }, 100);
         
         return true;
       } else {
-        console.error('Failed to load child nodes:', response);
         message.error('加载子节点失败');
         // 失败时仍然保持原来的展开状态
         setOpenKeys(currentOpenKeys);
+        // 更新节点为已加载状态并移除空数组
+        setCategoryTree(prevTree => {
+          const updateTreeNodes = (nodes) => {
+            return nodes.map(node => {
+              if (String(node.id) === parentIdStr) {
+                return {
+                  ...node,
+                  children: undefined,
+                  childrenLoaded: true
+                };
+              } else if (node.children && node.children.length > 0) {
+                return {
+                  ...node,
+                  children: updateTreeNodes(node.children)
+                };
+              }
+              return node;
+            });
+          };
+          return updateTreeNodes(prevTree);
+        });
         return false;
       }
     } catch (error) {
-      console.error('加载子节点失败:', error);
       message.error('加载子节点失败，请稍后重试');
       return false;
+    } finally {
+      // 移除加载标记
+      setLoadingChildNodes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(parentIdStr);
+        return newSet;
+      });
     }
   };
 
@@ -216,6 +222,11 @@ const CommonSidebar = ({
     categoryTreeRef.current = categoryTree;
   }, [categoryTree]);
 
+  // 记录选中状态变化
+  useEffect(() => {
+    console.log('[CommonSidebar] selectedKeys updated to', selectedKeys);
+  }, [selectedKeys]);
+
   // 处理默认展开状态（默认不展开任何分类）
   useEffect(() => {
   
@@ -233,23 +244,15 @@ const CommonSidebar = ({
  
 
   useEffect(() => {
-    console.log('[CommonSidebar] effect:selectedKnowledgeId', { selectedKnowledgeId, treeLen: categoryTree?.length });
-    
     if (selectedKnowledgeId && categoryTree?.length > 0) {
-      console.log('[CommonSidebar] fetching detail for', selectedKnowledgeId);
-      
       // 通过API获取知识详情来获取分类信息
       const fetchKnowledgeAndSetCategory = async () => {
         try {
           const response = await knowledgeAPI.getKnowledgeDetail(selectedKnowledgeId);
-          console.log('[CommonSidebar] getKnowledgeDetail response', response);
-       
           
           if (response.code === 200 && response.data) {
             const knowledgeData = response.data;
             const knowledgeIdStr = String(knowledgeData.id || selectedKnowledgeId);
-            console.log('[CommonSidebar] knowledgeIdStr derived', knowledgeIdStr);
-            
             
             // 尝试从知识数据中获取分类ID；若无则回退到父分类ID
             const categoryId = (
@@ -260,176 +263,110 @@ const CommonSidebar = ({
               knowledgeData.parent_id ||
               knowledgeData.parent?.id
             );
-            console.log('[CommonSidebar] categoryId derived (with parentId fallback)', categoryId);
-          
+            
+            // 提取知识的所有父节点ID（API新增字段，直接获取无需递归计算）
+            const fetchedAncestorId = knowledgeData.ancestorId || [];
+            setAncestorId(fetchedAncestorId);
+            // 将父节点ID转换为字符串格式
+            const parentKeysFromAncestor = fetchedAncestorId.map(id => String(id));
             
             if (categoryId) {
-              // 查找分类在树中的位置并设置选中状态（若未找到则递归懒加载直至找到）
-              const findCategoryInTree = (tree, targetId) => {
-                for (const node of tree) {
-                  if (node.id === targetId || node.key === targetId) {
-                    return node;
-                  }
-                  if (node.children && node.children.length > 0) {
-                    const found = findCategoryInTree(node.children, targetId);
-                    if (found) return found;
-                  }
-                }
-                return null;
-              };
-
-              // 辅助：根据ID在当前最新树中获取节点
-              const getNodeById = (tree, targetId) => {
-                for (const node of tree) {
-                  if (String(node.id) === String(targetId)) return node;
-                  if (node.children && node.children.length > 0) {
-                    const found = getNodeById(node.children, targetId);
-                    if (found) return found;
-                  }
-                }
-                return null;
-              };
-
-              // 辅助：递归懒加载并查找目标分类，返回父级key链路
-              const findCategoryWithLoading = async (targetId) => {
-                const visited = new Set();
-                const traverse = async (nodes, parents = []) => {
-                  for (const node of nodes) {
-                    const keyStr = String(node.key || node.id);
-                    if (String(node.id) === String(targetId) || String(node.key) === String(targetId)) {
-                      return { target: node, parentKeys: parents };
-                    }
-                    // 若为文件夹，确保其子节点已加载后再递归
-                    if (node.nodeType === 'folder') {
-                      const needLoad = !node.childrenLoaded;
-                      if (needLoad && !visited.has(node.id)) {
-                        visited.add(node.id);
-                        await loadChildNodes(node.id);
-                      }
-                      const updatedNode = getNodeById(categoryTreeRef.current, node.id) || node;
-                      const children = updatedNode.children || [];
-                      if (children.length > 0) {
-                        const res = await traverse(children, [...parents, keyStr]);
-                        if (res) return res;
-                      }
-                    }
-                  }
-                  return null;
-                };
-                return traverse(categoryTreeRef.current, []);
-              };
-
-              let targetCategory = findCategoryInTree(categoryTreeRef.current, categoryId);
-              let parentKeys = [];
-              if (!targetCategory) {
-                console.log('[CommonSidebar] targetCategory not found, start lazy path loading');
-                const found = await findCategoryWithLoading(categoryId);
-                targetCategory = found?.target || null;
-                parentKeys = found?.parentKeys || [];
-              } else {
-                // 计算需要展开的父级路径
-                const expandParents = (tree, targetId, parents = []) => {
+              // 使用ancestorId直接构建完整的父键路径
+              let parentKeys = [...parentKeysFromAncestor];
+              const categoryIdStr = String(categoryId);
+              
+              // 确保当前分类ID也在父键路径中
+              if (!parentKeys.includes(categoryIdStr)) {
+                parentKeys.push(categoryIdStr);
+              }
+              
+              // 设置展开的键
+              setOpenKeys(parentKeys);
+              
+              // 使用categoryId直接构建选中键
+              const keyToSelect = categoryIdStr;
+              // 先高亮选中分类
+              console.log('[CommonSidebar] setSelectedKeys -> category', keyToSelect);
+              setSelectedKeys([keyToSelect]);
+              
+              // 尝试找到叶子节点
+              setTimeout(() => {
+                // 简化：直接使用categoryTreeRef查找叶子节点
+                const findNode = (tree, targetId) => {
                   for (const node of tree) {
-                    const currentPath = [...parents, String(node.key || node.id)];
-                    if (node.id === targetId || node.key === targetId) {
-                      return parents;
+                    if (String(node.id) === String(targetId) || String(node.key) === String(targetId)) {
+                      return node;
                     }
                     if (node.children && node.children.length > 0) {
-                      const found = expandParents(node.children, targetId, currentPath);
+                      const found = findNode(node.children, targetId);
                       if (found) return found;
                     }
                   }
                   return null;
                 };
-                parentKeys = expandParents(categoryTreeRef.current, categoryId) || [];
-              }
-
-              console.log('[CommonSidebar] targetCategory', targetCategory);
-         
-              
-              if (targetCategory) {
-                const keyToSelect = String(targetCategory.key || targetCategory.id);
-                // 高亮选中分类（仅对 Menu.Item 生效）
-                console.log('[CommonSidebar] setSelectedKeys -> category', keyToSelect);
-                setSelectedKeys([keyToSelect]);
-
-                console.log('[CommonSidebar] parentKeys', parentKeys);
-
-                // 如果该分类有子节点，也将其自身加入展开列表，确保层级展开可见
-                const shouldExpandSelf = Array.isArray(targetCategory.children) && targetCategory.children.length > 0;
-                const keysToExpand = shouldExpandSelf ? [...parentKeys, keyToSelect] : parentKeys;
-                console.log('[CommonSidebar] keysToExpand', keysToExpand);
-
-                if (keysToExpand.length > 0) {
-                  console.log('[CommonSidebar] merging openKeys', keysToExpand);
-                  setOpenKeys(prev => Array.from(new Set([...(prev || []), ...keysToExpand])));
+                
+                // 查找叶子节点
+                const leaf = findNode(categoryTreeRef.current, knowledgeIdStr);
+                if (leaf) {
+                  console.log('[CommonSidebar] select leaf knowledge', knowledgeIdStr);
+                  setSelectedKeys([String(knowledgeIdStr)]);
+                } else {
+                  // 如果未找到叶子节点，则回退到分类高亮
+                  console.log('[CommonSidebar] leaf not found, fallback category', keyToSelect);
+                  setSelectedKeys([keyToSelect]);
                 }
-
-                // 懒加载该分类的子节点，尝试选中具体知识叶子（仅在未加载时触发）
-                try {
-                  if (!targetCategory.childrenLoaded) {
-                    await loadChildNodes(categoryId);
-                    console.log('[CommonSidebar] loadChildNodes done', categoryId);
-                  } else {
-                    console.log('[CommonSidebar] children already loaded, skip reload');
-                  }
-                } catch (e) {
-                  // ignore
-                }
-                // 加载完成后，确保当前分类以及其父级均展开
-                console.log('[CommonSidebar] force expand', { keyToSelect, parentKeys });
-                setOpenKeys(prev => Array.from(new Set([...(prev || []), String(keyToSelect), ...parentKeys])));
-                setTimeout(() => {
-                  const findCategoryInTreeLocal = (tree, targetId) => {
-                    for (const node of tree) {
-                      if (node.id === targetId || node.key === targetId) return node;
-                      if (node.children && node.children.length > 0) {
-                        const found = findCategoryInTreeLocal(node.children, targetId);
-                        if (found) return found;
-                      }
-                    }
-                    return null;
-                  };
-                  const parentNode = findCategoryInTreeLocal(categoryTreeRef.current, categoryId);
-                  const findLeafRecursively = (node, targetId) => {
-                    if (!node) return null;
-                    if (Array.isArray(node.children)) {
-                      for (const ch of node.children) {
-                        if (String(ch.id) === String(targetId)) return ch;
-                        const deeper = findLeafRecursively(ch, targetId);
-                        if (deeper) return deeper;
-                      }
-                    }
-                    return null;
-                  };
-                  const leaf = findLeafRecursively(parentNode, knowledgeIdStr);
-                  if (leaf) {
-                    console.log('[CommonSidebar] select leaf knowledge', knowledgeIdStr);
-                    setSelectedKeys([String(knowledgeIdStr)]);
-                  } else {
-                    // 如果未找到叶子节点，则回退到分类高亮，保证至少有可见选中
-                    console.log('[CommonSidebar] leaf not found, fallback category', keyToSelect);
-                    setSelectedKeys([String(keyToSelect)]);
-                  }
-                }, 120);
-              } else {
-                // 未在树中找到对应分类，保持现状
-                console.warn('[CommonSidebar] targetCategory not found for categoryId', categoryId);
-              }
-            } else {
-              console.warn('[CommonSidebar] categoryId missing in knowledgeData', knowledgeData);
-              
+              }, 120);
+          
             }
           }
         } catch (error) {
-          console.error('获取知识详情失败:', error);
-          console.error('[CommonSidebar] getKnowledgeDetail error', error);
+          // 静默处理错误
         }
       };
       
       fetchKnowledgeAndSetCategory();
     }
   }, [selectedKnowledgeId, categoryTree]);
+
+  // 根据ancestorId自动展开节点层级
+  useEffect(() => {
+    if (ancestorId.length > 0 && categoryTree.length > 0) {
+      const ancestorKeys = ancestorId.map(id => String(id));
+      setOpenKeys(ancestorKeys);
+    }
+  }, [ancestorId, categoryTree]);
+
+  // 当openKeys变化时，自动加载所有展开的文件夹节点的子节点
+  useEffect(() => {
+    const loadOpenFolders = async () => {
+      // 遍历所有展开的键
+      for (const key of openKeys) {
+        // 查找对应的节点
+        const findNode = (nodes, targetKey) => {
+          for (const node of nodes) {
+            if (node.id.toString() === targetKey) {
+              return node;
+            }
+            if (node.children?.length > 0 || node.nodeType === 'folder') {
+              const found = findNode(node.children || [], targetKey);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+
+        const node = findNode(categoryTree, key);
+        if (node) {
+          // 如果是文件夹节点且未加载子节点，则加载
+          if (node.nodeType === 'folder' && !node.childrenLoaded) {
+            await loadChildNodes(node.id);
+          }
+        }
+      }
+    };
+
+    loadOpenFolders();
+  }, [openKeys, categoryTree]);
 
   // 当有filterCategoryId时，初始化选中状态和展开父级
   useEffect(() => {
@@ -562,6 +499,7 @@ const CommonSidebar = ({
           onClick={(e) => {
             e.stopPropagation();
             // 主动设置选中高亮
+            console.log('[CommonSidebar] category clicked, setting selectedKeys to', category.id.toString());
             setSelectedKeys([category.id.toString()]);
             // 子项点击时，确保父级展开
             if (!isTopLevel) {
@@ -583,15 +521,19 @@ const CommonSidebar = ({
           {category.name}
         </div>
       ),
-      // 如果是文件夹且没有加载过子节点，则显示为可展开但未加载
-      children: category.children 
-        ? (category.children.length > 0 
-          ? convertToMenuItems(category.children, false) 
-          : category.childrenLoaded ? undefined : [{ key: `loading-${category.id}`, label: '加载中...', disabled: true }])
-        : undefined,
+      // 修复：确保文件夹节点始终显示展开图标（即使无孩子节点）
+        children: category.nodeType === 'folder' ? 
+          (category.childrenLoaded ? 
+            (category.children && category.children.length > 0 ? convertToMenuItems(category.children, false) : undefined) 
+            : 
+            (loadingChildNodes.has(String(category.id)) ? 
+              [{ key: `loading-${category.id}`, label: '加载中...', disabled: true }] 
+              : 
+              [])) // 设置为空数组以确保展开图标显示
+            : (category.children ? convertToMenuItems(category.children, false) : undefined),
       // 当展开时，如果子节点未加载，则触发加载
       onTitleClick: ({ key }) => {
-        if (category.children && category.children.length === 0 && !category.childrenLoaded) {
+        if (!category.childrenLoaded) {
           loadChildNodes(category.id);
         }
       }
@@ -602,7 +544,7 @@ const CommonSidebar = ({
   const menuItems = convertToMenuItems(getFilteredCategoryTree());
 
   const handleMenuSelect = ({ key, keyPath }) => {
-
+    console.log('[CommonSidebar] menu select event, setting selectedKeys to', key);
     setSelectedKeys([key]);
     
     // 如果启用了导航功能
@@ -683,9 +625,16 @@ const CommonSidebar = ({
     }
   };
 
-  const handleSubMenuTitleClick = ({ key }) => {
+  const handleSubMenuTitleClick = ({ key, domEvent }) => {
+    // 检查点击事件的目标是否是展开图标或其子元素，如果是，则不执行导航
+    if (domEvent) {
+      const target = domEvent.target;
+      // 展开图标通常是带有 .ant-menu-submenu-expand-icon 类的元素
+      if (target.closest('.ant-menu-submenu-expand-icon')) {
+        return; // 点击的是展开图标，不执行导航
+      }
+    }
 
-    
     // 如果启用了导航功能
     if (enableNavigation) {
       // 查找选中的分类项
