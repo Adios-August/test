@@ -417,7 +417,6 @@ const RoleManagement = () => {
             <Form.Item
               name="workspace"
               label="Workspace"
-              rules={[{ required: true, message: '请选择工作空间' }]}
             >
               <Select
                 mode="multiple"

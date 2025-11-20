@@ -1,5 +1,7 @@
 import axios from "axios";
 import { message } from "antd";
+import { hasWorkspaceFromStorage } from "./workspaceUtils";
+import { hasWorkspaceFromStorage } from "./workspaceUtils";
 
 // 统一的token获取函数
 const getTokenFromStorage = () => {
@@ -17,8 +19,8 @@ const getTokenFromStorage = () => {
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: "/api",
-  timeout: 60000, // 请求超时时间
+  baseURL: "https://resource-including-visits-irc.trycloudflare.com/api",
+  timeout: 10000, // 请求超时时间
   headers: {
     "Content-Type": "application/json",
   },
@@ -70,6 +72,12 @@ request.interceptors.response.use(
     // 对响应错误做点什么
 
     console.error("Response Error:", error);
+
+    // If user has no workspace, suppress all error messages
+    // The error message will be shown in Layout.jsx instead
+    if (!hasWorkspaceFromStorage()) {
+      return Promise.reject(error);
+    }
 
     // 处理不同的错误状态码
     if (error.response) {

@@ -6,6 +6,7 @@ import { observer } from "mobx-react-lite";
 import { useAuthStore } from "../stores";
 import rootStore from "../stores/rootStore";
 import { canAccessKnowledgeManagement } from "../constants/roles";
+import { useHasWorkspace } from "../hooks/useHasWorkspace";
 import "./Layout.scss";
 
 const { Header, Content } = Layout;
@@ -28,6 +29,7 @@ const LayoutComponent = observer(() => {
   const navigate = useNavigate();
   const location = useLocation();
   const authStore = useAuthStore();
+  const hasWorkspace = useHasWorkspace();
 
   // Compute menu items based on user role
   const headerMenuItems = useMemo(() => {
@@ -52,6 +54,13 @@ const LayoutComponent = observer(() => {
       setHeaderSelectedKey(pathname);
     }
   }, [location.pathname]);
+
+  // Check if user has no workspace and show error message
+  useEffect(() => {
+    if (!hasWorkspace && authStore.isAuthenticated) {
+      message.error("用户没有工作空间，请联系管理员设置工作空间");
+    }
+  }, [hasWorkspace, authStore.isAuthenticated]);
 
   const handleHeaderMenuClick = ({ key }) => {
     setHeaderSelectedKey(key);
@@ -118,21 +127,27 @@ const LayoutComponent = observer(() => {
               </Tooltip>
               <Dropdown
                 menu={{
-                  items: authStore.user?.workspace?.split(',').map(w => ({
-                    key: w,
-                    label: w,
-                    onClick: () => {
+                  items: (authStore.user?.workspace?.trim() 
+                    ? authStore.user.workspace.split(',').map(w => w.trim()).filter(Boolean).map(w => ({
+                        key: w,
+                        label: w,
+                        onClick: () => {
                           // 设置当前工作区
                           authStore.setCurrentWorkspace(w);
                           message.success(`已切换到工作区：${w}`);
                         }
-                  })) || []
+                      }))
+                    : []
+                  )
                 }}
                 placement="bottomRight"
                 trigger={['click']}
               >
                 <div className="wpd-button" style={{ cursor: 'pointer' }}>
-                  {authStore.currentWorkspace || authStore.user?.workspace?.split(',')[0] || '未设置workspace'}
+                  {authStore.currentWorkspace || 
+                   (authStore.user?.workspace?.trim() 
+                     ? authStore.user.workspace.split(',')[0].trim() 
+                     : '未设置workspace')}
                 </div>
               </Dropdown>
                <span className="wpd-button">{authStore.user?.displayName ||   ''}</span>

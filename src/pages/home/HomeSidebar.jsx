@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Spin, message, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { homeAPI } from '../../api/home';
-
+import { hasWorkspaceFromStorage } from '../../utils/workspaceUtils';
 import './HomeSidebar.scss';
 
 const { Sider } = Layout;
@@ -16,6 +16,12 @@ const HomeSidebar = () => {
 
   // 获取知识树数据（根层）
   const fetchCategoryTree = async () => {
+    if (!hasWorkspaceFromStorage()) {
+      setCategoryTree([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await homeAPI.getKnowledgeFullTree();
@@ -38,7 +44,9 @@ const HomeSidebar = () => {
       }
     } catch (error) {
       console.error('获取知识树失败:', error);
-      message.error('获取知识树失败，请稍后重试');
+      if (hasWorkspaceFromStorage()) {
+        message.error('获取知识树失败，请稍后重试');
+      }
       // 如果API失败，设置空数组避免显示错误
       setCategoryTree([]);
     } finally {

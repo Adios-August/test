@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { homeAPI } from '../api/home';
 import { knowledgeAPI } from '../api/knowledge';
 import { useAuthStore } from '../stores';
+import { useHasWorkspace } from '../hooks/useHasWorkspace';
 import './CommonSidebar.scss';
 
 const { Sider } = Layout;
@@ -30,10 +31,17 @@ const CommonSidebar = ({
   const hasInitialized = useRef(false);
   const authStore = useAuthStore();
   const currentWorkspace = authStore.currentWorkspace;
+  const hasWorkspace = useHasWorkspace();
 
  
   // 获取顶层目录数据
   const fetchCategoryTree = async () => {
+    if (!hasWorkspace) {
+      // Don't make API calls if user has no workspace
+      setCategoryTree([]);
+      setLoading(false);
+      return;
+    }
   
     setLoading(true);
     try {
@@ -74,7 +82,9 @@ const CommonSidebar = ({
       }
     } catch (error) {
       console.error('获取知识树失败:', error);
-      message.error('获取知识树失败，请稍后重试');
+      if (hasWorkspace) {
+        message.error('获取知识树失败，请稍后重试');
+      }
       setCategoryTree([]);
     } finally {
       setLoading(false);
@@ -83,6 +93,9 @@ const CommonSidebar = ({
   
   // 按需加载子节点
   const loadChildNodes = async (parentId) => {
+    if (!hasWorkspace) {
+      return false;
+    }
  
     try {
       // 在加载子节点前，保存当前的展开状态
@@ -142,14 +155,18 @@ const CommonSidebar = ({
         return true;
       } else {
         console.error('Failed to load child nodes:', response);
-        message.error('加载子节点失败');
+        if (hasWorkspace) {
+          message.error('加载子节点失败');
+        }
         // 失败时仍然保持原来的展开状态
         setOpenKeys(currentOpenKeys);
         return false;
       }
     } catch (error) {
       console.error('加载子节点失败:', error);
-      message.error('加载子节点失败，请稍后重试');
+      if (hasWorkspace) {
+        message.error('加载子节点失败，请稍后重试');
+      }
       return false;
     }
   };

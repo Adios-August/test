@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { message } from 'antd';
 import { homeAPI } from '../../../../api/home';
 import { convertToTreeData } from '../utils/knowledgeUtils';
+import { hasWorkspaceFromStorage } from '../../../../utils/workspaceUtils';
 
 export const useCategoryTree = () => {
   const [loading, setLoading] = useState(false);
@@ -9,6 +10,12 @@ export const useCategoryTree = () => {
 
   // Fetch category tree data
   const fetchCategoryTree = useCallback(async () => {
+    if (!hasWorkspaceFromStorage()) {
+      setCategoryTree([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await homeAPI.getKnowledgeFullTree();
@@ -21,7 +28,9 @@ export const useCategoryTree = () => {
       }
     } catch (error) {
       console.error('获取分类树失败:', error);
-      message.error('获取分类树失败，请稍后重试');
+      if (hasWorkspaceFromStorage()) {
+        message.error('获取分类树失败，请稍后重试');
+      }
       setCategoryTree([]);
     } finally {
       setLoading(false);

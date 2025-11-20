@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { homeAPI } from '../../api/home';
 import { knowledgeAPI } from '../../api/knowledge';
 import { useAuthStore } from '../../stores';
+import { useHasWorkspace } from '../../hooks/useHasWorkspace';
 import RoleProtectedComponent from '../../components/RoleProtectedComponent';
 import '../knowledge-management/KnowledgeManagement.scss';
 
@@ -13,6 +14,7 @@ const { Option } = Select;
 const CategoryManagement = () => {
   const navigate = useNavigate();
   const authStore = useAuthStore();
+  const hasWorkspace = useHasWorkspace();
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -22,6 +24,13 @@ const CategoryManagement = () => {
 
   // 获取知识树数据（只获取顶层目录）
   const fetchCategoryTree = async () => {
+    if (!hasWorkspace) {
+      // Don't make API calls if user has no workspace
+      setDataSource([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       // 使用knowledgeAPI获取顶层目录，只获取folder类型
@@ -37,7 +46,9 @@ const CategoryManagement = () => {
       }
     } catch (error) {
       console.error('获取知识树失败:', error);
-      message.error('获取知识树失败，请稍后重试');
+      if (hasWorkspace) {
+        message.error('获取知识树失败，请稍后重试');
+      }
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -83,6 +94,10 @@ const CategoryManagement = () => {
 
   // 加载子节点
   const loadChildNodes = async (parentId, key) => {
+    if (!hasWorkspace) {
+      return;
+    }
+
     setLoadingKeys(prev => [...prev, key]);
     try {
       const response = await knowledgeAPI.getChildren(parentId, {});
@@ -114,7 +129,9 @@ const CategoryManagement = () => {
       }
     } catch (error) {
       console.error('加载子节点失败:', error);
-      message.error('加载子节点失败');
+      if (hasWorkspace) {
+        message.error('加载子节点失败');
+      }
     } finally {
       setLoadingKeys(prev => prev.filter(k => k !== key));
     }

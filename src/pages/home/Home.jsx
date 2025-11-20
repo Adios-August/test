@@ -18,6 +18,7 @@ import { http } from "../../utils/request";
 import { addSearchHistory } from "../../utils/searchHistoryAPI";
 import homeBanner from "../../assets/image/home_banner.png";
 import { useAuthStore } from "../../stores";
+import { useHasWorkspace } from "../../hooks/useHasWorkspace";
 import "./Home.scss";
 
 const { Content } = Layout;
@@ -32,9 +33,15 @@ const Home = observer(() => {
   const [latestLoading, setLatestLoading] = useState(false);
   const [hotDownloadsLoading, setHotDownloadsLoading] = useState(false);
   const authStore = useAuthStore();
+  const hasWorkspace = useHasWorkspace();
 
   // 加载所有数据的函数
   const loadAllData = async () => {
+    if (!hasWorkspace) {
+      // Don't make API calls if user has no workspace
+      return;
+    }
+
     try {
       await Promise.all([
         fetchPopularKnowledge(),
@@ -42,7 +49,9 @@ const Home = observer(() => {
         fetchHotDownloads()
       ]);
     } catch (error) {
-      console.error('加载数据失败:', error);
+      if (hasWorkspace) {
+        console.error('加载数据失败:', error);
+      }
     }
   }
 
@@ -69,6 +78,8 @@ const Home = observer(() => {
 
   // 获取热门知识列表
   const fetchPopularKnowledge = async () => {
+    if (!hasWorkspace) return;
+
     setLoading(true);
     try {
       const response = await homeAPI.getPopularKnowledge(10);
@@ -87,6 +98,8 @@ const Home = observer(() => {
 
   // 获取最新知识列表
   const fetchLatestKnowledge = async () => {
+    if (!hasWorkspace) return;
+
     setLatestLoading(true);
     try {
       const response = await homeAPI.getLatestKnowledge(10);
@@ -105,6 +118,8 @@ const Home = observer(() => {
 
   // 获取最热资料
   const fetchHotDownloads = async () => {
+    if (!hasWorkspace) return;
+
     setHotDownloadsLoading(true);
     try {
       const resp = await homeAPI.getHotDownloads(10);
@@ -210,7 +225,6 @@ const Home = observer(() => {
                     onBlur={() => {
                       setTimeout(() => {
                         setSearchFocused(false);
-                        resetSearchSuggestions();
                       }, 300);
                     }}
                     suffix={
