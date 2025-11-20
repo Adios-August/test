@@ -329,7 +329,7 @@ const KnowledgeQA = () => {
       // 1. 获取历史记录
   
       const historicalSessions = await fetchSessions();
-    
+  
       
       // 2. 新增会话
       const newSession = {
@@ -337,18 +337,19 @@ const KnowledgeQA = () => {
         title: question.length > 20 ? question.substring(0, 20) + "..." : question,
         isActive: true
       };
-    
+  
+      console.log('handleWithParams - 新创建的会话:', newSession);
       
       // 3. 将新会话和历史会话合并，新会话在前面
       const allSessions = [newSession, ...historicalSessions];
-   
+  
       
       setConversations(allSessions);
       setCurrentConversation(newSession.id);
       
       // 4. 调用AI问答接口
  
-      await handleStreamAIRequest(question);
+      await handleStreamAIRequest(question, newSession.id);
       
       // 5. 确保在添加会话后调用fetchSessions刷新会话列表
 
@@ -360,6 +361,7 @@ const KnowledgeQA = () => {
       
     } catch (error) {
     
+      console.error('handleWithParams - 创建会话失败:', error);
       message.error('创建会话失败');
     }
   };
@@ -404,7 +406,7 @@ const KnowledgeQA = () => {
   }, [currentUserId]); // 移除params依赖，避免重复触发
 
   // 流式AI请求处理
-  const handleStreamAIRequest = async (userQuestion, customSessionId = null) => {
+  const handleStreamAIRequest = async (userQuestion, customSessionId = null, messageId = null) => {
     // 安全检查：确保用户已登录
     if (!currentUserId) {
       message.error('请先登录后再发送消息');
@@ -420,31 +422,37 @@ const KnowledgeQA = () => {
 
     setIsLoading(true);
 
-    // 添加用户消息
-    const newUserMessage = {
-      id: Date.now() + Math.random(),
-      type: "user",
-      content: userQuestion.trim(),
-      timestamp: new Date(),
-    };
+    let isRegenerating = !!messageId;
 
- 
-    
-    // 添加新的AI回复消息
-    const newAIMessage = {
-      id: Date.now() + Math.random() + 1,
-      type: "ai",
-      content: "",
-      timestamp: new Date(),
-      references: [],
-      
-      messageId: "",
-      isLiked: false,
-      isDisliked: false,
-      isRegenerating: false,
-    };
+    if (!isRegenerating) {
+      // 添加用户消息
+      const newUserMessage = {
+        id: Date.now() + Math.random(),
+        type: "user",
+        content: userQuestion.trim(),
+        timestamp: new Date(),
+      };
 
-    setMessages((prev) => [...prev, newUserMessage, newAIMessage]);
+      // 添加新的AI回复消息
+      const newAIMessage = {
+        id: Date.now() + Math.random() + 1,
+        type: "ai",
+        content: "",
+        timestamp: new Date(),
+        references: [],
+        
+        // 设置默认的sessionId和messageId
+        sessionId: customSessionId || currentConversation || "",
+        messageId: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        isLiked: false,
+        isDisliked: false,
+        isRegenerating: false,
+      };
+
+      console.log('handleStreamAIRequest - 新创建的用户消息:', newUserMessage);
+      console.log('handleStreamAIRequest - 新创建的AI消息:', newAIMessage);
+      setMessages((prev) => [...prev, newUserMessage, newAIMessage]);
+    }
 
     // 首次发送消息后，将当前会话标记为非“新会话”
     if (currentConversation) {
@@ -585,16 +593,24 @@ const KnowledgeQA = () => {
                   const newMessages = [...prev];
                   // 安全检查：确保有消息且能找到AI消息
                   if (newMessages.length === 0) {
-              
                     return prev;
                   }
-                  const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
-                  if (aiIndex !== -1) {
-                    const realIndex = newMessages.length - 1 - aiIndex;
-                    const aiMsg = newMessages[realIndex];
-                    newMessages[realIndex] = { 
-                      ...aiMsg, 
-                      content: answer, 
+                  let aiIndex;
+                  if (messageId) {
+                    // 如果是重新生成，找到指定messageId的AI消息
+                    aiIndex = newMessages.findIndex((m) => m?.id === messageId && m?.type === "ai");
+                  } else {
+                    // 否则找到最后一条AI消息
+                    aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
+                    if (aiIndex !== -1) {
+                      aiIndex = newMessages.length - 1 - aiIndex;
+                    }
+                  }
+                  if (aiIndex !== -1 && aiIndex < newMessages.length) {
+                    const aiMsg = newMessages[aiIndex];
+                    newMessages[aiIndex] = {
+                      ...aiMsg,
+                      content: answer,
                       references: references,
                       // 保持原有的sessionId和messageId
                       sessionId: aiMsg.sessionId || "",
@@ -603,7 +619,7 @@ const KnowledgeQA = () => {
                       isDisliked: aiMsg.isDisliked || false,
                       isRegenerating: false // 清除重新生成状态
                     };
-                  }  
+                  }
                   return newMessages;
                 });
               }  
@@ -835,25 +851,22 @@ const KnowledgeQA = () => {
 
 
 
-  const handleSend = async (customQuestion = null, customSessionId = null) => {
+  const handleSend = async (customQuestion = null, customSessionId = null, isRegenerate = false, messageId = null) => {
     const question = customQuestion || inputValue.trim();
     
     // 安全检查：确保用户已登录（优先检查）
     if (!currentUserId) {
-     
       message.error('请先登录后再发送消息');
       return;
     }
     
     // 安全检查：确保问题内容是有效的字符串
     if (!question || typeof question !== 'string') {
-     
       message.warning("问题内容类型错误");
       return;
     }
     
     if (!question.trim()) {
-      
       message.warning("请输入有效的问题");
       return;
     }
@@ -879,9 +892,9 @@ const KnowledgeQA = () => {
     if (!sessionIdToUse && sessionIdRef.current) {
       sessionIdToUse = sessionIdRef.current; 
     }
-     
-    
-    await handleStreamAIRequest(question, sessionIdToUse);
+      
+    // 如果是重新生成，传递messageId给handleStreamAIRequest
+    await handleStreamAIRequest(question, sessionIdToUse, messageId);
   };
 
   const handleNewConversation = async () => {
@@ -946,9 +959,11 @@ const KnowledgeQA = () => {
 
   // 加载会话历史消息
   const handleLoadConversationHistory = async (sessionId) => {
+    console.log('=== handleLoadConversationHistory 开始 ===');
+    console.log('sessionId:', sessionId);
     if (!sessionId) {
-     
-      return;
+      
+      return [];
     }
 
     try {
@@ -960,25 +975,41 @@ const KnowledgeQA = () => {
       setExpandedRelatedTextLoading({});
 
       const response = await chatAPI.getHistory(sessionId, { limit: 20 });
+      console.log('handleLoadConversationHistory - API返回的原始数据:', response.data);
       if (response?.code === 200 && Array.isArray(response.data)) {
         // 正确映射消息类型
-        const msgs = response.data.map((m) => ({
-          id: m.id || `${Date.now()}_${Math.random()}`,
-          type: m.role === "user" ? "user" : "ai",
-          content: m.content || "",
-          references: m.references || [],
-          timestamp: new Date(m.timestamp || Date.now()),
-        }));
+        const msgs = response.data.map((m, index) => {
+          // 合并相同文件的引用
+          const mergedReferences = mergeReferencesByFile(m.references || []);
+          const processedMsg = {
+            id: m.id || `${Date.now()}_${Math.random()}`,
+            type: m.role === "user" ? "user" : "ai",
+            content: m.content || "",
+            references: mergedReferences,
+            timestamp: new Date(m.timestamp || Date.now()),
+            // 添加历史消息缺少的字段，与新消息结构一致
+            sessionId: sessionId,
+            messageId: m.messageId || m.id || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            isLiked: m.isLiked || false,
+            isDisliked: m.isDisliked || false,
+            isRegenerating: false
+          };
+          console.log(`handleLoadConversationHistory - 第${index}条处理后的消息:`, processedMsg);
+          return processedMsg;
+        });
+        console.log('handleLoadConversationHistory - 所有处理后的消息:', msgs);
         setMessages(msgs);
-      } else {
-      
-        setMessages([]);
+        return msgs;
       }
+      return [];
     } catch (error) {
+      console.error('handleLoadConversationHistory - 加载会话历史失败:', error);
       
       setMessages([]);
+      return [];
     } finally {
       setIsLoadingConversation(false);
+      console.log('=== handleLoadConversationHistory 结束 ===');
     }
   };
 
@@ -1005,28 +1036,41 @@ const KnowledgeQA = () => {
     (async () => {
       try {
         const res = await chatAPI.getHistory(conversationId, { limit: 20 });
+        console.log('handleConversationSelect - API返回的原始数据:', res.data);
         if (res?.code === 200 && Array.isArray(res.data)) {
-          const msgs = res.data.map((m) => {
+          const msgs = res.data.map((m, index) => {
+            console.log(`handleConversationSelect - 第${index}条原始消息:`, m);
             // 安全检查：确保消息内容有效
             const content = m.content || "";
             if (typeof content !== 'string') {
               
-              return {
+              const invalidContentMsg = {
                 id: m.id || `${Date.now()}_${Math.random()}`,
                 type: m.role === "user" ? "user" : "ai",
                 content: "", // 设置为空字符串而不是无效内容
                 references: m.references || [],
                 timestamp: new Date(m.timestamp || Date.now()),
               };
+              console.log(`handleConversationSelect - 第${index}条处理后的消息(无效内容):`, invalidContentMsg);
+              return invalidContentMsg;
             }
-            return {
+            const validContentMsg = {
               id: m.id || `${Date.now()}_${Math.random()}`,
               type: m.role === "user" ? "user" : "ai",
               content: content,
               references: m.references || [],
               timestamp: new Date(m.timestamp || Date.now()),
+              // 添加历史消息缺少的字段，与新消息结构一致
+              sessionId: conversationId,
+              messageId: m.messageId || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              isLiked: m.isLiked || false,
+              isDisliked: m.isDisliked || false,
+              isRegenerating: false
             };
+            console.log(`handleConversationSelect - 第${index}条处理后的消息(有效内容):`, validContentMsg);
+            return validContentMsg;
           });
+          console.log('handleConversationSelect - 所有处理后的消息:', msgs);
           setMessages(msgs);
         } else {
           setMessages([]);
@@ -1084,15 +1128,25 @@ const KnowledgeQA = () => {
     // 找到对应的消息
     const targetMessage = messages.find(m => m.id === messageId);
     
-    
     if (!targetMessage) {
       message.error('找不到对应的消息');
       return;
     }
     
+    // 检查消息类型，如果是用户消息则不允许点赞/点踩
+    if (targetMessage.type === 'user') {
+      message.error('用户消息不支持点赞/点踩');
+      return;
+    }
+    
+    // 确保消息有基本字段
     if (!targetMessage.sessionId || !targetMessage.messageId) {
-      message.error('消息信息不完整，无法操作');
-     
+      // 如果是AI消息但缺少必要字段，可能是消息还在生成中
+      if (targetMessage.type === 'ai' && targetMessage.content) {
+        message.error('消息正在生成中，请稍候再试');
+      } else {
+        message.error('消息信息不完整，无法操作');
+      }
       return;
     }
 
@@ -1270,45 +1324,38 @@ const KnowledgeQA = () => {
     }
   };
 
-  // 重新生成AI回答
   const handleRegenerateAnswer = async (messageId) => {
-    // 安全检查：确保用户已登录
+    // 安全检查
     if (!currentUserId) {
- 
       message.error('请先登录后再重新生成回答');
       return;
     }
-
-    // 安全检查：确保消息数组不为空
     if (messages.length === 0) {
       message.error('消息数组为空，无法重新生成');
       return;
     }
 
-    // 获取用户问题（找到用户消息）
+    // 获取用户问题
     const userMessageIndex = messages.findIndex(m => m.id === messageId) - 1;
     if (userMessageIndex < 0 || messages[userMessageIndex].type !== 'user') {
       message.error('找不到对应的用户问题');
       return;
     }
-    
     const userQuestion = messages[userMessageIndex].content;
-    
-    // 安全检查：确保用户问题是有效的字符串
     if (typeof userQuestion !== 'string' || !userQuestion.trim()) {
       message.error('用户问题内容无效，无法重新生成');
       return;
     }
 
-    // 标记旧的AI回答为重新生成中，而不是立即删除
+    // 标记旧AI回答为重新生成中
     setMessages(prev => prev.map(m => 
       m.id === messageId 
-        ? { ...m, content: "", isRegenerating: true }
+        ? { ...m, content: "", isRegenerating: true, references: [] } 
         : m
     ));
 
-    // 重新生成AI回答（直接重新发送问题，不需要sessionId）
-    await handleSend(userQuestion);
+    // 重新生成AI回答
+    await handleStreamAIRequest(userQuestion, null, messageId);
   };
 
   // 取消反馈弹窗
