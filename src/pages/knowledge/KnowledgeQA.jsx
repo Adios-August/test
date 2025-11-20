@@ -116,6 +116,11 @@ const KnowledgeQA = () => {
   const [currentMessageId, setCurrentMessageId] = useState(null);
   const [feedbackPosition, setFeedbackPosition] = useState({ x: 0, y: 0 });
 
+  // 重命名会话相关状态
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [renameInput, setRenameInput] = useState("");
+  const [currentRenameSessionId, setCurrentRenameSessionId] = useState(null);
+
   // RelatedText展开状态管理
   const [expandedRelatedText, setExpandedRelatedText] = useState({});
   const [expandedRelatedTextData, setExpandedRelatedTextData] = useState({});
@@ -134,9 +139,8 @@ const KnowledgeQA = () => {
 
   // 处理引用点击：展开右侧、设置页码/坐标覆盖并保证详情加载
   const handleReferenceClick = async (ref, message) => {
-    console.log('点击引用:', ref);
-    console.log('所属消息:', message);
-    
+  
+ 
     const url = ref.download_url || ref.downloadUrl;
     if (url) setPreviewFileUrl(url);
     const pg = ref.page_num ?? ref.pageNum;
@@ -154,12 +158,8 @@ const KnowledgeQA = () => {
     setPreviewBboxes(normalizedBboxes);
 
     const knowledgeId = ref.knowledgeId || ref.knowledge_id;
-    console.log('提取的knowledgeId:', knowledgeId);
-    
-    if (!knowledgeId) {
-      console.warn('引用缺少knowledgeId:', ref);
-      return;
-    }
+   
+ 
 
     // 设置当前选中的引用消息，用于右侧面板显示
     if (message) {
@@ -167,7 +167,7 @@ const KnowledgeQA = () => {
     }
 
     const preferred = ref.sourceFile || ref.source_file || (Array.isArray(ref.attachments) ? ref.attachments[0] : undefined);
-    console.log('设置展开状态，knowledgeId:', knowledgeId);
+ 
     
     setExpandedRelatedText(prev => ({ ...prev, [knowledgeId]: true }));
     setExpandedRelatedTextOverride(prev => ({
@@ -179,39 +179,27 @@ const KnowledgeQA = () => {
     }
 
     if (!expandedRelatedTextData[knowledgeId] && !expandedRelatedTextLoading[knowledgeId]) {
-      console.log('开始加载知识详情，knowledgeId:', knowledgeId);
+    
       try {
         setExpandedRelatedTextLoading(prev => ({ ...prev, [knowledgeId]: true }));
         const response = await knowledgeAPI.getKnowledgeDetail(knowledgeId);
         if (response.code === 200) {
           setExpandedRelatedTextData(prev => ({ ...prev, [knowledgeId]: response.data }));
-          console.log('知识详情加载成功');
+        
         } else {
           message.error(response.message || '获取知识详情失败');
         }
       } catch (e) {
-        console.error('获取知识详情失败:', e);
+      
         message.error('获取知识详情失败，请稍后重试');
       } finally {
         setExpandedRelatedTextLoading(prev => ({ ...prev, [knowledgeId]: false }));
       }
-    } else {
-      console.log('知识详情已存在或正在加载中');
-    }
+    }  
   };
 
-  // 调试信息：显示用户状态
-
-  // 获取初始问题（从params或location.state）
-  const initialQuestion = params.question ? decodeURIComponent(params.question) : location.state?.question;
-  
-  // 检查是否从知识库页面跳转过来
-  const isFromKnowledgePage = params.fromPage === "knowledge" || location.state?.fromPage === "knowledge";
-
-  // 防止重复搜索的ref
-  const hasSearchedFromHome = useRef(false);
-  // 防止AI模块被重复隐藏的ref
-  const shouldKeepAIModule = useRef(false);
+ 
+ 
   // 防止重复加载会话历史的ref
   const hasLoadedSessions = useRef(false);
   // 防止重复处理URL参数的ref
@@ -224,23 +212,7 @@ const KnowledgeQA = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // 监听用户状态变化
-
-  // 监听输入值变化
-
-  // 组件挂载时检查用户状态
-  useEffect(() => {
-    const checkUserStatus = async () => {
-      try {
-        const isAuthValid = await authStore.checkAuth();
-
-      } catch (error) {
-        console.error('KnowledgeQA - 用户认证检查失败:', error);
-      }
-    };
-    
-    checkUserStatus();
-  }, [authStore]);
+ 
 
 
 
@@ -275,7 +247,7 @@ const KnowledgeQA = () => {
           message.error(response.message || '获取知识详情失败');
         }
       } catch (error) {
-        console.error('获取知识详情失败:', error);
+        
         message.error('获取知识详情失败，请稍后重试');
       } finally {
         setExpandedRelatedTextLoading(prev => ({ ...prev, [knowledgeId]: false }));
@@ -323,42 +295,71 @@ const KnowledgeQA = () => {
     }
   }, [params.question, params.fromPage, navigate]);
 
-  // 有参数时的处理逻辑
-  const handleWithParams = async (question, fromPage) => {
+  // 获取会话列表
+  const fetchSessions = async () => {
     try {
-      // 1. 获取历史记录
       const res = await chatAPI.getSessions(currentUserId);
-      let historicalSessions = [];
-      
+   
       if (res?.code === 200 && Array.isArray(res.data)) {
-        historicalSessions = res.data.map(s => ({
+        const mappedSessions = res.data.map(s => ({
           id: s.sessionId,
           title: s.sessionName || '会话',
           isActive: false
-        })); 
-        
-        // 不再需要去重，直接使用API返回的数据
+        }));
+     
+        return mappedSessions;
       }
+   
+      return [];
+    } catch (error) {
+   
+      return [];
+    }
+  };
+
+  // 有参数时的处理逻辑
+  const handleWithParams = async (question, fromPage) => {
+ 
+    if (!currentUserId) {
+      
+      message.error('请先登录后再操作');
+      return;
+    }
+    try {
+      // 1. 获取历史记录
+  
+      const historicalSessions = await fetchSessions();
+    
       
       // 2. 新增会话
       const newSession = {
         id: `temp_${Date.now()}`,
         title: question.length > 20 ? question.substring(0, 20) + "..." : question,
         isActive: true
-      }; 
+      };
+    
+      
       // 3. 将新会话和历史会话合并，新会话在前面
-      const allSessions = [newSession, ...historicalSessions]; 
+      const allSessions = [newSession, ...historicalSessions];
+   
       
       setConversations(allSessions);
       setCurrentConversation(newSession.id);
       
       // 4. 调用AI问答接口
+ 
       await handleStreamAIRequest(question);
       
-      // 5. 渲染数据（AI接口会自动更新messages）
+      // 5. 确保在添加会话后调用fetchSessions刷新会话列表
+
+      const updatedSessions = await fetchSessions();
+ 
+      setConversations(updatedSessions.map(session => ({ ...session, isActive: session.id === currentConversation })));
+      
+
       
     } catch (error) {
-      console.error('处理参数时出错:', error);
+    
       message.error('创建会话失败');
     }
   };
@@ -367,14 +368,7 @@ const KnowledgeQA = () => {
   const handleWithoutParams = async () => {
     try {
       // 1. 获取历史记录
-      const res = await chatAPI.getSessions(currentUserId);
-      
-      if (res?.code === 200 && Array.isArray(res.data) && res.data.length > 0) {
-        const sessions = res.data.map(s => ({
-          id: s.sessionId,
-          title: s.sessionName || '会话',
-          isActive: false
-        }));
+      const sessions = await fetchSessions();
         
         // 不再需要去重，直接使用API返回的数据
         setConversations(sessions);
@@ -394,9 +388,9 @@ const KnowledgeQA = () => {
           // 自动加载第一条会话的消息历史 
           await handleLoadConversationHistory(firstSession.id);
         }
-      }
-    } catch (error) {
-      console.error('加载历史会话时出错:', error);
+      
+    } catch{
+      
     }
   };
 
@@ -472,7 +466,7 @@ const KnowledgeQA = () => {
       };
 
       // 调用新的RAG流式对话接口
-      const response = await authenticatedFetch("/api/chat/stream", {
+      const response = await authenticatedFetch("http://cnl20044474:3006/api/chat/strean", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -538,24 +532,27 @@ const KnowledgeQA = () => {
               break;
             }
 
-            // 调试日志，观察解析到的事件
-            // eslint-disable-next-line no-console
+             
     
 
             if (eventName === "start") {
               // 保存会话ID（后端会在end事件里补充messageId）
+     
               if (parsed.sessionId) {
                 sessionIdRef.current = parsed.sessionId;
                 window.__ragSessionId = parsed.sessionId;
                 
                 // 更新会话列表中的临时会话ID为真实的sessionId
                 setConversations(prev => {
-                  return prev.map(conv => {
+                  const updatedConvs = prev.map(conv => {
                     if (conv.isActive && conv.id && typeof conv.id === 'string' && conv.id.startsWith('temp_')) { 
+                     
                       return { ...conv, id: parsed.sessionId };
                     }
                     return conv;
                   });
+
+                  return updatedConvs;
                 });
                 
                 // 更新当前会话ID
@@ -566,7 +563,7 @@ const KnowledgeQA = () => {
                   const newMessages = [...prev];
                   // 安全检查：确保有消息且能找到AI消息
                   if (newMessages.length === 0) {
-                    console.warn('SSE start事件：消息数组为空，无法更新sessionId');
+                   
                     return prev;
                   }
                   const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
@@ -574,9 +571,7 @@ const KnowledgeQA = () => {
                     const realIndex = newMessages.length - 1 - aiIndex;
                     const aiMsg = newMessages[realIndex];
                     newMessages[realIndex] = { ...aiMsg, sessionId: parsed.sessionId };
-                  } else {
-                    console.warn('SSE start事件：未找到AI消息，无法更新sessionId');
-                  }
+                  }  
                   return newMessages;
                 });
               }
@@ -589,7 +584,7 @@ const KnowledgeQA = () => {
                   const newMessages = [...prev];
                   // 安全检查：确保有消息且能找到AI消息
                   if (newMessages.length === 0) {
-                    console.warn('SSE message事件：消息数组为空，无法更新内容');
+              
                     return prev;
                   }
                   const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
@@ -607,14 +602,10 @@ const KnowledgeQA = () => {
                       isDisliked: aiMsg.isDisliked || false,
                       isRegenerating: false // 清除重新生成状态
                     };
-                  } else {
-                    console.warn('SSE message事件：未找到AI消息，无法更新内容');
-                  }
+                  }  
                   return newMessages;
                 });
-              } else {
-                console.warn('SSE message事件收到非字符串content:', typeof content, content);
-              }
+              }  
             } else if (eventName === "references") {
               // 仅AI命中的块，后端包含 download_url
               const arr = Array.isArray(parsed) ? parsed : [];
@@ -699,7 +690,7 @@ const KnowledgeQA = () => {
                           message.error(resp.message || '获取知识详情失败');
                         }
                       } catch (e) {
-                        console.error('获取知识详情失败:', e);
+                        
                         message.error('获取知识详情失败，请稍后重试');
                       } finally {
                         setExpandedRelatedTextLoading((prev) => ({ ...prev, [kId]: false }));
@@ -712,7 +703,7 @@ const KnowledgeQA = () => {
                 const newMessages = [...prev];
                 // 安全检查：确保有消息且能找到AI消息
                 if (newMessages.length === 0) {
-                  console.warn('SSE references事件：消息数组为空，无法更新引用');
+                 
                   return prev;
                 }
                 const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
@@ -728,12 +719,11 @@ const KnowledgeQA = () => {
                     isLiked: aiMsg.isLiked || false,
                     isDisliked: aiMsg.isDisliked || false
                   };
-                } else {
-                  console.warn('SSE references事件：未找到AI消息，无法更新引用');
-                }
+                } 
                 return newMessages;
               });
             } else if (eventName === "end") {
+             
               // 兜底同步一次内容与引用并关闭loading
               // 安全检查：确保answer是字符串类型
               if (typeof answer === 'string') {
@@ -741,7 +731,7 @@ const KnowledgeQA = () => {
                   const newMessages = [...prev];
                   // 安全检查：确保有消息且能找到AI消息
                   if (newMessages.length === 0) {
-                    console.warn('SSE end事件：消息数组为空，无法更新内容');
+                   
                     return prev;
                   }
                   const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
@@ -749,15 +739,12 @@ const KnowledgeQA = () => {
                     const realIndex = newMessages.length - 1 - aiIndex;
                     const aiMsg = newMessages[realIndex];
                     newMessages[realIndex] = { ...aiMsg, content: answer, references: references };
-                  } else {
-                    console.warn('SSE end事件：未找到AI消息，无法更新内容');
-                  }
+                  }  
                   return newMessages;
                 });
-              } else {
-                console.error('SSE end事件中answer不是字符串类型:', typeof answer, answer);
-              }
+              }  
               if (parsed.sessionId) {
+                
                 sessionIdRef.current = parsed.sessionId;
                 window.__ragSessionId = parsed.sessionId;
                 // 更新AI消息的sessionId
@@ -765,7 +752,7 @@ const KnowledgeQA = () => {
                   const newMessages = [...prev];
                   // 安全检查：确保有消息且能找到AI消息
                   if (newMessages.length === 0) {
-                    console.warn('SSE end事件：消息数组为空，无法更新sessionId');
+                    
                     return prev;
                   }
                   const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
@@ -773,9 +760,7 @@ const KnowledgeQA = () => {
                     const realIndex = newMessages.length - 1 - aiIndex;
                     const aiMsg = newMessages[realIndex];
                     newMessages[realIndex] = { ...aiMsg, sessionId: parsed.sessionId };
-                  } else {
-                    console.warn('SSE end事件：未找到AI消息，无法更新sessionId');
-                  }
+                  } 
                   return newMessages;
                 });
               }
@@ -787,7 +772,7 @@ const KnowledgeQA = () => {
                   const newMessages = [...prev];
                   // 安全检查：确保有消息且能找到AI消息
                   if (newMessages.length === 0) {
-                    console.warn('SSE end事件：消息数组为空，无法更新messageId');
+                    
                     return prev;
                   }
                   const aiIndex = [...newMessages].reverse().findIndex((m) => m?.type === "ai");
@@ -796,7 +781,7 @@ const KnowledgeQA = () => {
                     const aiMsg = newMessages[realIndex];
                     newMessages[realIndex] = { ...aiMsg, messageId: parsed.messageId };
                   } else {
-                    console.warn('SSE end事件：未找到AI消息，无法更新messageId');
+                    
                   }
                   return newMessages;
                 });
@@ -824,14 +809,14 @@ const KnowledgeQA = () => {
         }
 
         message.error(errorMessage);
-        console.error("AI请求错误:", error);
+     
 
         // 如果请求失败，移除空的AI回复消息
         setMessages((prev) => {
           const newMessages = [...prev];
           // 安全检查：确保有消息
           if (newMessages.length === 0) {
-            console.warn('错误处理：消息数组为空，无法移除空消息');
+           
             return prev;
           }
           const lastMessage = newMessages[newMessages.length - 1];
@@ -854,20 +839,20 @@ const KnowledgeQA = () => {
     
     // 安全检查：确保用户已登录（优先检查）
     if (!currentUserId) {
-      console.error('handleSend: 用户未登录，currentUserId:', currentUserId);
+     
       message.error('请先登录后再发送消息');
       return;
     }
     
     // 安全检查：确保问题内容是有效的字符串
     if (!question || typeof question !== 'string') {
-      console.error('handleSend: 问题内容类型错误:', typeof question, question);
+     
       message.warning("问题内容类型错误");
       return;
     }
     
     if (!question.trim()) {
-      console.error('handleSend: 问题内容为空:', question);
+      
       message.warning("请输入有效的问题");
       return;
     }
@@ -898,35 +883,47 @@ const KnowledgeQA = () => {
     await handleStreamAIRequest(question, sessionIdToUse);
   };
 
-  const handleNewConversation = () => {
+  const handleNewConversation = async () => {
+
     // 若当前已处于新会话，则不允许继续新建
     if (isInNewConversation) {
+   
       message.info('已是最新对话');
       return;
     }
 
     // 安全检查：确保用户已登录
     if (!currentUserId) {
-      console.error('handleNewConversation: 用户未登录，currentUserId:', currentUserId);
+  
       message.error('请先登录后再新建会话');
       return;
     }
 
-    const newId = Date.now() + Math.random();
-    const newConversation = {
-      id: newId,
-      title: "新会话问题",
-      isActive: true,
-      isNew: true,
-    };
-
-    // 安全检查：确保状态正确重置
     try {
-      setConversations((prev) => {
-        const updatedConversations = prev.map((conv) => ({ ...conv, isActive: false }));
-        return [newConversation, ...updatedConversations];
+      // 创建新会话API调用
+      const sessionResponse = await chatAPI.createSession({
+        userId: currentUserId,
+        sessionName: "新会话问题"
       });
-      setCurrentConversation(newId);
+ 
+
+      // 检查API响应是否成功
+      if (sessionResponse.code !== 200) {
+        throw new Error(sessionResponse.message || '新建会话失败');
+      }
+
+      // 重新获取会话列表，确保与服务器状态一致
+      const updatedSessions = await fetchSessions();
+    
+      
+      // 设置会话列表并激活新会话
+      const updatedConversations = updatedSessions.map(session => ({
+        ...session,
+        isActive: session.id === sessionResponse.sessionId
+      }));
+      
+      setConversations(updatedConversations);
+      setCurrentConversation(sessionResponse.sessionId);
       setMessages([]); // 清空消息数组
       setInputValue(""); // 清空输入框
       
@@ -938,18 +935,18 @@ const KnowledgeQA = () => {
       setPreviewPage(1);
       setPreviewBboxes([]);
       setIsLoadingConversation(false); // 重置会话加载状态
-      
+      message.success('新会话已创建');
 
     } catch (error) {
-      console.error('新建会话失败:', error);
-      message.error('新建会话失败，请重试');
+   
+      message.error(error.message || '新建会话失败，请重试');
     }
   };
 
   // 加载会话历史消息
   const handleLoadConversationHistory = async (sessionId) => {
     if (!sessionId) {
-      console.warn('handleLoadConversationHistory: sessionId为空');
+     
       return;
     }
 
@@ -973,11 +970,11 @@ const KnowledgeQA = () => {
         }));
         setMessages(msgs);
       } else {
-        console.warn('获取会话历史失败:', response);
+      
         setMessages([]);
       }
     } catch (error) {
-      console.error('获取会话历史时出错:', error);
+      
       setMessages([]);
     } finally {
       setIsLoadingConversation(false);
@@ -987,7 +984,7 @@ const KnowledgeQA = () => {
   const handleConversationSelect = (conversationId) => {
     // 安全检查：确保用户已登录
     if (!currentUserId) {
-      console.error('handleConversationSelect: 用户未登录，currentUserId:', currentUserId);
+      
       message.error('请先登录后再选择会话');
       return;
     }
@@ -1012,7 +1009,7 @@ const KnowledgeQA = () => {
             // 安全检查：确保消息内容有效
             const content = m.content || "";
             if (typeof content !== 'string') {
-              console.warn('历史消息content不是字符串类型:', typeof content, content);
+              
               return {
                 id: m.id || `${Date.now()}_${Math.random()}`,
                 type: m.role === "user" ? "user" : "ai",
@@ -1034,7 +1031,7 @@ const KnowledgeQA = () => {
           setMessages([]);
         }
       } catch (error) {
-        console.error('加载会话历史失败:', error);
+       
         setMessages([]);
         message.error('加载会话历史失败，请重试');
       } finally {
@@ -1051,14 +1048,14 @@ const KnowledgeQA = () => {
   const handleCopyMessage = (content) => {
     // 安全检查：确保用户已登录
     if (!currentUserId) {
-      console.error('handleCopyMessage: 用户未登录，currentUserId:', currentUserId);
+   
       message.error('请先登录后再复制消息');
       return;
     }
 
     // 安全检查：确保content是字符串类型
     if (typeof content !== 'string') {
-      console.error('handleCopyMessage: content不是字符串类型:', typeof content, content);
+      
       message.error('复制失败：内容格式错误');
       return;
     }
@@ -1068,15 +1065,11 @@ const KnowledgeQA = () => {
   };
 
   const handleFeedback = async (messageId, type, event) => {
-    // 安全检查：确保event参数是有效的事件对象
-    if (event && typeof event !== 'object') {
-      console.error('handleFeedback: event参数类型错误:', typeof event, event);
-      return;
-    }
+  
 
     // 安全检查：确保用户已登录
     if (!currentUserId) {
-      console.error('handleFeedback: 用户未登录，currentUserId:', currentUserId);
+     
       message.error('请先登录后再进行反馈');
       return;
     }
@@ -1098,7 +1091,7 @@ const KnowledgeQA = () => {
     
     if (!targetMessage.sessionId || !targetMessage.messageId) {
       message.error('消息信息不完整，无法操作');
-      console.error('消息缺少必要信息:', targetMessage);
+     
       return;
     }
 
@@ -1124,7 +1117,7 @@ const KnowledgeQA = () => {
             message.error(response.message || '取消点踩失败');
           }
         } catch (error) {
-          console.error('取消点踩失败:', error);
+        
           message.error('操作失败，请重试');
         }
         return;
@@ -1210,7 +1203,7 @@ const KnowledgeQA = () => {
         }
       }
     } catch (error) {
-      console.error('点赞操作失败:', error);
+   
       message.error('操作失败，请重试');
     }
   };
@@ -1229,7 +1222,7 @@ const KnowledgeQA = () => {
 
     // 安全检查：确保用户已登录
     if (!currentUserId) {
-      console.error('handleSubmitFeedback: 用户未登录，currentUserId:', currentUserId);
+ 
       message.error('请先登录后再提交反馈');
       return;
     }
@@ -1271,7 +1264,7 @@ const KnowledgeQA = () => {
         message.error(response.message || "提交失败，请重试");
       }
     } catch (error) {
-      console.error('点踩失败:', error);
+ 
       message.error("提交失败，请重试");
     }
   };
@@ -1280,7 +1273,7 @@ const KnowledgeQA = () => {
   const handleRegenerateAnswer = async (messageId) => {
     // 安全检查：确保用户已登录
     if (!currentUserId) {
-      console.error('handleRegenerateAnswer: 用户未登录，currentUserId:', currentUserId);
+ 
       message.error('请先登录后再重新生成回答');
       return;
     }
@@ -1326,7 +1319,7 @@ const KnowledgeQA = () => {
 
     // 安全检查：确保用户已登录
     if (!currentUserId) {
-      console.error('handleCancelFeedback: 用户未登录，currentUserId:', currentUserId);
+  
       message.error('请先登录后再取消反馈');
       return;
     }
@@ -1368,9 +1361,49 @@ const KnowledgeQA = () => {
         message.error(response.message || "提交失败，请重试");
       }
     } catch (error) {
-      console.error('点踩失败:', error);
+    
       message.error("提交失败，请重试");
     }
+  };
+
+  // 提交重命名
+  const handleRenameSubmit = async () => {
+    if (!currentRenameSessionId || !renameInput.trim()) {
+      message.error('会话名称不能为空');
+      return;
+    }
+
+    
+
+    try {
+      
+      // 调用重命名会话API
+      const res = await chatAPI.renameSession(currentRenameSessionId, renameInput.trim());
+      // 检查API响应是否成功
+      if (res.code !== 200) {
+        throw new Error(res.message || '重命名会话失败');
+      }
+      // 重新获取会话列表，确保与服务器状态一致
+      const updatedSessions = await fetchSessions();
+      setConversations(updatedSessions.map(session => ({
+        ...session,
+        isActive: session.id === currentConversation // 保持当前会话激活状态
+      })));
+      setRenameModalVisible(false);
+      message.success('会话已重命名');
+    } catch (err) {
+ 
+      message.error(err.message || '重命名会话失败');
+    } finally {
+       
+    }
+  };
+
+  // 取消重命名
+  const handleRenameCancel = () => {
+    setRenameModalVisible(false);
+    setRenameInput('');
+    setCurrentRenameSessionId(null);
   };
 
   // 取消AI请求
@@ -1397,7 +1430,7 @@ const KnowledgeQA = () => {
           <div className="conversation-sider">
             <div className="conversation-header">
               <Button type="text" icon={<ArrowLeftOutlined />} onClick={handleBackToKnowledge} className="back-button">
-                返回知识库
+              Back
               </Button>
             </div>
 
@@ -1428,9 +1461,9 @@ const KnowledgeQA = () => {
                 className="new-conversation-btn"
                 block
                 disabled={!currentUserId}
-                title={!currentUserId ? "请先登录后再新建会话" : "新建会话问题"}
-              >
-                {!currentUserId ? "请先登录" : "新建会话问题"}
+                title={!currentUserId ? "Place first login" : "New Session"}
+                >
+                  {!currentUserId ? "Place first login" : "New Session"}
               </Button>
               </div>
 
@@ -1465,25 +1498,48 @@ const KnowledgeQA = () => {
                                 if (!id) return;
                                 switch (info.key) {
                                 case 'rename':
-                                  message.info('正在开发中');
+                                  // 打开重命名弹窗
+                                  setCurrentRenameSessionId(id);
+                                  const currentSession = conversations.find(c => c.id === id);
+                                  if (currentSession) {
+                                    setRenameInput(currentSession.title);
+                                  }
+                                  setRenameModalVisible(true);
                                   break;
                                 case 'delete':
-                                  // 删除会话
-                                  chatAPI.deleteSession(id)
-                                    .then(() => {
-                                      // 从会话列表中移除该会话
-                                      setConversations(prev => prev.filter(c => c.id !== id));
-                                      // 如果删除的是当前会话，则重置当前会话
-                                      if (currentConversationId === id) {
-                                        setCurrentConversationId(null);
-                                        setConversation(null);
+                                  
+                                  try {
+                                    
+                                     chatAPI.deleteSession(id).then(async(res)=>{
+
+                                          // 检查API响应是否成功
+                                    if (res.code !== 200) {
+                                      throw new Error(res.message || '删除会话失败');
+                                    }
+                                    // 重新获取会话列表，确保与服务器状态一致
+                                    const updatedSessions = await fetchSessions();
+                                    setConversations(updatedSessions);
+                                    // 如果删除的是当前会话，则重置当前会话或选择第一个会话
+                                    if (currentConversation === id) {
+                                      const newCurrentSession = updatedSessions[0]?.id || null;
+                                      setCurrentConversation(newCurrentSession);
+                                      if (newCurrentSession) {
+                                        // 如果还有会话，加载第一个会话的历史记录
+                                        await handleLoadConversationHistory(newCurrentSession);
+                                      } else {
+                                        setMessages([]); // 清空消息数组
+                                        setInputValue(""); // 清空输入框
                                       }
-                                      message.success('会话已删除');
-                                    })
-                                    .catch(err => {
-                                      message.error('删除会话失败');
-                                      console.error('删除会话失败:', err);
-                                    });
+                                    }
+                                    message.success('会话已删除');
+                                     });
+                                
+                                  } catch (err) {
+                                   
+                                    message.error(err.message || '删除会话失败');
+                                  } finally {
+                                  
+                                  }
                                   break;
                                 default:
                                   break;
@@ -1597,7 +1653,7 @@ const KnowledgeQA = () => {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  console.log('引用点击事件触发');
+                            
                                   handleReferenceClick(ref, message);
                                 }}
                               >
@@ -1734,7 +1790,7 @@ const KnowledgeQA = () => {
                   className="send-button"
                   disabled={isLoading || !inputValue.trim() || !currentUserId}
                 >
-                  {isLoading ? "思考中..." : "发送"}
+                     {isLoading ? "Thinking..." : "Send"}
                 </Button>
               </div>
             </div>
@@ -1958,6 +2014,23 @@ const KnowledgeQA = () => {
             className="feedback-textarea"
           />
         </div>
+      </Modal>
+
+      {/* 重命名会话弹窗 */}
+      <Modal
+        title="重命名会话"
+        open={renameModalVisible}
+        onOk={handleRenameSubmit}
+        onCancel={handleRenameCancel}
+        okText="确定"
+        cancelText="取消"
+      >
+        <Input
+          value={renameInput}
+          onChange={(e) => setRenameInput(e.target.value)}
+          placeholder="请输入新的会话名称"
+          autoFocus
+        />
       </Modal>
     </div>
   );

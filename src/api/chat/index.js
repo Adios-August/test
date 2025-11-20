@@ -27,6 +27,16 @@ export const chatAPI = {
   deleteSession: (sessionId) => {
     return http.delete(`/chat/sessions/${sessionId}`);
   },
+
+  // 重命名会话
+  renameSession: (sessionId, newName) => {
+    return http.put(`/chat/sessions/${sessionId}`, { sessionName: newName });
+  },
+
+  // 新增会话
+  createSession: (data) => {
+    return http.post("/chat/sessions", data);
+  },
 };
 
 export default chatAPI;
