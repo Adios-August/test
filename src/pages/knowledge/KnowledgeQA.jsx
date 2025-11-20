@@ -460,13 +460,14 @@ const KnowledgeQA = () => {
       const requestData = {
         question: userQuestion,
         userId: currentUserId, // 从用户状态获取
+        sessionId: customSessionId || currentConversation, // 会话ID
        
         knowledgeIds: [], // 这里可以从store获取知识ID列表
         stream: true,
       };
 
       // 调用新的RAG流式对话接口
-      const response = await authenticatedFetch("http://cnl20044474:3006/api/chat/strean", {
+      const response = await authenticatedFetch("http://cnl20044474:3006/api/chat/stream", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
