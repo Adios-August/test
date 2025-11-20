@@ -22,6 +22,11 @@ export const chatAPI = {
   getHistory: (sessionId, params) => {
     return http.get(`/chat/history/${sessionId}`, params);
   },
+
+  // 删除会话
+  deleteSession: (sessionId) => {
+    return http.delete(`/chat/sessions/${sessionId}`);
+  },
 };
 
 export default chatAPI;

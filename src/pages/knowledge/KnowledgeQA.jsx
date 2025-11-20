@@ -127,12 +127,7 @@ const KnowledgeQA = () => {
   // 当前选中的引用消息，用于右侧面板显示
   const [selectedReferenceMessage, setSelectedReferenceMessage] = useState(null);
 
-  // 会话项操作弹窗/菜单状态
-  const [actionsConversationId, setActionsConversationId] = useState(null);
-  const [groupInput, setGroupInput] = useState("");
-  const [groupModalVisible, setGroupModalVisible] = useState(false);
-
-  // 当前是否处于“新会话”状态（未发送过消息的会话）
+  // 当前是否处于"新会话"状态（未发送过消息的会话）
   const isInNewConversation = Boolean(
     currentConversation && conversations.some(c => c.id === currentConversation && c.isNew)
   );
@@ -342,20 +337,7 @@ const KnowledgeQA = () => {
           isActive: false
         })); 
         
-        // 去重处理 - 基于ID和标题去重
-        const uniqueHistoricalSessions = [];
-        const seenIds = new Set();
-        const seenTitles = new Set();
-        
-        for (const session of historicalSessions) {
-          if (!seenIds.has(session.id) && !seenTitles.has(session.title)) {
-            uniqueHistoricalSessions.push(session);
-            seenIds.add(session.id);
-            seenTitles.add(session.title);
-          }  
-        }
-        
-        historicalSessions = uniqueHistoricalSessions; 
+        // 不再需要去重，直接使用API返回的数据
       }
       
       // 2. 新增会话
@@ -394,26 +376,14 @@ const KnowledgeQA = () => {
           isActive: false
         }));
         
-        // 去重处理
-        const uniqueSessions = [];
-        const seenTitles = new Set();
-        const seenIds = new Set();
-        
-        for (const session of sessions) {
-          if (!seenIds.has(session.id) && !seenTitles.has(session.title)) {
-            uniqueSessions.push(session);
-            seenIds.add(session.id);
-            seenTitles.add(session.title);
-          }
-        }
-         
-        setConversations(uniqueSessions);
+        // 不再需要去重，直接使用API返回的数据
+        setConversations(sessions);
         
         // 2. 用第一条直接查询详情
-        if (uniqueSessions.length > 0) {
-          const firstSession = uniqueSessions[0];
+        if (sessions.length > 0) {
+          const firstSession = sessions[0];
           // 设置第一个会话为活跃状态
-          const sessionsWithActive = uniqueSessions.map((session, index) => ({
+          const sessionsWithActive = sessions.map((session, index) => ({
             ...session,
             isActive: index === 0
           }));
@@ -1488,25 +1458,36 @@ const KnowledgeQA = () => {
                             menu={{
                               items: [
                                 { key: 'rename', label: '重命名', icon: <EditOutlined /> },
-                                { key: 'group', label: '移动到分组', icon: <FolderOpenOutlined /> },
                                 { key: 'delete', label: '删除此对话', icon: <DeleteOutlined />, danger: true },
                               ],
                               onClick: (info) => {
                                 const id = item.id;
                                 if (!id) return;
                                 switch (info.key) {
-                                  case 'rename':
-                                    message.info('正在开发中');
-                                    break;
-                                  case 'group':
-                                    message.info('正在开发中');
-                                    break;
-                                  case 'delete':
-                                    message.info('正在开发中');
-                                    break;
-                                  default:
-                                    break;
-                                }
+                                case 'rename':
+                                  message.info('正在开发中');
+                                  break;
+                                case 'delete':
+                                  // 删除会话
+                                  chatAPI.deleteSession(id)
+                                    .then(() => {
+                                      // 从会话列表中移除该会话
+                                      setConversations(prev => prev.filter(c => c.id !== id));
+                                      // 如果删除的是当前会话，则重置当前会话
+                                      if (currentConversationId === id) {
+                                        setCurrentConversationId(null);
+                                        setConversation(null);
+                                      }
+                                      message.success('会话已删除');
+                                    })
+                                    .catch(err => {
+                                      message.error('删除会话失败');
+                                      console.error('删除会话失败:', err);
+                                    });
+                                  break;
+                                default:
+                                  break;
+                              }
                               }
                             }}
                           >
@@ -1945,26 +1926,7 @@ const KnowledgeQA = () => {
 
       
 
-      {/* 分组弹窗 */}
-      <Modal
-        title="移动到分组"
-        open={groupModalVisible}
-        onCancel={() => setGroupModalVisible(false)}
-        onOk={() => {
-          const id = actionsConversationId;
-          const group = (groupInput || '').trim();
-          if (!id) return;
-          setConversations(prev => prev.map(c => c.id === id ? { ...c, group } : c));
-          setGroupModalVisible(false);
-          message.success(group ? `已设置分组：${group}` : '已清空分组');
-        }}
-      >
-        <Input
-          value={groupInput}
-          onChange={(e) => setGroupInput(e.target.value)}
-          placeholder="输入分组名（示例：工作/学习）"
-        />
-      </Modal>
+      
 
       {/* 反馈弹窗 */}
       <Modal
