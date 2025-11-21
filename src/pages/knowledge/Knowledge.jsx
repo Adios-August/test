@@ -512,9 +512,15 @@ const Knowledge = observer(() => {
 
           // 设置AI回答
           if (ragResult.answer || ragResult.answer == "") {
+            // 转换AI回答引用的格式，确保包含downloadUrl
+            const aiAnswerReferences = (ragResult.references || []).map(ref => ({
+              ...ref,
+              sourceFile: (ref.sourceFile ?? ref.source_file) || ref.attachments?.[0] || '未知文件',
+              downloadUrl: ref.downloadUrl ?? ref.download_url
+            }));
             setAiAnswer({
               answer: ragResult.answer || "暂无内容",
-              references: ragResult.references || [],
+              references: aiAnswerReferences,
               recommendedQuestions: ragResult.recommendedQuestions || [],
               sessionId: ragResult.sessionId,
               messageId: ragResult.messageId,
@@ -1205,9 +1211,16 @@ const Knowledge = observer(() => {
                       {aiAnswer.references && aiAnswer.references.length > 0 && (
                         <>
                           <span style={{color:'#db0011'}}>Learn More</span>
-                          <Button type="link" size="small" icon={<FilePdfOutlined />}>
-                            {aiAnswer.references[0].sourceFile}
-                          </Button>
+                          {aiAnswer.references[0].sourceFile && aiAnswer.references[0].sourceFile.toLowerCase().endsWith('.pdf') && aiAnswer.references[0].downloadUrl && (
+                            <Button
+                              type="link"
+                              size="small"
+                              icon={<FilePdfOutlined />}
+                              onClick={() => window.open(aiAnswer.references[0].downloadUrl, '_blank')}
+                            >
+                              {aiAnswer.references[0].sourceFile}
+                            </Button>
+                          )}
                         </>
                       )}
                       <Tooltip title={aiAnswer?.isLiked ? "Dislike" : "Like"}>
