@@ -98,6 +98,14 @@ export const knowledgeAPI = {
   uploadKnowledgeAttachment: (knowledgeId, file) => {
     const formData = new FormData();
     formData.append("file", file);
+  },
+
+  // 搜索分类树
+  searchCategoryTree: (keywords) => {
+    return http.get("/knowledge/tree/search", {
+      workspace: authStore.currentWorkspace,
+      keywords
+    });
     return http.post(`/knowledge/${knowledgeId}/document`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
