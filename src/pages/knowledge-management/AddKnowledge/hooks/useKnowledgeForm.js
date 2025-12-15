@@ -274,10 +274,48 @@ export const useKnowledgeForm = (mode = 'add') => {
       }
   
     } else {
-      let newKnowledgeId = null;
       try {
-        // 1. Create the document WITHOUT attachments first.
-        const initialSubmitData = {
+        // 1. Upload all local files first to get their URLs
+        const filesToUpload = formData.attachments.filter(a => a.isLocal && a.file);
+        const uploadedAttachments = [];
+        
+        if (filesToUpload.length > 0) {
+          message.info('正在上传附件...');
+          
+          const uploadResults = await Promise.all(
+            filesToUpload.map(async (attachment) => {
+              try {
+                const response = await knowledgeAPI.uploadAttachment(attachment.file);
+                if (response.url) {
+                  return { 
+                    name: attachment.name, 
+                    url: response.url, 
+                    size: attachment.size,
+                    success: true
+                  };
+                }
+                throw new Error('上传响应缺少URL');
+              } catch (error) {
+                return { name: attachment.name, error: error.message, success: false };
+              }
+            })
+          );
+          
+          const failedUploads = uploadResults.filter(r => !r.success);
+          if (failedUploads.length > 0) {
+            const failedNames = failedUploads.map(f => f.name).join(', ');
+            throw new Error(`附件上传失败: ${failedNames}`);
+          }
+          
+          uploadedAttachments.push(...uploadResults.filter(r => r.success).map(r => ({
+            name: r.name,
+            url: r.url,
+            size: r.size
+          })));
+        }
+
+        // 2. Create the document WITH attachments
+        const submitData = {
           name: processedFormData.title.trim(),
           description: contentHtml,
           parentId: processedFormData.category,
@@ -288,53 +326,25 @@ export const useKnowledgeForm = (mode = 'add') => {
           effectiveEndTime: processedFormData.effectiveTime?.[1]?.toISOString() || null,
           changeReason: "Knowledge creation",
           workspaces: processedFormData.privateToRoles,
-          attachments: [] // Send an empty array initially
+          attachments: uploadedAttachments
         };
 
-        console.log('创建知识提交数据:', initialSubmitData);
+        console.log('创建知识提交数据:', submitData);
   
-        const response = await knowledgeAPI.createKnowledge(initialSubmitData);
+        const response = await knowledgeAPI.createKnowledge(submitData);
         if (response.code !== 200 || !response.data?.id) {
-          throw new Error(response.message || '创建知识失败，无法获取ID');
+          throw new Error(response.message || '创建知识失败');
         }
-  
-        newKnowledgeId = response.data.id;
         
         // Add the new knowledge to the store
         if (response.data) {
           knowledgeStore.addKnowledge(response.data);
         }
-        
-        const filesToUpload = formData.attachments.filter(a => a.isLocal && a.file);
 
-        // 2. If there are attachments, upload them now using the new ID.
-        if (filesToUpload.length > 0) {
-          message.info('知识已创建，正在上传附件...');
-          const uploadPromises = filesToUpload.map(attachment =>
-            // Upload attachment using the new knowledge ID
-            knowledgeAPI.uploadKnowledgeAttachment(newKnowledgeId, attachment.file)
-              .catch(err => ({ name: attachment.name, error: err })) // Catch individual errors
-          );
-          
-          const results = await Promise.all(uploadPromises);
-          const failedUploads = results.filter(res => res.error);
-
-          if (failedUploads.length > 0) {
-            const failedNames = failedUploads.map(f => f.name).join(', ');
-            // The document is created, so we show a success message but warn about the failures.
-            message.warning(`知识发布成功，但以下附件上传失败: ${failedNames}`, 5);
-          } else {
-            message.success('知识发布成功，所有附件已上传');
-          }
-        } else {
-          message.success('知识发布成功');
-        }
-
+        message.success('知识发布成功');
         navigate('/knowledge-admin/category-management');
   
       } catch (error) {
-        // If the initial creation fails, we just show an error.
-        // If uploads fail, the user is already notified, but we log it.
         console.error('发布失败:', error);
         message.error(error.message || '发布失败，请重试');
       } finally {
